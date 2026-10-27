@@ -274,7 +274,9 @@ Common additions:
 - **New diagram element:** add its layout data, SVG component, visual mapping,
   fixture, and Playwright coverage.
 
-See [`docs/architecture.md`](docs/architecture.md) for the detailed architecture.
+See [`docs/architecture.md`](docs/architecture.md) for the detailed architecture and
+[`docs/implementation-plan.md`](docs/implementation-plan.md) for the implementation
+and test plan.
 
 ### Scope
 
