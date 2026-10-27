@@ -3,6 +3,8 @@ dist/
 coverage/
 playwright-report/
 test-results/
+.bun-cache/
+.npm/
 
 .env
 .env.*

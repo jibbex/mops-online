@@ -21,6 +21,8 @@ export default tseslint.config(
             'coverage',
             'playwright-report',
             'test-results',
+            '.bun-cache',
+            '.npm',
             '.agents',
             'skills-lock.json',
         ],
