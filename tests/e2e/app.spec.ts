@@ -21,6 +21,12 @@ test('assembles and runs a program with input', async ({ page }) => {
     await input.fill('21');
     await page.getByRole('button', { name: 'Submit' }).click();
 
+    await expect(
+        page.getByRole('heading', { name: 'Program output' }),
+    ).toBeVisible();
+    await expect(page.getByTestId('output-value')).toHaveText('00042');
+    await page.getByRole('button', { name: 'Continue' }).click();
+
     await expect(page.getByTestId('status-status')).toHaveText('Finished');
     await expect(page.getByTestId('status-aus')).toHaveText('00042');
 

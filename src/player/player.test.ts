@@ -19,6 +19,8 @@ function resetPlayer(source = SIMPLE_SOURCE): void {
         warnings: [],
         trap: null,
         lastEvent: null,
+        lastOutput: null,
+        resumeAfterOutput: false,
         history: [],
     });
 }
@@ -51,11 +53,18 @@ describe('player', () => {
         expect(usePlayer.getState().diagnostics.length).toBeGreaterThan(0);
     });
 
-    it('runs to completion in complete mode', () => {
+    it('pauses on output and resumes in complete mode', () => {
         usePlayer.getState().assemble();
         usePlayer.getState().setMode('run');
         usePlayer.getState().setSpeed(0);
         usePlayer.getState().start();
+        vi.runAllTimers();
+
+        expect(usePlayer.getState().status).toBe('waiting-output');
+        expect(usePlayer.getState().lastOutput).toBe(8);
+        expect(usePlayer.getState().resumeAfterOutput).toBe(true);
+
+        usePlayer.getState().acknowledgeOutput();
         vi.runAllTimers();
 
         const state = usePlayer.getState();
@@ -63,6 +72,7 @@ describe('player', () => {
         expect(state.status).toBe('finished');
         expect(state.cpu?.ac).toBe(8);
         expect(state.cpu?.aus).toBe(8);
+        expect(state.lastOutput).toBeNull();
         expect(state.history.length).toBeGreaterThan(0);
     });
 
@@ -106,9 +116,47 @@ describe('player', () => {
         usePlayer.getState().provideInput(42);
         vi.runAllTimers();
 
+        expect(usePlayer.getState().status).toBe('waiting-output');
+        expect(usePlayer.getState().lastOutput).toBe(42);
+
+        usePlayer.getState().acknowledgeOutput();
+        vi.runAllTimers();
+
         expect(usePlayer.getState().status).toBe('finished');
         expect(usePlayer.getState().cpu?.memory[64]).toBe(42);
         expect(usePlayer.getState().cpu?.aus).toBe(42);
+    });
+
+    it('pauses on output in manual stepping', () => {
+        resetPlayer(['out 5', 'end'].join('\n'));
+        usePlayer.getState().assemble();
+
+        for (let step = 0; step < 10; step += 1) {
+            usePlayer.getState().step();
+
+            if (usePlayer.getState().status === 'waiting-output') {
+                break;
+            }
+        }
+
+        expect(usePlayer.getState().status).toBe('waiting-output');
+        expect(usePlayer.getState().lastOutput).toBe(5);
+        expect(usePlayer.getState().resumeAfterOutput).toBe(false);
+
+        usePlayer.getState().acknowledgeOutput();
+
+        expect(usePlayer.getState().status).toBe('paused');
+        expect(usePlayer.getState().lastOutput).toBeNull();
+
+        for (let step = 0; step < 10; step += 1) {
+            usePlayer.getState().step();
+
+            if (usePlayer.getState().status === 'finished') {
+                break;
+            }
+        }
+
+        expect(usePlayer.getState().status).toBe('finished');
     });
 
     it('steps one microcycle at a time', () => {

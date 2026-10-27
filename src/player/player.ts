@@ -31,6 +31,7 @@ export type PlayerStatus =
     | 'running'
     | 'paused'
     | 'waiting-input'
+    | 'waiting-output'
     | 'finished'
     | 'error';
 
@@ -68,6 +69,8 @@ export interface PlayerState {
     readonly warnings: readonly AssembleWarning[];
     readonly trap: Trap | null;
     readonly lastEvent: VmEvent | null;
+    readonly lastOutput: Word | null;
+    readonly resumeAfterOutput: boolean;
     readonly history: readonly HistoryEntry[];
     readonly setSource: (source: string) => void;
     readonly assemble: () => void;
@@ -79,6 +82,7 @@ export interface PlayerState {
     readonly setMode: (mode: ExecutionMode) => void;
     readonly setSpeed: (speed: PlayerSpeed) => void;
     readonly provideInput: (value: Word) => void;
+    readonly acknowledgeOutput: () => void;
 }
 
 /** Source shown when the application starts. */
@@ -166,6 +170,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 cpu: result.state,
                 status: 'waiting-input',
                 lastEvent: result.event,
+                lastOutput: null,
+                resumeAfterOutput: false,
             });
             clearTimer();
             return;
@@ -177,6 +183,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 status: 'error',
                 trap: result.trap,
                 lastEvent: result.event,
+                lastOutput: null,
+                resumeAfterOutput: false,
                 history: withHistory(get().history, {
                     event: result.event,
                     before: result.event.before,
@@ -192,6 +200,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 cpu: result.state,
                 status: 'finished',
                 lastEvent: event ?? get().lastEvent,
+                lastOutput: null,
+                resumeAfterOutput: false,
                 history:
                     event === undefined
                         ? get().history
@@ -205,10 +215,33 @@ export const usePlayer = create<PlayerState>((set, get) => {
             return;
         }
 
+        if (
+            result.kind === 'step' &&
+            result.event.microOp.kind === 'AUS_WRITE'
+        ) {
+            set({
+                cpu: result.state,
+                status: 'waiting-output',
+                lastEvent: result.event,
+                lastOutput: result.event.after.aus,
+                resumeAfterOutput: get().status === 'running',
+                history: withHistory(get().history, {
+                    event: result.event,
+                    before: result.event.before,
+                    after: result.state,
+                }),
+                trap: null,
+            });
+            clearTimer();
+            return;
+        }
+
         set({
             cpu: result.state,
             status: pause ? 'paused' : 'running',
             lastEvent: result.event,
+            lastOutput: null,
+            resumeAfterOutput: false,
             history: withHistory(get().history, {
                 event: result.event,
                 before: result.event.before,
@@ -235,6 +268,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
         warnings: [],
         trap: null,
         lastEvent: null,
+        lastOutput: null,
+        resumeAfterOutput: false,
         history: [],
 
         setSource: (source) => {
@@ -248,6 +283,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 warnings: [],
                 trap: null,
                 lastEvent: null,
+                lastOutput: null,
+                resumeAfterOutput: false,
                 history: [],
             });
         },
@@ -266,6 +303,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
                     warnings: result.warnings,
                     trap: null,
                     lastEvent: null,
+                    lastOutput: null,
+                    resumeAfterOutput: false,
                     history: [],
                 });
                 return;
@@ -279,6 +318,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 warnings: result.warnings,
                 trap: null,
                 lastEvent: null,
+                lastOutput: null,
+                resumeAfterOutput: false,
                 history: [],
             });
         },
@@ -286,7 +327,11 @@ export const usePlayer = create<PlayerState>((set, get) => {
         start: () => {
             const initial = get();
 
-            if (initial.status === 'running') {
+            if (
+                initial.status === 'running' ||
+                initial.status === 'waiting-input' ||
+                initial.status === 'waiting-output'
+            ) {
                 return;
             }
 
@@ -296,6 +341,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
                     status: initial.program ? 'ready' : 'idle',
                     trap: null,
                     lastEvent: null,
+                    lastOutput: null,
+                    resumeAfterOutput: false,
                     history: [],
                 });
             }
@@ -330,7 +377,12 @@ export const usePlayer = create<PlayerState>((set, get) => {
 
             const state = get();
 
-            if (state.status === 'finished' || state.status === 'error') {
+            if (
+                state.status === 'finished' ||
+                state.status === 'error' ||
+                state.status === 'waiting-input' ||
+                state.status === 'waiting-output'
+            ) {
                 return;
             }
 
@@ -359,11 +411,17 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 status: program ? 'ready' : 'idle',
                 trap: null,
                 lastEvent: null,
+                lastOutput: null,
+                resumeAfterOutput: false,
                 history: [],
             });
         },
 
         stepBack: () => {
+            if (get().status === 'waiting-output') {
+                return;
+            }
+
             const history = get().history;
             const entry = history.at(-1);
 
@@ -376,6 +434,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 cpu: entry.before,
                 status: 'paused',
                 lastEvent: entry.event,
+                lastOutput: null,
+                resumeAfterOutput: false,
                 history: history.slice(0, -1),
                 trap: null,
             });
@@ -404,6 +464,30 @@ export const usePlayer = create<PlayerState>((set, get) => {
                     ? shouldPause(result.event, state.mode)
                     : false;
             record(result, pause);
+        },
+
+        acknowledgeOutput: () => {
+            const state = get();
+
+            if (state.status !== 'waiting-output') {
+                return;
+            }
+
+            if (state.resumeAfterOutput) {
+                set({
+                    status: 'running',
+                    lastOutput: null,
+                    resumeAfterOutput: false,
+                });
+                scheduleNext();
+                return;
+            }
+
+            set({
+                status: 'paused',
+                lastOutput: null,
+                resumeAfterOutput: false,
+            });
         },
     };
 });

@@ -57,7 +57,7 @@ assembly programs on a simplified von Neumann machine.
 - A data-packet layer that moves along the complete bus route for each transfer.
 - Run, pause, step, and stop controls.
 - Configurable execution modes and animation speed.
-- Input and output registers with validation.
+- Input and output registers with validation and blocking dialogs.
 - Runtime traps for division by zero, overflow, and invalid instructions.
 - Execution history with backward stepping.
 - English and German interfaces with established technical terms.
@@ -74,8 +74,9 @@ assembly programs on a simplified von Neumann machine.
 5. Start the program and observe the data packets in the diagram.
 6. Pause, step, or rewind to inspect individual states.
 7. Enter a value when the input register requests one.
-8. Switch the interface language and theme from the header.
-9. Download the `.ass` source file from the file dialog and upload it to Moodle.
+8. Confirm each output value in the output dialog.
+9. Switch the interface language and theme from the header.
+10. Download the `.ass` source file from the file dialog and upload it to Moodle.
 
 ### Moodle Tasks
 

@@ -117,6 +117,7 @@ const STATUS_KEYS: Record<PlayerStatus, MessageKey> = {
     running: 'status.running',
     paused: 'status.paused',
     'waiting-input': 'status.waiting-input',
+    'waiting-output': 'status.waiting-output',
     finished: 'status.finished',
     error: 'status.error',
 };
@@ -191,6 +192,7 @@ export default function App(): ReactElement {
                 </section>
             </main>
             <InputDialog />
+            <OutputDialog />
         </div>
     );
 }
@@ -245,7 +247,8 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
     const { t } = useI18n();
     const player = usePlayer();
     const running = player.status === 'running';
-    const waiting = player.status === 'waiting-input';
+    const waiting =
+        player.status === 'waiting-input' || player.status === 'waiting-output';
 
     return (
         <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b px-4 py-2">
@@ -288,7 +291,11 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
                 size="sm"
                 variant="outline"
                 onClick={player.stepBack}
-                disabled={player.history.length === 0 || running}
+                disabled={
+                    player.history.length === 0 ||
+                    running ||
+                    player.status === 'waiting-output'
+                }
             >
                 <StepBack data-icon="inline-start" />
                 {t('toolbar.back')}
@@ -588,6 +595,46 @@ function InputDialog(): ReactElement {
                         <Button type="submit">{t('input.submit')}</Button>
                     </DialogFooter>
                 </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+/**
+ * Renders the output dialog while the VM waits for confirmation.
+ *
+ * @returns The output dialog element.
+ */
+function OutputDialog(): ReactElement {
+    const { t } = useI18n();
+    const player = usePlayer();
+    const open = player.status === 'waiting-output';
+
+    return (
+        <Dialog open={open} onOpenChange={() => undefined}>
+            <DialogContent showCloseButton={false}>
+                <DialogHeader>
+                    <DialogTitle>{t('output.title')}</DialogTitle>
+                    <DialogDescription>
+                        {t('output.description')}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="rounded-lg border bg-muted/40 px-4 py-6 text-center">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        {t('output.label')}
+                    </p>
+                    <p
+                        className="font-mono text-3xl font-semibold tabular-nums"
+                        data-testid="output-value"
+                    >
+                        {formatWord(player.lastOutput ?? 0)}
+                    </p>
+                </div>
+                <DialogFooter>
+                    <Button onClick={player.acknowledgeOutput}>
+                        {t('output.continue')}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
