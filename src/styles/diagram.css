@@ -1,0 +1,158 @@
+:root {
+    --font-mono:
+        ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Roboto Mono', Menlo,
+        Consolas, monospace;
+    --diagram-bg: #f8fafc;
+    --diagram-unit: #eef2f7;
+    --diagram-head: #dbe7f3;
+    --diagram-border: #94a3b8;
+    --diagram-register: #fff7cc;
+    --diagram-bus: #e2b93b;
+    --diagram-active: #2563eb;
+    --diagram-active-soft: #bfdbfe;
+    --diagram-active-text: #0f172a;
+    --diagram-text: #1e293b;
+    --diagram-muted: #64748b;
+    --diagram-alu: #dbeafe;
+}
+
+.diagram-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 420px;
+    background: var(--diagram-bg);
+    border-radius: 0.75rem;
+}
+
+.diagram-unit .unit-frame {
+    fill: var(--diagram-unit);
+    stroke: var(--diagram-border);
+    stroke-width: 1.5;
+}
+
+.diagram-unit .unit-head {
+    fill: var(--diagram-head);
+    stroke: var(--diagram-border);
+    stroke-width: 1.5;
+}
+
+.diagram-unit.is-active .unit-head {
+    fill: var(--diagram-active);
+}
+
+.diagram-unit.is-active .unit-frame {
+    stroke: var(--diagram-active);
+    stroke-width: 2.5;
+}
+
+.diagram-register rect {
+    fill: var(--diagram-register);
+    stroke: var(--diagram-border);
+    stroke-width: 1.2;
+}
+
+.diagram-register text {
+    fill: var(--diagram-text);
+}
+
+.diagram-register.is-active rect {
+    fill: var(--diagram-active-soft);
+    stroke: var(--diagram-active);
+    stroke-width: 2;
+}
+
+.diagram-register.is-active text {
+    fill: var(--diagram-active-text);
+    font-weight: 700;
+}
+
+.memory-cell rect {
+    fill: var(--diagram-register);
+    stroke: var(--diagram-border);
+    stroke-width: 0.8;
+}
+
+.memory-cell text {
+    fill: var(--diagram-text);
+}
+
+.memory-cell.is-active rect {
+    fill: var(--diagram-active-soft);
+    stroke: var(--diagram-active);
+    stroke-width: 2;
+}
+
+.memory-cell.is-active text {
+    fill: var(--diagram-active-text);
+    font-weight: 700;
+}
+
+.diagram-bus {
+    fill: none;
+    stroke: var(--diagram-bus);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.diagram-bus.is-active {
+    stroke: var(--diagram-active);
+    filter: drop-shadow(0 0 4px rgb(37 99 235 / 45%));
+}
+
+.diagram-signal {
+    fill: none;
+    stroke: var(--diagram-bus);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.diagram-signal.is-active {
+    stroke: var(--diagram-active);
+    filter: drop-shadow(0 0 4px rgb(37 99 235 / 45%));
+}
+
+.diagram-text {
+    fill: var(--diagram-text);
+    font-family: var(--font-mono);
+}
+
+.diagram-label {
+    fill: var(--diagram-muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
+
+.diagram-value {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.diagram-title {
+    fill: var(--diagram-text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.diagram-active-text {
+    fill: var(--diagram-active-text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .diagram-bus,
+    .diagram-signal,
+    .memory-cell rect,
+    .diagram-register rect,
+    .unit-head,
+    .unit-frame {
+        transition:
+            stroke 120ms ease,
+            fill 120ms ease,
+            stroke-width 120ms ease;
+    }
+}
