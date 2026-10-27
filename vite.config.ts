@@ -16,6 +16,37 @@ export default defineConfig({
             '@': fileURLToPath(new URL('./src', import.meta.url)),
         },
     },
+    build: {
+        rolldownOptions: {
+            output: {
+                codeSplitting: {
+                    groups: [
+                        {
+                            name: 'codemirror',
+                            test: /node_modules[\\/](?:@codemirror|@lezer|codemirror)[\\/]/,
+                            priority: 30,
+                            maxSize: 350 * 1024,
+                        },
+                        {
+                            name: 'react',
+                            test: /node_modules[\\/](?:react|react-dom|scheduler)[\\/]/,
+                            priority: 20,
+                        },
+                        {
+                            name: 'ui',
+                            test: /node_modules[\\/](?:@radix-ui|radix-ui|lucide-react|class-variance-authority)[\\/]/,
+                            priority: 10,
+                        },
+                        {
+                            name: 'vendor',
+                            test: /node_modules[\\/]/,
+                            priority: 0,
+                        },
+                    ],
+                },
+            },
+        },
+    },
     test: {
         environment: 'jsdom',
         setupFiles: './src/test/setup.ts',
