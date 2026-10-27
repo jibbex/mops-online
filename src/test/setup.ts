@@ -1,8 +1,8 @@
 /**
  * Vitest DOM test setup.
  *
- * Adds jest-dom matchers and a deterministic `matchMedia` implementation for
- * components that read the system appearance preference.
+ * Adds jest-dom matchers, a deterministic `matchMedia` implementation, and the
+ * minimal Range geometry that CodeMirror expects during layout measurement.
  *
  * @module test/setup
  */
@@ -23,5 +23,41 @@ if (typeof window !== 'undefined') {
             removeEventListener: vi.fn(),
             dispatchEvent: vi.fn(),
         })),
+    });
+
+    installRangeGeometry();
+}
+
+/**
+ * Installs the Range geometry methods CodeMirror uses for coordinate lookup.
+ *
+ * jsdom implements neither method, which causes noisy layout errors when the
+ * editor is mounted in component tests.
+ */
+function installRangeGeometry(): void {
+    const rect = {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        toJSON: () => ({}),
+    } as DOMRect;
+
+    const rects = [rect] as unknown as DOMRectList & {
+        item: (index: number) => DOMRect | null;
+    };
+    rects.item = (index) => rects[index] ?? null;
+
+    Object.defineProperty(Range.prototype, 'getClientRects', {
+        configurable: true,
+        value: () => rects,
+    });
+    Object.defineProperty(Range.prototype, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => rect,
     });
 }
