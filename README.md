@@ -244,6 +244,8 @@ Core ideas:
 - The player owns timing, pausing, input handling, and execution history.
 - The UI renders state and visual events; it contains no machine logic.
 - The diagram is rendered with SVG and styled with CSS variables.
+- shadcn/ui components live in `src/components/ui` and are used only for the
+  application shell, never for the SVG diagram.
 
 Tech stack:
 
@@ -253,6 +255,7 @@ Tech stack:
 - Bun
 - Node.js LTS for Vitest and related tooling
 - Tailwind CSS for the application shell
+- shadcn/ui for application shell components
 - CSS variables and a dedicated stylesheet for the SVG diagram
 - CodeMirror 6
 - Zustand

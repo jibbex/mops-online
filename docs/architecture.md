@@ -255,6 +255,7 @@ is a proposal.
 | React component tests   | required             | Vitest + Testing Library + jsdom/happy-dom                | Component behavior and accessibility                                     |
 | E2E and visual tests    | decided              | Playwright                                                | Real browsers, keyboard, responsive views, screenshots                   |
 | App shell styling       | decided              | Tailwind CSS                                              | Layout, toolbar, panels, dialogs, responsive states                      |
+| UI components           | decided              | shadcn/ui (Radix + Tailwind)                              | Accessible shell primitives; the SVG diagram remains custom              |
 | SVG styling             | decided              | CSS variables + `diagram.css`                             | No Tailwind inside SVG                                                   |
 | State                   | decided              | Zustand                                                   | Small, selector-based, suitable for frequent updates                     |
 | Animation               | decided              | CSS transitions + Web Animations API                      | Sufficient for color changes and bus flow                                |
@@ -273,6 +274,10 @@ is a proposal.
 Use Tailwind only for the application shell: layout, toolbar, panels, dialogs, and
 responsive states. The SVG diagram uses semantic classes, CSS variables, and
 `diagram.css`. Do not use utility classes inside the SVG.
+
+shadcn/ui components live in `src/components/ui`. They are used for shell controls
+such as buttons, dialogs, selects, tabs, and tooltips. They are not used inside the
+SVG diagram.
 
 ```text
 src/ui/components/...    -> Tailwind
