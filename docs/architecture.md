@@ -12,12 +12,12 @@
 The key finding from the analysis is that graphics are **not** the hard part.
 The original von Neumann machine diagram consists of only **316 canvas primitives**:
 
-| Element type | Count |
-|---|---:|
-| Text | 183 |
-| Rectangles | 90 |
-| Lines (bus paths) | 42 |
-| Polygon (ALU triangle) | 1 |
+| Element type           | Count |
+| ---------------------- | ----: |
+| Text                   |   183 |
+| Rectangles             |    90 |
+| Lines (bus paths)      |    42 |
+| Polygon (ALU triangle) |     1 |
 
 That is four functional units, 72 memory cells, about 20 named signal paths, and a
 handful of registers. There are **no bitmap graphics in the machine diagram**, no
@@ -57,17 +57,17 @@ The UI contains no machine logic. This is the most important architectural idea.
 
 ### 2.1 Domain Model
 
-| Property | Value |
-|---|---|
-| Memory | 72 cells (3 columns x 24 rows), addresses 0-71 |
-| Data memory | 64-71, aliases `a`-`h` |
-| Program area | 0-63, at most 32 instructions |
+| Property           | Value                                               |
+| ------------------ | --------------------------------------------------- |
+| Memory             | 72 cells (3 columns x 24 rows), addresses 0-71      |
+| Data memory        | 64-71, aliases `a`-`h`                              |
+| Program area       | 0-63, at most 32 instructions                       |
 | Instruction format | 2 memory cells: opcode + operand; `end` uses 1 cell |
-| Number range | -9999 to 9999, decimal, integer |
-| Registers | BZ, BR, AC, OP, AR, ERG, VGL, EIN, AUS, DEK |
-| Internal latches | `sl_adr`, `sl_val`, `ml_val` |
-| Instructions | 15 mnemonics |
-| Phases | FETCH, DECODE, EXECUTE |
+| Number range       | -9999 to 9999, decimal, integer                     |
+| Registers          | BZ, BR, AC, OP, AR, ERG, VGL, EIN, AUS, DEK         |
+| Internal latches   | `sl_adr`, `sl_val`, `ml_val`                        |
+| Instructions       | 15 mnemonics                                        |
+| Phases             | FETCH, DECODE, EXECUTE                              |
 
 Important details that are easy to miss in a reimplementation:
 
@@ -92,23 +92,23 @@ Important details that are easy to miss in a reimplementation:
 
 ### 2.2 Instruction Set and Encoding
 
-| Mnemonic | Opcode(s) | Operand | Meaning |
-|---|---:|---|---|
-| `ld` | 10 / 11 | address / value | Load a value into AC |
-| `st` | 12 | address | Store AC to memory |
-| `in` | 20 | address | Store input to memory |
-| `out` | 22 / 23 | address / value | Write a value to AUS |
-| `add` | 30 / 31 | address / value | AC + operand |
-| `sub` | 32 / 33 | address / value | AC - operand |
-| `mul` | 34 / 35 | address / value | AC x operand |
-| `div` | 36 / 37 | address / value | AC / operand (integer) |
-| `mod` | 38 / 39 | address / value | AC % operand |
-| `cmp` | 40 / 41 | address / value | Compare AC with operand, set VGL |
-| `jmp` | 50 | target | Unconditional jump |
-| `jlt` | 52 | target | Jump if VGL is `<` |
-| `jeq` | 54 | target | Jump if VGL is `=` |
-| `jgt` | 56 | target | Jump if VGL is `>` |
-| `end` | 60 | none | End program |
+| Mnemonic | Opcode(s) | Operand         | Meaning                          |
+| -------- | --------: | --------------- | -------------------------------- |
+| `ld`     |   10 / 11 | address / value | Load a value into AC             |
+| `st`     |        12 | address         | Store AC to memory               |
+| `in`     |        20 | address         | Store input to memory            |
+| `out`    |   22 / 23 | address / value | Write a value to AUS             |
+| `add`    |   30 / 31 | address / value | AC + operand                     |
+| `sub`    |   32 / 33 | address / value | AC - operand                     |
+| `mul`    |   34 / 35 | address / value | AC x operand                     |
+| `div`    |   36 / 37 | address / value | AC / operand (integer)           |
+| `mod`    |   38 / 39 | address / value | AC % operand                     |
+| `cmp`    |   40 / 41 | address / value | Compare AC with operand, set VGL |
+| `jmp`    |        50 | target          | Unconditional jump               |
+| `jlt`    |        52 | target          | Jump if VGL is `<`               |
+| `jeq`    |        54 | target          | Jump if VGL is `=`               |
+| `jgt`    |        56 | target          | Jump if VGL is `>`               |
+| `end`    |        60 | none            | End program                      |
 
 Address versus value is encoded by **opcode parity**: even means address, odd means
 immediate value. The microcycle implementation uses the same rule (`BR.op % 2`).
@@ -133,20 +133,20 @@ EXECUTE:
 
 Execution microcycles:
 
-| Instruction | Microcycles |
-|---|---|
-| `ld addr` | BR.op -> SL_ADR; MEM -> SL_VAL; SL_VAL -> AC |
-| `ld val` | BR.op -> SL_VAL; SL_VAL -> AC |
-| `st addr` | AC -> SL_VAL; BR.op -> SL_ADR; SL_VAL -> MEM |
-| `in addr` | EIN -> SL_VAL; BR.op -> SL_ADR; SL_VAL -> MEM |
-| `out addr` | BR.op -> SL_ADR; MEM -> SL_VAL; SL_VAL -> AUS |
-| `out val` | BR.op -> SL_VAL; SL_VAL -> AUS |
+| Instruction                | Microcycles                                                            |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `ld addr`                  | BR.op -> SL_ADR; MEM -> SL_VAL; SL_VAL -> AC                           |
+| `ld val`                   | BR.op -> SL_VAL; SL_VAL -> AC                                          |
+| `st addr`                  | AC -> SL_VAL; BR.op -> SL_ADR; SL_VAL -> MEM                           |
+| `in addr`                  | EIN -> SL_VAL; BR.op -> SL_ADR; SL_VAL -> MEM                          |
+| `out addr`                 | BR.op -> SL_ADR; MEM -> SL_VAL; SL_VAL -> AUS                          |
+| `out val`                  | BR.op -> SL_VAL; SL_VAL -> AUS                                         |
 | `add/sub/mul/div/mod addr` | BR.op -> SL_ADR; MEM -> SL_VAL; SL_VAL -> OP; OP -> AR; ALU; ERG -> AC |
-| `add/sub/... val` | BR.op -> SL_VAL; SL_VAL -> OP; OP -> AR; ALU; ERG -> AC |
-| `cmp addr/val` | Like an arithmetic operation, but ERG -> VGL |
-| `jmp` | BR.op -> BZ |
-| `jlt/jeq/jgt` | Check VGL; only if the condition matches, BR.op -> BZ |
-| `end` | No execution |
+| `add/sub/... val`          | BR.op -> SL_VAL; SL_VAL -> OP; OP -> AR; ALU; ERG -> AC                |
+| `cmp addr/val`             | Like an arithmetic operation, but ERG -> VGL                           |
+| `jmp`                      | BR.op -> BZ                                                            |
+| `jlt/jeq/jgt`              | Check VGL; only if the condition matches, BR.op -> BZ                  |
+| `end`                      | No execution                                                           |
 
 The original condition for `jlt`, `jeq`, and `jgt` is:
 
@@ -162,28 +162,28 @@ stays at the already incremented value. The new core must reproduce this exactly
 Four functional units:
 
 1. **Memory unit**
-   - Header "Memory Unit", inner label "MEMORY LOGIC"
-   - 3 columns x 24 rows = 72 cells
-   - Address labels 00-23, 24-47, 48-71
-   - 8 data cells 64-71 with aliases `a`-`h`
-   - Three vertical memory bars (`mem-bar1`...`mem-bar3`)
+    - Header "Memory Unit", inner label "MEMORY LOGIC"
+    - 3 columns x 24 rows = 72 cells
+    - Address labels 00-23, 24-47, 48-71
+    - 8 data cells 64-71 with aliases `a`-`h`
+    - Three vertical memory bars (`mem-bar1`...`mem-bar3`)
 
 2. **Control unit**
-   - Header "Control Unit", inner label "CONTROL LOGIC"
-   - Instruction counter BZ
-   - Instruction register BR, split into command and operand
-   - Decoder DEK
+    - Header "Control Unit", inner label "CONTROL LOGIC"
+    - Instruction counter BZ
+    - Instruction register BR, split into command and operand
+    - Decoder DEK
 
 3. **ALU**
-   - Operand OP
-   - Accumulator AC
-   - ALU triangle
-   - Compare register VGL
-   - Result ERG
+    - Operand OP
+    - Accumulator AC
+    - ALU triangle
+    - Compare register VGL
+    - Result ERG
 
 4. **Input/output unit**
-   - Output register AUS
-   - Input register EIN
+    - Output register AUS
+    - Input register EIN
 
 Yellow buses with dark borders connect the units. In the original, active elements
 turn red (`#ff6d6d`), and buses are yellow (`#fffe82`).
@@ -220,15 +220,15 @@ one-to-one React port. The goal is to preserve the **semantics** and separate
 
 ### 3.1 Comparison
 
-| Option | Fit | Rationale |
-|---|---|---|
-| **React + SVG** | Excellent | 316 primitives, declarative, CSS animation, accessibility, direct React integration |
-| React + Canvas | Poor | Unnecessary for a few hundred elements; worse text, hit testing, and accessibility; imperative redraws |
-| React + WebGL | Very poor | Overkill; no 3D or mass scenes |
-| D3 + SVG | Good | Useful for scales and layout, but the machine geometry is fixed; D3 DOM manipulation would compete with React |
-| React Flow | Poor | Graph-editor abstraction; the machine is a fixed schematic, not a free node graph |
-| Vue/Svelte + SVG | Good | Also suitable; choose based on team strength |
-| Electron/Tauri | Fair | Useful for offline desktop, but only after the web MVP |
+| Option           | Fit       | Rationale                                                                                                     |
+| ---------------- | --------- | ------------------------------------------------------------------------------------------------------------- |
+| **React + SVG**  | Excellent | 316 primitives, declarative, CSS animation, accessibility, direct React integration                           |
+| React + Canvas   | Poor      | Unnecessary for a few hundred elements; worse text, hit testing, and accessibility; imperative redraws        |
+| React + WebGL    | Very poor | Overkill; no 3D or mass scenes                                                                                |
+| D3 + SVG         | Good      | Useful for scales and layout, but the machine geometry is fixed; D3 DOM manipulation would compete with React |
+| React Flow       | Poor      | Graph-editor abstraction; the machine is a fixed schematic, not a free node graph                             |
+| Vue/Svelte + SVG | Good      | Also suitable; choose based on team strength                                                                  |
+| Electron/Tauri   | Fair      | Useful for offline desktop, but only after the web MVP                                                        |
 
 **Recommendation:** React + TypeScript + Vite + SVG. No Canvas, no WebGL, no
 React Flow. Use D3 at most as a small helper for path calculations, not as a DOM
@@ -244,29 +244,29 @@ React Router is **not** approved. Bun is the package manager and script runner;
 Node.js LTS remains required by Vitest and other Node-based tooling. Everything else
 is a proposal.
 
-| Purpose | Status | Recommendation | Rationale |
-|---|---|---|---|
-| Build | decided | Vite | Fast, simple static build |
-| Language | decided | TypeScript (strict) | Discriminated unions for micro-ops and events |
-| Package manager | decided | Bun | Fast installs and script execution |
-| Node tooling runtime | decided | Node.js LTS | Required by Vitest and related tooling |
-| Editor | decided | CodeMirror 6 | Lightweight, extensible, custom language, diagnostics, breakpoint gutter |
-| Core unit tests | decided | Vitest | Assembler, VM, player; fast and browser-free |
-| React component tests | required | Vitest + Testing Library + jsdom/happy-dom | Component behavior and accessibility |
-| E2E and visual tests | decided | Playwright | Real browsers, keyboard, responsive views, screenshots |
-| App shell styling | decided | Tailwind CSS | Layout, toolbar, panels, dialogs, responsive states |
-| SVG styling | decided | CSS variables + `diagram.css` | No Tailwind inside SVG |
-| State | decided | Zustand | Small, selector-based, suitable for frequent updates |
-| Animation | decided | CSS transitions + Web Animations API | Sufficient for color changes and bus flow |
-| Offline | decided | PWA/service worker | Fits the school context |
-| Routing | not approved | No React Router | `routes.tsx` was only pseudocode |
-| Optional animation | optional, not in MVP | Motion (Framer Motion) | Only if orchestrated sequences or tokens become too complex |
-| Visual development | proposal | Dev route `/dev/diagram` + Playwright | Fixtures for diagram states and screenshot tests |
-| Architecture boundaries | proposal | ESLint `import/no-restricted-paths` or dependency-cruiser | Enforces the assembler/VM boundary |
-| Linting | decided | ESLint | Curly braces, TypeScript, quality rules |
-| Formatting | decided | Prettier + `eslint-config-prettier` | Layout, indentation, line endings; no formatting rules in ESLint |
-| Git hooks | decided | Husky + commitlint | Commit message validation |
-| License | decided | MIT | New project code; original vendor assets remain separate |
+| Purpose                 | Status               | Recommendation                                            | Rationale                                                                |
+| ----------------------- | -------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Build                   | decided              | Vite                                                      | Fast, simple static build                                                |
+| Language                | decided              | TypeScript (strict)                                       | Discriminated unions for micro-ops and events                            |
+| Package manager         | decided              | Bun                                                       | Fast installs and script execution                                       |
+| Node tooling runtime    | decided              | Node.js LTS                                               | Required by Vitest and related tooling                                   |
+| Editor                  | decided              | CodeMirror 6                                              | Lightweight, extensible, custom language, diagnostics, breakpoint gutter |
+| Core unit tests         | decided              | Vitest                                                    | Assembler, VM, player; fast and browser-free                             |
+| React component tests   | required             | Vitest + Testing Library + jsdom/happy-dom                | Component behavior and accessibility                                     |
+| E2E and visual tests    | decided              | Playwright                                                | Real browsers, keyboard, responsive views, screenshots                   |
+| App shell styling       | decided              | Tailwind CSS                                              | Layout, toolbar, panels, dialogs, responsive states                      |
+| SVG styling             | decided              | CSS variables + `diagram.css`                             | No Tailwind inside SVG                                                   |
+| State                   | decided              | Zustand                                                   | Small, selector-based, suitable for frequent updates                     |
+| Animation               | decided              | CSS transitions + Web Animations API                      | Sufficient for color changes and bus flow                                |
+| Offline                 | decided              | PWA/service worker                                        | Fits the school context                                                  |
+| Routing                 | not approved         | No React Router                                           | `routes.tsx` was only pseudocode                                         |
+| Optional animation      | optional, not in MVP | Motion (Framer Motion)                                    | Only if orchestrated sequences or tokens become too complex              |
+| Visual development      | proposal             | Dev route `/dev/diagram` + Playwright                     | Fixtures for diagram states and screenshot tests                         |
+| Architecture boundaries | proposal             | ESLint `import/no-restricted-paths` or dependency-cruiser | Enforces the assembler/VM boundary                                       |
+| Linting                 | decided              | ESLint                                                    | Curly braces, TypeScript, quality rules                                  |
+| Formatting              | decided              | Prettier + `eslint-config-prettier`                       | Layout, indentation, line endings; no formatting rules in ESLint         |
+| Git hooks               | decided              | Husky + commitlint                                        | Commit message validation                                                |
+| License                 | decided              | MIT                                                       | New project code; original vendor assets remain separate                 |
 
 #### Tailwind CSS
 
@@ -405,24 +405,36 @@ meet. The assembler, VM, and disassembler use it for different purposes.
 export type OperandMode = 'address' | 'immediate' | 'target' | 'none';
 
 export interface InstructionSpec {
-  id: string;                       // e.g. 'ld', 'add', 'jmp'
-  canonicalMnemonic: string;        // 'ld'
-  opcodes: Partial<Record<OperandMode, Opcode>>;
-  // e.g. ld: { address: 10, immediate: 11 }
+    id: string; // e.g. 'ld', 'add', 'jmp'
+    canonicalMnemonic: string; // 'ld'
+    opcodes: Partial<Record<OperandMode, Opcode>>;
+    // e.g. ld: { address: 10, immediate: 11 }
 }
 
 export const ISA: Record<string, InstructionSpec> = {
-  ld:  { id: 'ld',  canonicalMnemonic: 'ld',  opcodes: { address: 10, immediate: 11 } },
-  st:  { id: 'st',  canonicalMnemonic: 'st',  opcodes: { address: 12 } },
-  in:  { id: 'in',  canonicalMnemonic: 'in',  opcodes: { address: 20 } },
-  out: { id: 'out', canonicalMnemonic: 'out', opcodes: { address: 22, immediate: 23 } },
-  add: { id: 'add', canonicalMnemonic: 'add', opcodes: { address: 30, immediate: 31 } },
-  // ...
-  jmp: { id: 'jmp', canonicalMnemonic: 'jmp', opcodes: { target: 50 } },
-  jlt: { id: 'jlt', canonicalMnemonic: 'jlt', opcodes: { target: 52 } },
-  jeq: { id: 'jeq', canonicalMnemonic: 'jeq', opcodes: { target: 54 } },
-  jgt: { id: 'jgt', canonicalMnemonic: 'jgt', opcodes: { target: 56 } },
-  end: { id: 'end', canonicalMnemonic: 'end', opcodes: { none: 60 } },
+    ld: {
+        id: 'ld',
+        canonicalMnemonic: 'ld',
+        opcodes: { address: 10, immediate: 11 },
+    },
+    st: { id: 'st', canonicalMnemonic: 'st', opcodes: { address: 12 } },
+    in: { id: 'in', canonicalMnemonic: 'in', opcodes: { address: 20 } },
+    out: {
+        id: 'out',
+        canonicalMnemonic: 'out',
+        opcodes: { address: 22, immediate: 23 },
+    },
+    add: {
+        id: 'add',
+        canonicalMnemonic: 'add',
+        opcodes: { address: 30, immediate: 31 },
+    },
+    // ...
+    jmp: { id: 'jmp', canonicalMnemonic: 'jmp', opcodes: { target: 50 } },
+    jlt: { id: 'jlt', canonicalMnemonic: 'jlt', opcodes: { target: 52 } },
+    jeq: { id: 'jeq', canonicalMnemonic: 'jeq', opcodes: { target: 54 } },
+    jgt: { id: 'jgt', canonicalMnemonic: 'jgt', opcodes: { target: 56 } },
+    end: { id: 'end', canonicalMnemonic: 'end', opcodes: { none: 60 } },
 };
 ```
 
@@ -439,19 +451,19 @@ JavaScript functions:
 
 ```ts
 export interface ObjectProgram {
-  memory: readonly Word[];          // 72 cells, including data
-  sourceMap: readonly number[];     // memory address -> source line
-  symbols: ReadonlyMap<string, Address>; // label -> memory address
-  listing: readonly ListingEntry[];
-  entry: Address;                   // 0 for MOPS
-  endAddress?: Address;
+    memory: readonly Word[]; // 72 cells, including data
+    sourceMap: readonly number[]; // memory address -> source line
+    symbols: ReadonlyMap<string, Address>; // label -> memory address
+    listing: readonly ListingEntry[];
+    entry: Address; // 0 for MOPS
+    endAddress?: Address;
 }
 
 export interface ListingEntry {
-  line: number;                     // source line
-  address: Address;                 // first memory cell
-  words: readonly Word[];           // 1 or 2 cells
-  source: string;                   // original line
+    line: number; // source line
+    address: Address; // first memory cell
+    words: readonly Word[]; // 1 or 2 cells
+    source: string; // original line
 }
 ```
 
@@ -492,10 +504,10 @@ but two passes are the classic and more robust assembler architecture.
 Important assembler tasks:
 
 - **Determine operand mode:**
-  - `$64`...`$71` or `a`...`h` -> address
-  - decimal number -> immediate
-  - `#12` or label -> jump target
-  - `end` -> no operand
+    - `$64`...`$71` or `a`...`h` -> address
+    - decimal number -> immediate
+    - `#12` or label -> jump target
+    - `end` -> no operand
 - **Choose opcode:** `ld` + address -> 10, `ld` + immediate -> 11.
 - **Range checks:** data addresses only 64-71, values -9999...9999, program no more
   than 64 cells, `end` present.
@@ -558,15 +570,15 @@ The VM emits **VmEvents**, for example:
 
 ```ts
 export interface VmEvent {
-  seq: number;
-  phase: Phase;
-  address: Address;           // current memory address
-  opcode?: Opcode;
-  operand?: Word;
-  microOp: MicroOp;
-  before: CpuState;
-  after: CpuState;
-  description: string;        // short English description
+    seq: number;
+    phase: Phase;
+    address: Address; // current memory address
+    opcode?: Opcode;
+    operand?: Word;
+    microOp: MicroOp;
+    before: CpuState;
+    after: CpuState;
+    description: string; // short English description
 }
 ```
 
@@ -585,45 +597,45 @@ Micro-ops remain a discriminated union:
 
 ```ts
 export type MicroOp =
-  | { kind: 'BZ_READ' }           // BZ -> SL_ADR
-  | { kind: 'MEM_READ'; width: 1 | 2 }
-  | { kind: 'BR_WRITE' }          // SL_VAL -> BR
-  | { kind: 'DECODE' }
-  | { kind: 'BZ_UPDATE' }
-  | { kind: 'INPUT_READ' }
-  | { kind: 'MEM_WRITE' }
-  | { kind: 'AC_WRITE' }
-  | { kind: 'AC_READ' }
-  | { kind: 'OP_WRITE' }
-  | { kind: 'AR_WRITE' }
-  | { kind: 'ALU_CALC' }
-  | { kind: 'ERG_AC_WRITE' }
-  | { kind: 'ERG_VGL_WRITE' }
-  | { kind: 'AUS_WRITE' }
-  | { kind: 'VGL_READ' }
-  | { kind: 'BZ_WRITE' }
-  | { kind: 'HALT' };
+    | { kind: 'BZ_READ' } // BZ -> SL_ADR
+    | { kind: 'MEM_READ'; width: 1 | 2 }
+    | { kind: 'BR_WRITE' } // SL_VAL -> BR
+    | { kind: 'DECODE' }
+    | { kind: 'BZ_UPDATE' }
+    | { kind: 'INPUT_READ' }
+    | { kind: 'MEM_WRITE' }
+    | { kind: 'AC_WRITE' }
+    | { kind: 'AC_READ' }
+    | { kind: 'OP_WRITE' }
+    | { kind: 'AR_WRITE' }
+    | { kind: 'ALU_CALC' }
+    | { kind: 'ERG_AC_WRITE' }
+    | { kind: 'ERG_VGL_WRITE' }
+    | { kind: 'AUS_WRITE' }
+    | { kind: 'VGL_READ' }
+    | { kind: 'BZ_WRITE' }
+    | { kind: 'HALT' };
 ```
 
 ```ts
 export type VmStepResult =
-  | { kind: 'step'; state: CpuState; event: VmEvent }
-  | { kind: 'input-required'; state: CpuState; event: VmEvent }
-  | { kind: 'trap'; state: CpuState; trap: Trap; event: VmEvent }
-  | { kind: 'halted'; state: CpuState; event?: VmEvent };
+    | { kind: 'step'; state: CpuState; event: VmEvent }
+    | { kind: 'input-required'; state: CpuState; event: VmEvent }
+    | { kind: 'trap'; state: CpuState; trap: Trap; event: VmEvent }
+    | { kind: 'halted'; state: CpuState; event?: VmEvent };
 ```
 
 Trap codes:
 
 ```ts
 export type TrapCode =
-  | 'DIVISION_BY_ZERO'
-  | 'OVERFLOW'
-  | 'COMPARE_NOT_SET'
-  | 'INVALID_OPCODE'
-  | 'PC_OUT_OF_RANGE'
-  | 'MEMORY_OUT_OF_RANGE'
-  | 'INPUT_OUT_OF_RANGE';
+    | 'DIVISION_BY_ZERO'
+    | 'OVERFLOW'
+    | 'COMPARE_NOT_SET'
+    | 'INVALID_OPCODE'
+    | 'PC_OUT_OF_RANGE'
+    | 'MEMORY_OUT_OF_RANGE'
+    | 'INPUT_OUT_OF_RANGE';
 ```
 
 A trap stops execution in a controlled way; the player presents it as a runtime error
@@ -709,40 +721,40 @@ Execution loop:
 
 ```ts
 function tick() {
-  const result = stepCpu(cpu, pendingInput);
-  cpu = result.state;
-  history.push(decorate(result.event, program));
+    const result = stepCpu(cpu, pendingInput);
+    cpu = result.state;
+    history.push(decorate(result.event, program));
 
-  if (result.kind === 'input-required') {
-    setStatus('waiting-input');
-    return;
-  }
-  if (result.kind === 'trap') {
-    setStatus('error');
-    return;
-  }
-  if (result.kind === 'halted') {
-    setStatus('finished');
-    return;
-  }
+    if (result.kind === 'input-required') {
+        setStatus('waiting-input');
+        return;
+    }
+    if (result.kind === 'trap') {
+        setStatus('error');
+        return;
+    }
+    if (result.kind === 'halted') {
+        setStatus('finished');
+        return;
+    }
 
-  if (shouldPause(result.event, mode)) {
-    setStatus('paused');
-  } else {
-    scheduleNext(tick, duration(result.event) / speed);
-  }
+    if (shouldPause(result.event, mode)) {
+        setStatus('paused');
+    } else {
+        scheduleNext(tick, duration(result.event) / speed);
+    }
 }
 ```
 
 Pause conditions:
 
-| Mode | Pause after |
-|---|---|
-| Microcycles | every microcycle |
-| Machine phases | last microcycle of a phase (FETCH/DECODE/EXECUTE) |
-| Instruction cycles | last microcycle of an instruction |
-| Output stop | `AUS_WRITE` |
-| Complete | only on END, error, or input |
+| Mode               | Pause after                                       |
+| ------------------ | ------------------------------------------------- |
+| Microcycles        | every microcycle                                  |
+| Machine phases     | last microcycle of a phase (FETCH/DECODE/EXECUTE) |
+| Instruction cycles | last microcycle of an instruction                 |
+| Output stop        | `AUS_WRITE`                                       |
+| Complete           | only on END, error, or input                      |
 
 Additionally: breakpoints on source lines, and always pause on `INPUT_READ`.
 
@@ -798,7 +810,7 @@ complex and fragile. In SVG, the clean solution is:
 
 ```tsx
 <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet">
-  ...
+    ...
 </svg>
 ```
 
@@ -823,13 +835,24 @@ For small screens:
 
 ```tsx
 <VnrDiagram cpu={cpu} visual={visual}>
-  <MemoryUnit memory={cpu.memory} active={visual.memory} />
-  <ControlUnit bz={cpu.bz} br={cpu.br} decoded={visual.decoded} active={visual.control} />
-  <AluUnit ac={cpu.ac} op={cpu.op} ar={cpu.ar} erg={cpu.erg}
-            vgl={cpu.vgl} active={visual.alu} />
-  <IoUnit ein={cpu.ein} aus={cpu.aus} active={visual.io} />
-  <BusLayer active={visual.buses} />
-  <FlowOverlay token={visual.token} />
+    <MemoryUnit memory={cpu.memory} active={visual.memory} />
+    <ControlUnit
+        bz={cpu.bz}
+        br={cpu.br}
+        decoded={visual.decoded}
+        active={visual.control}
+    />
+    <AluUnit
+        ac={cpu.ac}
+        op={cpu.op}
+        ar={cpu.ar}
+        erg={cpu.erg}
+        vgl={cpu.vgl}
+        active={visual.alu}
+    />
+    <IoUnit ein={cpu.ein} aus={cpu.aus} active={visual.io} />
+    <BusLayer active={visual.buses} />
+    <FlowOverlay token={visual.token} />
 </VnrDiagram>
 ```
 
@@ -851,11 +874,11 @@ Reusable building blocks:
 
 ```ts
 export const layout = {
-  memory: { x: 60, y: 140, cellW: 28, cellH: 18, columns: 3, rows: 24 },
-  control: { x: 430, y: 140, w: 220, h: 210 },
-  alu: { x: 430, y: 380, w: 220, h: 170 },
-  io: { x: 430, y: 580, w: 220, h: 100 },
-  buses: { /* named point lists */ },
+    memory: { x: 60, y: 140, cellW: 28, cellH: 18, columns: 3, rows: 24 },
+    control: { x: 430, y: 140, w: 220, h: 210 },
+    alu: { x: 430, y: 380, w: 220, h: 170 },
+    io: { x: 430, y: 580, w: 220, h: 100 },
+    buses: {/* named point lists */},
 };
 ```
 
@@ -879,31 +902,31 @@ or physics simulation. Neither applies here.
 
 Define a small, consistent state set:
 
-| State | Presentation |
-|---|---|
-| `idle` | neutral fill, normal border |
-| `active` | accent fill, stronger border, subtle glow |
-| `changed` | short pulse (for example 250 ms), then `idle` |
-| `error` | red border, error icon |
+| State        | Presentation                                     |
+| ------------ | ------------------------------------------------ |
+| `idle`       | neutral fill, normal border                      |
+| `active`     | accent fill, stronger border, subtle glow        |
+| `changed`    | short pulse (for example 250 ms), then `idle`    |
+| `error`      | red border, error icon                           |
 | `breakpoint` | editor/gutter marker, optional dot on a register |
-| `dimmed` | when another unit has focus (optional) |
+| `dimmed`     | when another unit has focus (optional)           |
 
 Colors as CSS variables:
 
 ```css
 :root {
-  --bg: #f7f8fa;
-  --unit-memory: #eef1f5;
-  --unit-control: #e3f2fd;
-  --unit-alu: #e8f5e9;
-  --unit-io: #fff8e1;
-  --bus: #f4d35e;
-  --bus-border: #8a7a2e;
-  --accent: #1e88e5;
-  --accent-soft: #bbdefb;
-  --error: #d32f2f;
-  --text: #1f2933;
-  --text-muted: #607080;
+    --bg: #f7f8fa;
+    --unit-memory: #eef1f5;
+    --unit-control: #e3f2fd;
+    --unit-alu: #e8f5e9;
+    --unit-io: #fff8e1;
+    --bus: #f4d35e;
+    --bus-border: #8a7a2e;
+    --accent: #1e88e5;
+    --accent-soft: #bbdefb;
+    --error: #d32f2f;
+    --text: #1f2933;
+    --text-muted: #607080;
 }
 ```
 
@@ -914,36 +937,44 @@ helps users with red-green color vision deficiency.
 ### 5.5 Animation Model: Three Levels
 
 1. **Semantic microcycle** (core)
-   - for example `MEM_READ`
-   - describes what happens functionally.
+    - for example `MEM_READ`
+    - describes what happens functionally.
 
 2. **Visual cues** (visualizer)
-   - for example:
-     ```ts
-     [
-       { active: ['sl', 'sl-mem'], duration: 120 },
-       { active: ['mem', 'mem-bar1', 'mem00', 'mem01'], duration: 300, stagger: 40 },
-     ]
-     ```
-   - cues are pure data; the player plays them in order.
-   - this allows visual changes without touching the machine.
+    - for example:
+        ```ts
+        [
+            { active: ['sl', 'sl-mem'], duration: 120 },
+            {
+                active: ['mem', 'mem-bar1', 'mem00', 'mem01'],
+                duration: 300,
+                stagger: 40,
+            },
+        ];
+        ```
+    - cues are pure data; the player plays them in order.
+    - this allows visual changes without touching the machine.
 
 3. **CSS/WAAPI** (browser)
-   - `fill`/`stroke` transitions, `opacity`, `filter`, `stroke-dashoffset`.
-   - for tokens: `offset-path`/`getPointAtLength` or WAAPI.
-   - respect `prefers-reduced-motion`.
+    - `fill`/`stroke` transitions, `opacity`, `filter`, `stroke-dashoffset`.
+    - for tokens: `offset-path`/`getPointAtLength` or WAAPI.
+    - respect `prefers-reduced-motion`.
 
 Example bus highlight:
 
 ```css
 .bus-path {
-  stroke: var(--bus);
-  stroke-width: 6;
-  transition: stroke 120ms ease, filter 120ms ease;
+    stroke: var(--bus);
+    stroke-width: 6;
+    transition:
+        stroke 120ms ease,
+        filter 120ms ease;
 }
-.bus-path[data-active="true"] {
-  stroke: var(--accent);
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 60%, transparent));
+.bus-path[data-active='true'] {
+    stroke: var(--accent);
+    filter: drop-shadow(
+        0 0 4px color-mix(in srgb, var(--accent) 60%, transparent)
+    );
 }
 ```
 
@@ -951,13 +982,15 @@ Optional overlay line for a flowing data stream:
 
 ```css
 .bus-flow {
-  stroke: var(--accent);
-  stroke-width: 2;
-  stroke-dasharray: 8 10;
-  animation: flow 0.8s linear infinite;
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-dasharray: 8 10;
+    animation: flow 0.8s linear infinite;
 }
 @keyframes flow {
-  to { stroke-dashoffset: -18; }
+    to {
+        stroke-dashoffset: -18;
+    }
 }
 ```
 
@@ -1146,14 +1179,14 @@ and VM (trace).
 ### 7.5 Visual Tests
 
 - Dev route `/dev/diagram` with fixtures for all diagram states:
-  - idle
-  - FETCH
-  - DECODE
-  - EXECUTE (ALU)
-  - memory read/write
-  - input
-  - error
-  - breakpoint
+    - idle
+    - FETCH
+    - DECODE
+    - EXECUTE (ALU)
+    - memory read/write
+    - input
+    - error
+    - breakpoint
 - Playwright screenshots for desktop, tablet, and mobile.
 - Check that active elements and values are correct, not just pixels.
 
@@ -1256,37 +1289,37 @@ Estimates are rough; tests and polish will likely add time.
 
 ## 9. Risks and Open Decisions
 
-| Risk | Mitigation |
-|---|---|
-| Semantic edge cases diverge | Differential tests against the original, fixture corpus |
-| Assembler and VM logic mix | Hard import boundary, VM tests with hand-written object code |
-| VM becomes a source interpreter | VM knows only opcodes/memory; mnemonics only in assembler/disassembler |
-| Animation and state get out of sync | Event stream, cues, pause at microcycle boundaries |
-| SVG text becomes unreadable on small screens | Fixed viewBox, zoom/fullscreen, collapsible editor |
-| Too many re-renders | Selectors, `React.memo`, CSS animations instead of per-frame state |
-| Tailwind Preflight breaks CodeMirror | Scope Preflight, load CodeMirror theme separately |
-| Browser file access is limited | Upload/download fallback; optional Tauri |
-| Legacy file encoding | Import ISO-8859-15, export UTF-8, offer a choice |
-| Scope creep | Keep Phase 1 deliberately small |
-| Licensing | See below |
+| Risk                                         | Mitigation                                                             |
+| -------------------------------------------- | ---------------------------------------------------------------------- |
+| Semantic edge cases diverge                  | Differential tests against the original, fixture corpus                |
+| Assembler and VM logic mix                   | Hard import boundary, VM tests with hand-written object code           |
+| VM becomes a source interpreter              | VM knows only opcodes/memory; mnemonics only in assembler/disassembler |
+| Animation and state get out of sync          | Event stream, cues, pause at microcycle boundaries                     |
+| SVG text becomes unreadable on small screens | Fixed viewBox, zoom/fullscreen, collapsible editor                     |
+| Too many re-renders                          | Selectors, `React.memo`, CSS animations instead of per-frame state     |
+| Tailwind Preflight breaks CodeMirror         | Scope Preflight, load CodeMirror theme separately                      |
+| Browser file access is limited               | Upload/download fallback; optional Tauri                               |
+| Legacy file encoding                         | Import ISO-8859-15, export UTF-8, offer a choice                       |
+| Scope creep                                  | Keep Phase 1 deliberately small                                        |
+| Licensing                                    | See below                                                              |
 
 Open design decisions:
 
 1. **Faithful or modern?**
-   - Recommendation: keep the basic layout recognizable for teachers, but modernize
-     colors, typography, and interaction.
+    - Recommendation: keep the basic layout recognizable for teachers, but modernize
+      colors, typography, and interaction.
 2. **Data-flow tokens?**
-   - Very helpful for teaching, but optional. Add after Phase 2.
+    - Very helpful for teaching, but optional. Add after Phase 2.
 3. **Single file or project management?**
-   - Single file initially; example library later.
+    - Single file initially; example library later.
 4. **Web only or desktop wrapper?**
-   - Web/PWA first; Tauri later if local files/offline access are important.
+    - Web/PWA first; Tauri later if local files/offline access are important.
 5. **Which font?**
-   - Monospace with a **plain zero without a dot or slash** (as in the original).
-     Candidates: Fira Mono, Roboto Mono, IBM Plex Mono; test in the browser.
+    - Monospace with a **plain zero without a dot or slash** (as in the original).
+      Candidates: Fira Mono, Roboto Mono, IBM Plex Mono; test in the browser.
 6. **UI language?**
-   - User-facing copy is a product decision. Keep it in a localization layer; the
-     repository itself uses American English.
+    - User-facing copy is a product decision. Keep it in a localization layer; the
+      repository itself uses American English.
 
 ---
 
