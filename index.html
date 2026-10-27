@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-accent="blue">
+<html lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,16 +7,12 @@
         <script>
             try {
                 const theme = localStorage.getItem('mops-theme');
-                const accent = localStorage.getItem('mops-accent');
                 const dark =
                     theme === 'dark' ||
                     (theme !== 'light' &&
                         window.matchMedia('(prefers-color-scheme: dark)')
                             .matches);
                 document.documentElement.classList.toggle('dark', dark);
-                if (accent) {
-                    document.documentElement.dataset.accent = accent;
-                }
             } catch {
                 // The application can run without stored preferences.
             }

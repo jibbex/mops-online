@@ -1,5 +1,5 @@
 /**
- * Theme and accent menu for the application header.
+ * Theme menu for the application header.
  *
  * @module components/theme-toggle
  */
@@ -12,68 +12,50 @@ import {
     DropdownMenuLabel,
     DropdownMenuRadioGroup,
     DropdownMenuRadioItem,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Moon, Palette, Sun } from 'lucide-react';
+import { useI18n } from '@/i18n/i18n-context';
+import { Moon, Sun } from 'lucide-react';
 import type { ReactElement } from 'react';
-import { useTheme, type Accent, type Theme } from './theme-context';
+import { useTheme, type Theme } from './theme-context';
 
 /**
- * Renders the appearance and accent selector.
+ * Renders the appearance selector.
  *
  * @returns The theme menu trigger and content.
  */
 export function ThemeToggle(): ReactElement {
-    const { theme, accent, setTheme, setAccent } = useTheme();
+    const { theme, setTheme } = useTheme();
+    const { t } = useI18n();
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Theme settings">
-                    {theme === 'dark' ? (
-                        <Moon data-icon="inline-start" />
-                    ) : (
-                        <Sun data-icon="inline-start" />
-                    )}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t('header.theme')}
+                >
+                    {theme === 'dark' ? <Moon /> : <Sun />}
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuGroup>
-                    <DropdownMenuLabel>Appearance</DropdownMenuLabel>
+                    <DropdownMenuLabel>
+                        {t('theme.appearance')}
+                    </DropdownMenuLabel>
                     <DropdownMenuRadioGroup
                         value={theme}
                         onValueChange={(value) => setTheme(value as Theme)}
                     >
                         <DropdownMenuRadioItem value="light">
-                            Light
+                            {t('theme.light')}
                         </DropdownMenuRadioItem>
                         <DropdownMenuRadioItem value="dark">
-                            Dark
+                            {t('theme.dark')}
                         </DropdownMenuRadioItem>
                         <DropdownMenuRadioItem value="system">
-                            System
-                        </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                    <DropdownMenuLabel className="flex items-center gap-2">
-                        <Palette />
-                        Accent
-                    </DropdownMenuLabel>
-                    <DropdownMenuRadioGroup
-                        value={accent}
-                        onValueChange={(value) => setAccent(value as Accent)}
-                    >
-                        <DropdownMenuRadioItem value="blue">
-                            Blue
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="emerald">
-                            Emerald
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="violet">
-                            Violet
+                            {t('theme.system')}
                         </DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                 </DropdownMenuGroup>

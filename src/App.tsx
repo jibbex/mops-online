@@ -2,13 +2,17 @@
  * Application shell.
  *
  * The shell connects the player store to the editor, execution controls, status
- * display, machine diagram, input dialog, and listing. It contains presentation
- * and command wiring only; machine semantics live in the core and player modules.
+ * display, machine diagram, input dialog, reference, and solution exchange. It
+ * contains presentation and command wiring only; machine semantics live in the
+ * core and player modules.
  *
  * @module App
  */
 
+import { CommandReference } from '@/components/command-reference';
+import { LanguageToggle } from '@/components/language-toggle';
 import { MopsEditor } from '@/components/MopsEditor';
+import { SourceFileDialog } from '@/components/source-file-dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { VnrDiagram } from '@/components/VnrDiagram';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -55,34 +59,67 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useI18n } from '@/i18n/i18n-context';
+import {
+    translateDiagnostic,
+    translateTrap,
+    type MessageKey,
+} from '@/i18n/messages';
 import { formatAddress, formatWord } from '@/lib/format';
+import {
+    isTaskContext,
+    PRACTICE_TASK_ID,
+    readTaskInfo,
+    type TaskInfo,
+} from '@/lib/task';
 import {
     usePlayer,
     type ExecutionMode,
     type PlayerSpeed,
     type PlayerStatus,
 } from '@/player/player';
+import { FLOW_DURATION_MS } from '@/player/timing';
 import { visualStateFor } from '@/player/visualMap';
-import { Code2 } from 'lucide-react';
+import {
+    ClipboardList,
+    Code2,
+    Cpu,
+    Pause,
+    Play,
+    Square,
+    StepBack,
+    StepForward,
+    Wand2,
+} from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 
 /** Pause modes exposed by the toolbar. */
-const MODES: { value: ExecutionMode; label: string }[] = [
-    { value: 'micro', label: 'Micro' },
-    { value: 'phase', label: 'Phases' },
-    { value: 'instruction', label: 'Commands' },
-    { value: 'output', label: 'Output' },
-    { value: 'run', label: 'Run' },
+const MODES: { readonly value: ExecutionMode; readonly key: MessageKey }[] = [
+    { value: 'micro', key: 'mode.micro' },
+    { value: 'phase', key: 'mode.phases' },
+    { value: 'instruction', key: 'mode.commands' },
+    { value: 'output', key: 'mode.output' },
+    { value: 'run', key: 'mode.run' },
 ];
 
 /** Playback speeds exposed by the toolbar. */
-const SPEEDS: { value: PlayerSpeed; label: string }[] = [
-    { value: 0, label: 'Off' },
+const SPEEDS: { readonly value: PlayerSpeed; readonly label: string }[] = [
+    { value: 0, label: '0' },
     { value: 0.5, label: '0.5x' },
     { value: 1, label: '1x' },
     { value: 2, label: '2x' },
     { value: 4, label: '4x' },
 ];
+
+const STATUS_KEYS: Record<PlayerStatus, MessageKey> = {
+    idle: 'status.idle',
+    ready: 'status.ready',
+    running: 'status.running',
+    paused: 'status.paused',
+    'waiting-input': 'status.waiting-input',
+    finished: 'status.finished',
+    error: 'status.error',
+};
 
 /**
  * Renders the complete editor, machine, and execution interface.
@@ -90,23 +127,34 @@ const SPEEDS: { value: PlayerSpeed; label: string }[] = [
  * @returns The application shell element.
  */
 export default function App(): ReactElement {
+    const { t } = useI18n();
     const player = usePlayer();
     const visual = visualStateFor(player.lastEvent);
+    const [task] = useState<TaskInfo>(() =>
+        readTaskInfo(window.location.search),
+    );
     const currentLine = player.lastEvent
         ? player.program?.sourceMap[player.lastEvent.address]
         : undefined;
+    const animatedSpeed = player.speed === 0 ? 1 : player.speed;
+    const flowDurationMs =
+        player.status === 'running' && player.speed === 0
+            ? 0
+            : Math.round(FLOW_DURATION_MS / animatedSpeed);
 
     return (
-        <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-            <Header />
-            <Toolbar />
+        <div className="app-shell flex h-screen flex-col overflow-hidden text-foreground">
+            <Header task={task} />
+            <Toolbar task={task} />
             <main className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.7fr)]">
                 <section className="flex min-h-0 flex-col gap-2">
-                    <Card className="flex min-h-0 flex-1 flex-col gap-0 py-0">
+                    <Card className="app-card flex min-h-0 flex-1 flex-col gap-0 py-0">
                         <CardHeader className="shrink-0 border-b">
-                            <CardTitle>Assembly source</CardTitle>
+                            <CardTitle>{t('editor.title')}</CardTitle>
                             <CardDescription>
-                                {player.source.split('\n').length} lines
+                                {t('editor.lines', {
+                                    count: player.source.split('\n').length,
+                                })}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="min-h-0 flex-1 p-0">
@@ -123,15 +171,20 @@ export default function App(): ReactElement {
                 </section>
 
                 <section className="flex min-h-0 flex-col gap-2">
-                    <Card className="flex min-h-0 flex-1 flex-col gap-0 py-0">
+                    <Card className="app-card flex min-h-0 flex-1 flex-col gap-0 py-0">
                         <CardHeader className="shrink-0 border-b">
-                            <CardTitle>Machine</CardTitle>
+                            <CardTitle>{t('machine.title')}</CardTitle>
                             <CardDescription>
-                                Live von Neumann machine state
+                                {t('machine.description')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="min-h-0 flex-1 p-1">
-                            <VnrDiagram cpu={player.cpu} visual={visual} />
+                            <VnrDiagram
+                                cpu={player.cpu}
+                                visual={visual}
+                                pulseKey={player.history.length}
+                                flowDurationMs={flowDurationMs}
+                            />
                         </CardContent>
                     </Card>
                     <StatusBar currentLine={currentLine} />
@@ -143,19 +196,39 @@ export default function App(): ReactElement {
 }
 
 /**
- * Product header with theme controls.
+ * Product header with task context, reference, language, and theme controls.
  *
+ * @param task Task metadata read from the page URL.
  * @returns The header element.
  */
-function Header(): ReactElement {
+function Header({ task }: { readonly task: TaskInfo }): ReactElement {
+    const { t } = useI18n();
+    const taskName =
+        task.title ||
+        (task.id === PRACTICE_TASK_ID ? t('task.practice') : task.id);
+
     return (
-        <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4">
-            <h1 className="text-xl font-semibold tracking-tight">MOPS</h1>
-            <Separator orientation="vertical" className="h-5" />
-            <p className="text-sm text-muted-foreground">
-                A web-based von Neumann model computer.
-            </p>
-            <div className="ml-auto">
+        <header className="app-header flex h-14 shrink-0 items-center gap-3 border-b px-4">
+            <span className="brand-mark" aria-hidden="true">
+                <Cpu />
+            </span>
+            <div className="flex min-w-0 flex-col justify-center">
+                <h1 className="brand-title text-lg leading-none font-semibold tracking-tight">
+                    MOPS
+                </h1>
+                <p className="mt-1 truncate text-[11px] leading-none text-muted-foreground">
+                    {t('app.subtitle')}
+                </p>
+            </div>
+            {isTaskContext(task) ? (
+                <Badge variant="outline" className="ml-1 max-w-64">
+                    <ClipboardList data-icon="inline-start" />
+                    <span className="truncate">{taskName}</span>
+                </Badge>
+            ) : null}
+            <div className="ml-auto flex items-center gap-1">
+                <CommandReference />
+                <LanguageToggle />
                 <ThemeToggle />
             </div>
         </header>
@@ -165,29 +238,40 @@ function Header(): ReactElement {
 /**
  * Execution controls and run-mode selectors.
  *
+ * @param task Task metadata used by the file dialog.
  * @returns The toolbar element.
  */
-function Toolbar(): ReactElement {
+function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
+    const { t } = useI18n();
     const player = usePlayer();
     const running = player.status === 'running';
     const waiting = player.status === 'waiting-input';
 
     return (
-        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2">
-            <Button variant="outline" onClick={player.assemble}>
-                Assemble
-            </Button>
-            <Button onClick={player.start} disabled={running || waiting}>
-                Start
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b px-4 py-2">
+            <Button size="sm" onClick={player.assemble}>
+                <Wand2 data-icon="inline-start" />
+                {t('toolbar.assemble')}
             </Button>
             <Button
+                size="sm"
+                onClick={player.start}
+                disabled={running || waiting}
+            >
+                <Play data-icon="inline-start" />
+                {t('toolbar.start')}
+            </Button>
+            <Button
+                size="sm"
                 variant="outline"
                 onClick={player.pause}
                 disabled={!running}
             >
-                Pause
+                <Pause data-icon="inline-start" />
+                {t('toolbar.pause')}
             </Button>
             <Button
+                size="sm"
                 variant="outline"
                 onClick={player.step}
                 disabled={
@@ -197,28 +281,38 @@ function Toolbar(): ReactElement {
                     player.status === 'error'
                 }
             >
-                Step
+                <StepForward data-icon="inline-start" />
+                {t('toolbar.step')}
             </Button>
             <Button
+                size="sm"
                 variant="outline"
                 onClick={player.stepBack}
                 disabled={player.history.length === 0 || running}
             >
-                Back
+                <StepBack data-icon="inline-start" />
+                {t('toolbar.back')}
             </Button>
             <Button
+                size="sm"
                 variant="destructive"
                 onClick={player.stop}
                 disabled={!player.program}
             >
-                Stop
+                <Square data-icon="inline-start" />
+                {t('toolbar.stop')}
             </Button>
             <ListingSheet />
+            <SourceFileDialog
+                task={task}
+                source={player.source}
+                onImport={player.setSource}
+            />
 
             <Separator orientation="vertical" className="h-6" />
 
             <Field orientation="horizontal" className="w-auto">
-                <FieldLabel className="sr-only">Mode</FieldLabel>
+                <FieldLabel className="sr-only">{t('mode.label')}</FieldLabel>
                 <ToggleGroup
                     type="single"
                     variant="outline"
@@ -229,18 +323,18 @@ function Toolbar(): ReactElement {
                             player.setMode(value as ExecutionMode);
                         }
                     }}
-                    aria-label="Mode"
+                    aria-label={t('mode.label')}
                 >
                     {MODES.map((mode) => (
                         <ToggleGroupItem key={mode.value} value={mode.value}>
-                            {mode.label}
+                            {t(mode.key)}
                         </ToggleGroupItem>
                     ))}
                 </ToggleGroup>
             </Field>
 
             <Field orientation="horizontal" className="w-auto">
-                <FieldLabel className="sr-only">Speed</FieldLabel>
+                <FieldLabel className="sr-only">{t('speed.label')}</FieldLabel>
                 <ToggleGroup
                     type="single"
                     variant="outline"
@@ -251,14 +345,14 @@ function Toolbar(): ReactElement {
                             player.setSpeed(Number(value) as PlayerSpeed);
                         }
                     }}
-                    aria-label="Speed"
+                    aria-label={t('speed.label')}
                 >
                     {SPEEDS.map((speed) => (
                         <ToggleGroupItem
                             key={speed.value}
                             value={String(speed.value)}
                         >
-                            {speed.label}
+                            {speed.value === 0 ? t('speed.off') : speed.label}
                         </ToggleGroupItem>
                     ))}
                 </ToggleGroup>
@@ -278,33 +372,61 @@ function StatusBar({
 }: {
     readonly currentLine?: number;
 }): ReactElement {
+    const { language, t } = useI18n();
     const player = usePlayer();
     const cpu = player.cpu;
 
     return (
-        <Card size="sm" className="shrink-0">
+        <Card size="sm" className="app-card shrink-0">
             <CardHeader>
-                <CardTitle>Status</CardTitle>
-                <CardDescription>Live machine values</CardDescription>
+                <CardTitle>{t('status.title')}</CardTitle>
+                <CardDescription>{t('status.description')}</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap items-center gap-2">
                 <StatusValue
-                    label="Status"
-                    value={statusLabel(player.status)}
+                    id="status"
+                    label={t('status.status')}
+                    value={t(STATUS_KEYS[player.status])}
                     accent={player.status === 'error'}
                 />
-                <StatusValue label="Phase" value={cpu?.phase ?? '—'} />
-                <StatusValue label="BZ" value={formatAddress(cpu?.bz ?? 0)} />
-                <StatusValue label="AC" value={formatWord(cpu?.ac ?? 0)} />
-                <StatusValue label="AUS" value={formatWord(cpu?.aus ?? 0)} />
                 <StatusValue
-                    label="Line"
+                    id="phase"
+                    label={t('status.phase')}
+                    value={cpu?.phase ?? '—'}
+                />
+                <StatusValue
+                    id="bz"
+                    label={t('status.bz')}
+                    value={formatAddress(cpu?.bz ?? 0)}
+                />
+                <StatusValue
+                    id="ac"
+                    label={t('status.ac')}
+                    value={formatWord(cpu?.ac ?? 0)}
+                />
+                <StatusValue
+                    id="aus"
+                    label={t('status.aus')}
+                    value={formatWord(cpu?.aus ?? 0)}
+                />
+                <StatusValue
+                    id="line"
+                    label={t('status.line')}
                     value={currentLine ? String(currentLine) : '—'}
                 />
-                <StatusValue label="Decoded" value={cpu?.decoded || '—'} />
+                <StatusValue
+                    id="decoded"
+                    label={t('status.decoded')}
+                    value={cpu?.decoded || '—'}
+                />
                 {player.trap ? (
                     <Badge variant="destructive">
-                        {player.trap.code}: {player.trap.message}
+                        {player.trap.code}:{' '}
+                        {translateTrap(
+                            language,
+                            player.trap.code,
+                            player.trap.message,
+                        )}
                     </Badge>
                 ) : null}
             </CardContent>
@@ -315,16 +437,19 @@ function StatusBar({
 /**
  * Renders one labelled status value.
  *
+ * @param id Stable test identifier.
  * @param label Visible status label.
  * @param value Formatted status value.
  * @param accent Whether the value uses the destructive accent.
  * @returns The status value element.
  */
 function StatusValue({
+    id,
     label,
     value,
     accent = false,
 }: {
+    readonly id: string;
     readonly label: string;
     readonly value: string;
     readonly accent?: boolean;
@@ -334,7 +459,7 @@ function StatusValue({
             <Badge variant="outline">{label}</Badge>
             <Badge
                 variant={accent ? 'destructive' : 'secondary'}
-                data-testid={`status-${label.toLowerCase()}`}
+                data-testid={`status-${id}`}
             >
                 {value}
             </Badge>
@@ -348,6 +473,7 @@ function StatusValue({
  * @returns The diagnostics element, or null when there are no messages.
  */
 function Diagnostics(): ReactElement | null {
+    const { language, t } = useI18n();
     const player = usePlayer();
     const messages = [...player.diagnostics, ...player.warnings];
 
@@ -362,7 +488,7 @@ function Diagnostics(): ReactElement | null {
             variant={hasError ? 'destructive' : 'default'}
             className="max-h-32 shrink-0"
         >
-            <AlertTitle>Diagnostics</AlertTitle>
+            <AlertTitle>{t('diagnostics.title')}</AlertTitle>
             <AlertDescription>
                 <ScrollArea className="h-20">
                     <div className="flex flex-col gap-1">
@@ -370,7 +496,14 @@ function Diagnostics(): ReactElement | null {
                             <span
                                 key={`${message.line}-${message.code}-${index}`}
                             >
-                                Line {message.line}: {message.message}
+                                {t('diagnostics.line', {
+                                    line: message.line,
+                                    message: translateDiagnostic(
+                                        language,
+                                        message.code,
+                                        message.message,
+                                    ),
+                                })}
                             </span>
                         ))}
                     </div>
@@ -386,15 +519,16 @@ function Diagnostics(): ReactElement | null {
  * @returns The input dialog element.
  */
 function InputDialog(): ReactElement {
+    const { t } = useI18n();
     const player = usePlayer();
     const [value, setValue] = useState('');
-    const [error, setError] = useState('');
+    const [invalid, setInvalid] = useState(false);
     const open = player.status === 'waiting-input';
 
     useEffect(() => {
         if (open) {
             setValue('');
-            setError('');
+            setInvalid(false);
         }
     }, [open]);
 
@@ -403,11 +537,11 @@ function InputDialog(): ReactElement {
         const parsed = Number.parseInt(value, 10);
 
         if (!Number.isInteger(parsed) || parsed < -9999 || parsed > 9999) {
-            setError('Enter an integer from -9999 to 9999.');
+            setInvalid(true);
             return;
         }
 
-        setError('');
+        setInvalid(false);
         player.provideInput(parsed);
     };
 
@@ -415,16 +549,16 @@ function InputDialog(): ReactElement {
         <Dialog open={open} onOpenChange={() => undefined}>
             <DialogContent showCloseButton={false}>
                 <DialogHeader>
-                    <DialogTitle>Input required</DialogTitle>
+                    <DialogTitle>{t('input.title')}</DialogTitle>
                     <DialogDescription>
-                        The input register is waiting for a value.
+                        {t('input.description')}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={submit} className="flex flex-col gap-4">
                     <FieldGroup>
-                        <Field data-invalid={error !== ''}>
+                        <Field data-invalid={invalid}>
                             <FieldLabel htmlFor="input-value">
-                                Input value
+                                {t('input.label')}
                             </FieldLabel>
                             <Input
                                 id="input-value"
@@ -432,25 +566,26 @@ function InputDialog(): ReactElement {
                                 min={-9999}
                                 max={9999}
                                 value={value}
-                                aria-invalid={error !== ''}
-                                onChange={(event) =>
-                                    setValue(event.target.value)
-                                }
+                                aria-invalid={invalid}
+                                onChange={(event) => {
+                                    setValue(event.target.value);
+                                    setInvalid(false);
+                                }}
                                 autoFocus
                             />
-                            {error ? (
+                            {invalid ? (
                                 <FieldDescription className="text-destructive">
-                                    {error}
+                                    {t('input.invalid')}
                                 </FieldDescription>
                             ) : (
                                 <FieldDescription>
-                                    Valid range: -9999 to 9999.
+                                    {t('input.validRange')}
                                 </FieldDescription>
                             )}
                         </Field>
                     </FieldGroup>
                     <DialogFooter>
-                        <Button type="submit">Submit</Button>
+                        <Button type="submit">{t('input.submit')}</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
@@ -464,31 +599,32 @@ function InputDialog(): ReactElement {
  * @returns The listing trigger and sheet content.
  */
 function ListingSheet(): ReactElement {
+    const { t } = useI18n();
     const player = usePlayer();
     const listing = player.program?.listing ?? [];
 
     return (
         <Sheet>
             <SheetTrigger asChild>
-                <Button variant="outline" disabled={!player.program}>
+                <Button size="sm" variant="outline" disabled={!player.program}>
                     <Code2 data-icon="inline-start" />
-                    Listing
+                    {t('listing.trigger')}
                 </Button>
             </SheetTrigger>
             <SheetContent className="w-full sm:max-w-2xl">
                 <SheetHeader>
-                    <SheetTitle>Machine code listing</SheetTitle>
+                    <SheetTitle>{t('listing.title')}</SheetTitle>
                     <SheetDescription>
-                        Source lines, addresses, and encoded words
+                        {t('listing.description')}
                     </SheetDescription>
                 </SheetHeader>
                 <ScrollArea className="h-[calc(100vh-8rem)] px-4">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Addr</TableHead>
-                                <TableHead>Code</TableHead>
-                                <TableHead>Source</TableHead>
+                                <TableHead>{t('listing.addr')}</TableHead>
+                                <TableHead>{t('listing.code')}</TableHead>
+                                <TableHead>{t('listing.source')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -511,29 +647,4 @@ function ListingSheet(): ReactElement {
             </SheetContent>
         </Sheet>
     );
-}
-
-/**
- * Maps an internal player status to its user-facing label.
- *
- * @param status Current player status.
- * @returns The visible status label.
- */
-function statusLabel(status: PlayerStatus): string {
-    switch (status) {
-        case 'idle':
-            return 'Idle';
-        case 'ready':
-            return 'Ready';
-        case 'running':
-            return 'Running';
-        case 'paused':
-            return 'Paused';
-        case 'waiting-input':
-            return 'Waiting for input';
-        case 'finished':
-            return 'Finished';
-        case 'error':
-            return 'Error';
-    }
 }

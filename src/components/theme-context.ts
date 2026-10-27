@@ -10,17 +10,13 @@
 import { createContext, useContext } from 'react';
 
 export type Theme = 'light' | 'dark' | 'system';
-export type Accent = 'blue' | 'emerald' | 'violet';
 
 export interface ThemeContextValue {
     readonly theme: Theme;
-    readonly accent: Accent;
     readonly setTheme: (theme: Theme) => void;
-    readonly setAccent: (accent: Accent) => void;
 }
 
 export const THEME_STORAGE_KEY = 'mops-theme';
-export const ACCENT_STORAGE_KEY = 'mops-accent';
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
@@ -34,19 +30,17 @@ export function prefersDark(): boolean {
 }
 
 /**
- * Applies the selected theme and accent to the document root.
+ * Applies the selected theme to the document root.
  *
  * @param theme Selected appearance.
- * @param accent Selected accent palette.
  */
-export function applyTheme(theme: Theme, accent: Accent): void {
+export function applyTheme(theme: Theme): void {
     const root = document.documentElement;
 
     root.classList.toggle(
         'dark',
         theme === 'dark' || (theme === 'system' && prefersDark()),
     );
-    root.dataset.accent = accent;
 }
 
 /**
@@ -73,7 +67,7 @@ export function readStoredValue<T extends string>(
 /**
  * Returns the active theme context.
  *
- * @returns Theme, accent, and setters.
+ * @returns Theme and setter.
  * @throws When called outside a {@link ThemeContext} provider.
  */
 export function useTheme(): ThemeContextValue {

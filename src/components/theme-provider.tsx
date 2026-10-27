@@ -10,12 +10,10 @@
 
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import {
-    ACCENT_STORAGE_KEY,
     applyTheme,
     readStoredValue,
     ThemeContext,
     THEME_STORAGE_KEY,
-    type Accent,
     type Theme,
 } from './theme-context';
 
@@ -37,20 +35,12 @@ export function ThemeProvider({
             'system',
         ),
     );
-    const [accent, setAccent] = useState<Accent>(() =>
-        readStoredValue(
-            ACCENT_STORAGE_KEY,
-            ['blue', 'emerald', 'violet'],
-            'blue',
-        ),
-    );
 
     useEffect(() => {
-        applyTheme(theme, accent);
+        applyTheme(theme);
 
         try {
             localStorage.setItem(THEME_STORAGE_KEY, theme);
-            localStorage.setItem(ACCENT_STORAGE_KEY, accent);
         } catch {
             // Storage can be unavailable; the active theme still applies.
         }
@@ -60,15 +50,15 @@ export function ThemeProvider({
         }
 
         const media = window.matchMedia('(prefers-color-scheme: dark)');
-        const onChange = (): void => applyTheme(theme, accent);
+        const onChange = (): void => applyTheme(theme);
 
         media.addEventListener('change', onChange);
 
         return () => media.removeEventListener('change', onChange);
-    }, [theme, accent]);
+    }, [theme]);
 
     return (
-        <ThemeContext.Provider value={{ theme, accent, setTheme, setAccent }}>
+        <ThemeContext.Provider value={{ theme, setTheme }}>
             {children}
         </ThemeContext.Provider>
     );

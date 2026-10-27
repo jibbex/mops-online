@@ -8,7 +8,11 @@
  */
 
 import type { Diagnostic } from '@/core/assembler';
-import { StreamLanguage } from '@codemirror/language';
+import {
+    HighlightStyle,
+    StreamLanguage,
+    syntaxHighlighting,
+} from '@codemirror/language';
 import {
     EditorState,
     RangeSetBuilder,
@@ -16,6 +20,7 @@ import {
     StateField,
 } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
+import { tags } from '@lezer/highlight';
 import { basicSetup } from 'codemirror';
 import { useEffect, useRef, type ReactElement } from 'react';
 import { createEditorLineState, type EditorLineState } from './editorLineState';
@@ -68,6 +73,34 @@ const mopsLanguage = StreamLanguage.define({
 });
 
 /**
+ * Syntax colors that follow the application theme tokens.
+ */
+const mopsHighlightStyle = HighlightStyle.define([
+    {
+        tag: tags.comment,
+        color: 'var(--editor-comment)',
+        fontStyle: 'italic',
+    },
+    {
+        tag: [tags.keyword, tags.atom],
+        color: 'var(--editor-keyword)',
+        fontWeight: '600',
+    },
+    {
+        tag: [tags.number, tags.literal],
+        color: 'var(--editor-number)',
+    },
+    {
+        tag: tags.variableName,
+        color: 'var(--editor-label)',
+    },
+    {
+        tag: tags.operator,
+        color: 'var(--editor-operator)',
+    },
+]);
+
+/**
  * Editor layout that follows the application's fonts and spacing.
  */
 const editorTheme = EditorView.theme({
@@ -91,6 +124,12 @@ const editorTheme = EditorView.theme({
     },
     '.cm-activeLine, .cm-activeLineGutter': {
         backgroundColor: 'var(--accent)',
+    },
+    '.cm-cursor': {
+        borderLeftColor: 'var(--primary)',
+    },
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
+        backgroundColor: 'color-mix(in oklch, var(--primary) 24%, transparent)',
     },
     '.cm-current-line': {
         boxShadow: 'inset 3px 0 0 var(--primary)',
@@ -210,6 +249,7 @@ export function MopsEditor({
                 extensions: [
                     basicSetup,
                     mopsLanguage,
+                    syntaxHighlighting(mopsHighlightStyle),
                     editorTheme,
                     editorLineField,
                     EditorState.tabSize.of(4),

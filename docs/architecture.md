@@ -839,7 +839,12 @@ For small screens:
 ### 5.2 Component Structure
 
 ```tsx
-<VnrDiagram cpu={cpu} visual={visual}>
+<VnrDiagram
+    cpu={cpu}
+    visual={visual}
+    pulseKey={eventKey}
+    flowDurationMs={flowDurationMs}
+>
     <MemoryUnit memory={cpu.memory} active={visual.memory} />
     <ControlUnit
         bz={cpu.bz}
@@ -856,10 +861,18 @@ For small screens:
         active={visual.alu}
     />
     <IoUnit ein={cpu.ein} aus={cpu.aus} active={visual.io} />
-    <BusLayer active={visual.buses} />
-    <FlowOverlay token={visual.token} />
+    <BusLayer />
+    <PacketLayer
+        transfer={visual.transfer}
+        pulseKey={eventKey}
+        flowDurationMs={flowDurationMs}
+    />
 </VnrDiagram>
 ```
+
+The bus and the packet layer are both plain SVG. The bus paths never change
+color. A transfer adds one `<animateMotion>` packet that travels the complete route
+from source to destination and fades out through an SVG `<animate>` element.
 
 `decoded` is a display object (mnemonic plus operand, possibly with a user-defined
 mnemonic). The VM provides opcode and operand; the UI formats them using the mnemonic
@@ -965,44 +978,44 @@ helps users with red-green color vision deficiency.
     - for tokens: `offset-path`/`getPointAtLength` or WAAPI.
     - respect `prefers-reduced-motion`.
 
-Example bus highlight:
+The bus is permanent SVG geometry. It never changes color during a transfer.
+Data movement uses a separate SVG packet layer above the units:
 
-```css
-.bus-path {
-    stroke: var(--bus);
-    stroke-width: 6;
-    transition:
-        stroke 120ms ease,
-        filter 120ms ease;
-}
-.bus-path[data-active='true'] {
-    stroke: var(--accent);
-    filter: drop-shadow(
-        0 0 4px color-mix(in srgb, var(--accent) 60%, transparent)
-    );
-}
+```tsx
+<g className="diagram-packet-layer" data-transfer={route.id}>
+    <rect className="diagram-packet-halo" ... />
+    <path className="diagram-packet-core" d={arrowShape} />
+    <animateMotion
+        begin="indefinite"
+        dur={`${flowDurationMs}ms`}
+        path={route.path}
+        rotate="auto"
+        fill="freeze"
+    />
+    <animate
+        attributeName="opacity"
+        begin="indefinite"
+        values="0;1;1;0"
+        keyTimes="0;0.08;0.86;1"
+        dur={`${flowDurationMs}ms`}
+        fill="freeze"
+    />
+</g>
 ```
 
-Optional overlay line for a flowing data stream:
+Each transfer gets exactly one packet. The route is a complete source-to-destination
+path, including every bus corner and the shared trunk. The packet has a distinct
+teal capsule and direction arrow so it cannot be confused with the yellow bus or
+the violet active-state highlight.
 
-```css
-.bus-flow {
-    stroke: var(--accent);
-    stroke-width: 2;
-    stroke-dasharray: 8 10;
-    animation: flow 0.8s linear infinite;
-}
-@keyframes flow {
-    to {
-        stroke-dashoffset: -18;
-    }
-}
-```
+The player reserves more time per microcycle than the packet animation needs, so a
+packet always finishes before the next transfer starts. Step mode uses the same
+duration, which keeps small routes readable instead of making them flash.
 
 ### 5.6 Animation Timing and Pause
 
-- Each microcycle has a **base duration** (for example 250-500 ms), depending on the
-  operation; the player scales it by the selected speed.
+- Each packet takes 600 ms at normal speed; the player scales it by the selected
+  speed and waits 780 ms per microcycle so the packet train can finish.
 - Pause occurs **at microcycle boundaries**, not in the middle of a CSS transition.
   This feels stable and matches the original (which deactivates after each
   microcycle).

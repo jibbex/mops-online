@@ -11,6 +11,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { ThemeProvider } from './components/theme-provider';
+import { LanguageProvider } from './i18n/i18n-provider';
 import './index.css';
 import './styles/diagram.css';
 
@@ -23,7 +24,9 @@ if (!rootElement) {
 createRoot(rootElement).render(
     <StrictMode>
         <ThemeProvider>
-            <App />
+            <LanguageProvider>
+                <App />
+            </LanguageProvider>
         </ThemeProvider>
     </StrictMode>,
 );

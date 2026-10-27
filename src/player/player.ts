@@ -22,6 +22,7 @@ import {
     type VmStepResult,
 } from '@/core/vm';
 import { create } from 'zustand';
+import { microcycleDelay } from './timing';
 
 /** Lifecycle states of the execution player. */
 export type PlayerStatus =
@@ -135,7 +136,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
             return;
         }
 
-        const delay = speed === 0 ? 0 : Math.max(20, 260 / speed);
+        const delay = microcycleDelay(speed);
         timer = setTimeout(() => {
             timer = null;
             runNext();

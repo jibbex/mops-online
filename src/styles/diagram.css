@@ -3,37 +3,41 @@
         ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Roboto Mono', Menlo,
         Consolas, monospace;
     --diagram-bg: transparent;
-    --diagram-memory: #e0e0e8;
-    --diagram-control: #a6e0fb;
-    --diagram-alu-unit: #d4f1ff;
-    --diagram-io: #c3f691;
-    --diagram-head: #fffde7;
-    --diagram-border: #64748b;
-    --diagram-register: #fff7cc;
-    --diagram-bus: #e2b93b;
-    --diagram-active: #dc2626;
-    --diagram-active-soft: #fecaca;
-    --diagram-active-text: #450a0a;
-    --diagram-text: #1e293b;
-    --diagram-muted: #64748b;
-    --diagram-alu: #2693c6;
+    --diagram-memory: oklch(0.94 0.012 275);
+    --diagram-control: oklch(0.93 0.045 225);
+    --diagram-alu-unit: oklch(0.95 0.035 230);
+    --diagram-io: oklch(0.94 0.05 150);
+    --diagram-head: oklch(0.98 0.025 95);
+    --diagram-border: oklch(0.62 0.03 255);
+    --diagram-register: oklch(0.99 0.025 95);
+    --diagram-bus: oklch(0.78 0.14 85);
+    --diagram-active: oklch(0.52 0.19 285);
+    --diagram-active-soft: oklch(0.92 0.06 285);
+    --diagram-active-text: oklch(0.99 0 0);
+    --diagram-packet: oklch(0.55 0.15 190);
+    --diagram-packet-text: oklch(0.99 0 0);
+    --diagram-text: oklch(0.24 0.02 260);
+    --diagram-muted: oklch(0.48 0.02 260);
+    --diagram-alu: oklch(0.62 0.11 230);
 }
 
 .dark {
-    --diagram-memory: #1e293b;
-    --diagram-control: #0c4a6e;
-    --diagram-alu-unit: #172554;
-    --diagram-io: #14532d;
-    --diagram-head: #3f3a1f;
-    --diagram-border: #64748b;
-    --diagram-register: #3f3a1f;
-    --diagram-bus: #b45309;
-    --diagram-active: #f87171;
-    --diagram-active-soft: #7f1d1d;
-    --diagram-active-text: #fef2f2;
-    --diagram-text: #e2e8f0;
-    --diagram-muted: #94a3b8;
-    --diagram-alu: #0e7490;
+    --diagram-memory: oklch(0.27 0.02 270);
+    --diagram-control: oklch(0.3 0.045 235);
+    --diagram-alu-unit: oklch(0.29 0.045 250);
+    --diagram-io: oklch(0.3 0.05 150);
+    --diagram-head: oklch(0.36 0.035 90);
+    --diagram-border: oklch(0.52 0.03 255);
+    --diagram-register: oklch(0.36 0.035 90);
+    --diagram-bus: oklch(0.7 0.13 85);
+    --diagram-active: oklch(0.76 0.14 285);
+    --diagram-active-soft: oklch(0.38 0.08 285);
+    --diagram-active-text: oklch(0.14 0 0);
+    --diagram-packet: oklch(0.8 0.13 190);
+    --diagram-packet-text: oklch(0.14 0 0);
+    --diagram-text: oklch(0.93 0.01 260);
+    --diagram-muted: oklch(0.72 0.02 260);
+    --diagram-alu: oklch(0.55 0.1 230);
 }
 
 .diagram-svg {
@@ -72,12 +76,16 @@
 }
 
 .diagram-unit.is-active .unit-head {
-    fill: var(--diagram-active);
+    fill: var(--diagram-active-soft);
+    stroke: var(--diagram-active);
 }
 
 .diagram-unit.is-active .unit-frame {
     stroke: var(--diagram-active);
     stroke-width: 2.5;
+    filter: drop-shadow(
+        0 0 5px color-mix(in oklch, var(--diagram-active) 35%, transparent)
+    );
 }
 
 .diagram-register rect {
@@ -91,7 +99,7 @@
 }
 
 .diagram-register.is-active rect {
-    fill: var(--diagram-active-soft);
+    fill: var(--diagram-active);
     stroke: var(--diagram-active);
     stroke-width: 2;
 }
@@ -112,7 +120,7 @@
 }
 
 .memory-cell.is-active rect {
-    fill: var(--diagram-active-soft);
+    fill: var(--diagram-active);
     stroke: var(--diagram-active);
     stroke-width: 2;
 }
@@ -130,13 +138,6 @@
     stroke-linejoin: round;
 }
 
-.diagram-bus.is-active {
-    stroke: var(--diagram-active);
-    filter: drop-shadow(
-        0 0 4px color-mix(in srgb, var(--diagram-active) 45%, transparent)
-    );
-}
-
 .diagram-signal {
     fill: none;
     stroke: var(--diagram-bus);
@@ -145,11 +146,29 @@
     stroke-linejoin: round;
 }
 
-.diagram-signal.is-active {
-    stroke: var(--diagram-active);
+/*
+ * A data packet travels along the complete route and fades out at the
+ * destination. The wires keep their permanent bus color between steps.
+ */
+.diagram-packet-layer {
+    pointer-events: none;
+}
+
+.diagram-packet-halo {
+    fill: color-mix(in oklch, var(--diagram-packet) 32%, transparent);
+}
+
+.diagram-packet-core {
+    fill: var(--diagram-packet);
+    stroke: var(--diagram-packet-text);
+    stroke-width: 1.5;
     filter: drop-shadow(
-        0 0 4px color-mix(in srgb, var(--diagram-active) 45%, transparent)
+        0 0 9px color-mix(in oklch, var(--diagram-packet) 75%, transparent)
     );
+}
+
+.diagram-packet-mark {
+    fill: var(--diagram-packet-text);
 }
 
 .diagram-text {
@@ -188,13 +207,11 @@
 }
 
 .diagram-unit.is-active .diagram-triangle {
-    fill: var(--diagram-active-soft);
+    fill: var(--diagram-active);
     stroke: var(--diagram-active);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-    .diagram-bus,
-    .diagram-signal,
     .memory-cell rect,
     .diagram-register rect,
     .unit-head,
@@ -203,6 +220,13 @@
         transition:
             stroke 120ms ease,
             fill 120ms ease,
-            stroke-width 120ms ease;
+            stroke-width 120ms ease,
+            filter 120ms ease;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .diagram-packet-layer {
+        display: none;
     }
 }

@@ -9,14 +9,19 @@
  */
 
 import type { CpuState } from '@/core/vm';
+import { useI18n } from '@/i18n/i18n-context';
 import { formatAddress, formatWord } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { VisualState } from '@/player/visualMap';
-import type { ReactElement } from 'react';
+import { useEffect, useRef, type ReactElement } from 'react';
 
 interface VnrDiagramProps {
     readonly cpu: CpuState | null;
     readonly visual: VisualState;
+    /** Monotonic event key used to restart packet movement. */
+    readonly pulseKey: number;
+    /** Time for one packet to traverse its route; zero hides packets. */
+    readonly flowDurationMs: number;
 }
 
 const MEMORY_COLUMNS = [0, 1, 2];
@@ -26,9 +31,17 @@ const MEMORY_COLUMNS = [0, 1, 2];
  *
  * @param cpu Current CPU state, or null before assembly.
  * @param visual Active diagram elements derived from the last event.
+ * @param pulseKey Monotonic event key used to restart packet movement.
+ * @param flowDurationMs Time for one packet to traverse its route.
  * @returns The SVG diagram element.
  */
-export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
+export function VnrDiagram({
+    cpu,
+    visual,
+    pulseKey,
+    flowDurationMs,
+}: VnrDiagramProps): ReactElement {
+    const { t } = useI18n();
     const memory = cpu?.memory ?? Array<number>(72).fill(0);
     const active = (id: string) => visual.active.has(id);
 
@@ -39,13 +52,10 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
             role="img"
             aria-labelledby="vnr-title vnr-description"
         >
-            <title id="vnr-title">MOPS von Neumann machine</title>
-            <desc id="vnr-description">
-                Memory, control unit, ALU, and input/output unit with live
-                register and bus states.
-            </desc>
+            <title id="vnr-title">{t('diagram.title')}</title>
+            <desc id="vnr-description">{t('diagram.description')}</desc>
 
-            <BusLayer active={active} />
+            <BusLayer />
 
             <g
                 className={cn(
@@ -76,7 +86,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                     y="14"
                     textAnchor="middle"
                 >
-                    MEMORY UNIT
+                    {t('diagram.memoryUnit')}
                 </text>
                 <text
                     className="diagram-title"
@@ -84,7 +94,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                     y="63"
                     textAnchor="middle"
                 >
-                    MEMORY LOGIC
+                    {t('diagram.memoryLogic')}
                 </text>
 
                 {MEMORY_COLUMNS.map((column) => (
@@ -189,7 +199,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                     y="14"
                     textAnchor="middle"
                 >
-                    CONTROL UNIT
+                    {t('diagram.controlUnit')}
                 </text>
                 <text
                     className="diagram-title"
@@ -197,11 +207,11 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                     y="63"
                     textAnchor="middle"
                 >
-                    CONTROL LOGIC
+                    {t('diagram.controlLogic')}
                 </text>
 
                 <text className="diagram-label" x="325" y="100">
-                    INSTRUCTION COUNTER
+                    {t('diagram.instructionCounter')}
                 </text>
                 <g
                     id="bz"
@@ -223,7 +233,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                 </g>
 
                 <text className="diagram-label" x="325" y="127">
-                    INSTRUCTION REGISTER
+                    {t('diagram.instructionRegister')}
                 </text>
                 <g
                     id="br"
@@ -258,7 +268,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                 </g>
 
                 <text className="diagram-label" x="325" y="160">
-                    DECODER
+                    {t('diagram.decoder')}
                 </text>
                 <g
                     id="dek"
@@ -300,11 +310,11 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                     y="220"
                     textAnchor="middle"
                 >
-                    ALU
+                    {t('diagram.alu')}
                 </text>
 
                 <text className="diagram-label" x="343" y="260">
-                    OPERAND
+                    {t('diagram.operand')}
                 </text>
                 <g
                     id="op"
@@ -326,7 +336,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                 </g>
 
                 <text className="diagram-label" x="417" y="260">
-                    ACCUMULATOR
+                    {t('diagram.accumulator')}
                 </text>
                 <g
                     id="ac"
@@ -352,7 +362,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                     points="380.2,278.2 398.7,302.2 380.2,326.2 417.2,326.2 398.7,302.2 417.2,278.2"
                 />
                 <text className="diagram-label" x="414" y="318">
-                    ALU
+                    {t('diagram.alu')}
                 </text>
 
                 <g
@@ -375,7 +385,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                 </g>
 
                 <text className="diagram-label" x="343" y="347">
-                    COMPARE
+                    {t('diagram.compare')}
                 </text>
                 <g
                     id="vgl"
@@ -397,7 +407,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                 </g>
 
                 <text className="diagram-label" x="380" y="347">
-                    RESULT
+                    {t('diagram.result')}
                 </text>
                 <g
                     id="erg"
@@ -432,7 +442,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                     y="400"
                     textAnchor="middle"
                 >
-                    INPUT / OUTPUT
+                    {t('diagram.inputOutput')}
                 </text>
                 <rect
                     className="unit-frame"
@@ -443,7 +453,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                     rx="2"
                 />
                 <text className="diagram-label" x="367.5" y="437">
-                    OUTPUT REGISTER
+                    {t('diagram.outputRegister')}
                 </text>
                 <g
                     id="aus"
@@ -473,7 +483,7 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                     rx="2"
                 />
                 <text className="diagram-label" x="367.5" y="476">
-                    INPUT REGISTER
+                    {t('diagram.inputRegister')}
                 </text>
                 <g
                     id="ein"
@@ -494,50 +504,134 @@ export function VnrDiagram({ cpu, visual }: VnrDiagramProps): ReactElement {
                     </text>
                 </g>
             </g>
+
+            <PacketLayer
+                transfer={visual.transfer}
+                pulseKey={pulseKey}
+                flowDurationMs={flowDurationMs}
+            />
         </svg>
     );
 }
 
 /**
- * Renders the bus and signal paths behind the machine units.
+ * Renders the permanent bus and signal paths behind the machine units.
  *
- * @param active Tests whether a diagram element is active.
  * @returns The bus layer element.
  */
-function BusLayer({
-    active,
-}: {
-    readonly active: (id: string) => boolean;
-}): ReactElement {
+function BusLayer(): ReactElement {
     const bus = (id: string, d: string, thin = false) => (
         <path
+            key={id}
             id={id}
             d={d}
-            className={cn(
-                thin ? 'diagram-signal' : 'diagram-bus',
-                active(id) && 'is-active',
-            )}
+            className={thin ? 'diagram-signal' : 'diagram-bus'}
         />
     );
 
     return (
         <g>
-            {bus('sl', 'M300 59 V480')}
+            {bus('sl-trunk', 'M300 59 V480')}
             {bus('sl-mem', 'M257 59 H300')}
             {bus('sl-bz', 'M300 99 H421', true)}
             {bus('sl-br', 'M300 135 H421', true)}
             {bus('sl-dek', 'M300 158 H325', true)}
             {bus('br-dek', 'M421 134 V147', true)}
-            {bus('sl-rw', 'M300 182 V230')}
             {bus('sl-op', 'M300 270 H343', true)}
             {bus('sl-ac', 'M300 270 H417', true)}
             {bus('sl-ar', 'M300 302 H392', true)}
             {bus('sl-vgl', 'M300 334 H343', true)}
             {bus('erg-ac', 'M417 334 H469 V278', true)}
             {bus('erg-vgl', 'M380 334 H350', true)}
-            {bus('sl-ea', 'M300 350 V456')}
             {bus('sl-aus', 'M300 437 H325', true)}
             {bus('sl-ein', 'M300 475 H325', true)}
+        </g>
+    );
+}
+
+/**
+ * Renders a single data packet that travels along a complete transfer route.
+ *
+ * The packet layer sits above the machine units so the route stays visible.
+ * A new event remounts the packet, which restarts the motion from the source.
+ *
+ * @param transfer Active transfer route, or null.
+ * @param pulseKey Event key that restarts the packet motion.
+ * @returns The packet layer element.
+ */
+function PacketLayer({
+    transfer,
+    pulseKey,
+    flowDurationMs,
+}: {
+    readonly transfer: VisualState['transfer'];
+    readonly pulseKey: number;
+    readonly flowDurationMs: number;
+}): ReactElement | null {
+    const motionRef = useRef<SVGAnimateMotionElement>(null);
+    const fadeRef = useRef<SVGAnimateElement>(null);
+
+    useEffect(() => {
+        motionRef.current?.beginElement();
+        fadeRef.current?.beginElement();
+    }, [pulseKey, transfer?.id]);
+
+    if (!transfer || flowDurationMs <= 0) {
+        return null;
+    }
+
+    const width = transfer.size === 'bus' ? 30 : 24;
+    const height = transfer.size === 'bus' ? 18 : 14;
+    const coreWidth = width - 6;
+    const coreHeight = height - 6;
+    const core = [
+        `M${-coreWidth / 2} ${-coreHeight / 2}`,
+        `H${coreWidth / 2 - 2}`,
+        `L${coreWidth / 2} 0`,
+        `L${coreWidth / 2 - 2} ${coreHeight / 2}`,
+        `H${-coreWidth / 2}`,
+        'Z',
+    ].join(' ');
+
+    return (
+        <g
+            key={`${transfer.id}-${pulseKey}`}
+            className="diagram-packet-layer"
+            data-transfer={transfer.id}
+            opacity={0}
+        >
+            <rect
+                x={-width / 2}
+                y={-height / 2}
+                width={width}
+                height={height}
+                rx={height / 2}
+                className="diagram-packet-halo"
+            />
+            <path d={core} className="diagram-packet-core" />
+            <circle
+                cx={coreWidth / 2 - 2.5}
+                cy="0"
+                r="1"
+                className="diagram-packet-mark"
+            />
+            <animateMotion
+                ref={motionRef}
+                begin="indefinite"
+                dur={`${flowDurationMs}ms`}
+                path={transfer.path}
+                rotate="auto"
+                fill="freeze"
+            />
+            <animate
+                ref={fadeRef}
+                attributeName="opacity"
+                begin="indefinite"
+                values="0;1;1;0"
+                keyTimes="0;0.08;0.86;1"
+                dur={`${flowDurationMs}ms`}
+                fill="freeze"
+            />
         </g>
     );
 }
