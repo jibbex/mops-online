@@ -870,9 +870,11 @@ For small screens:
 </VnrDiagram>
 ```
 
-The bus and the packet layer are both plain SVG. The bus paths never change
-color. A transfer adds one `<animateMotion>` packet that travels the complete route
-from source to destination and fades out through an SVG `<animate>` element.
+The bus and the packet layer are both plain SVG. The bus paths never change color.
+A real external transfer adds one `<animateMotion>` circle that travels from one
+unit boundary to another. The circle uses a radial gradient from a bright,
+blue/cyan center to a deep cyan edge, a bright rim, and a soft glow. Internal control and ALU
+micro-ops draw no packet; they only highlight the active register or unit.
 
 `decoded` is a display object (mnemonic plus operand, possibly with a user-defined
 mnemonic). The VM provides opcode and operand; the UI formats them using the mnemonic
@@ -979,43 +981,52 @@ helps users with red-green color vision deficiency.
     - respect `prefers-reduced-motion`.
 
 The bus is permanent SVG geometry. It never changes color during a transfer.
-Data movement uses a separate SVG packet layer above the units:
+Data movement uses one SVG circle above the units:
 
 ```tsx
 <g className="diagram-packet-layer" data-transfer={route.id}>
-    <rect className="diagram-packet-halo" ... />
-    <path className="diagram-packet-core" d={arrowShape} />
-    <animateMotion
-        begin="indefinite"
-        dur={`${flowDurationMs}ms`}
-        path={route.path}
-        rotate="auto"
-        fill="freeze"
-    />
-    <animate
-        attributeName="opacity"
-        begin="indefinite"
-        values="0;1;1;0"
-        keyTimes="0;0.08;0.86;1"
-        dur={`${flowDurationMs}ms`}
-        fill="freeze"
-    />
+    <circle
+        r={10}
+        fill="url(#dataPacketGradient)"
+        filter="url(#dataPacketBlur)"
+    >
+        <animateMotion
+            begin="indefinite"
+            dur={`${duration}ms`}
+            path={route.path}
+            fill="freeze"
+        />
+    </circle>
 </g>
 ```
 
-Each transfer gets exactly one packet. The route is a complete source-to-destination
-path, including every bus corner and the shared trunk. The packet has a distinct
-teal capsule and direction arrow so it cannot be confused with the yellow bus or
-the violet active-state highlight.
+The packet is a small cyan/blue sphere with a white highlight, a bright rim, and a
+glow. It contrasts with both the amber bus and the violet active-state highlights.
+The circle stays at the destination until the next micro-op produces a new route.
 
-The player reserves more time per microcycle than the packet animation needs, so a
-packet always finishes before the next transfer starts. Step mode uses the same
-duration, which keeps small routes readable instead of making them flash.
+Only real external bus transfers draw a packet:
+
+- `MEM_READ`: memory → control
+- `MEM_WRITE`: control → memory
+- `INPUT_READ`: input → control
+- `AC_READ`: ALU → control
+- `AC_WRITE`, `OP_WRITE`, `AR_WRITE`: control → ALU
+- `AUS_WRITE`: control → output
+- `VGL_READ`: ALU → control
+
+Internal micro-ops (`BZ_READ`, `BR_WRITE`, `DECODE`, `BZ_UPDATE`,
+`BR_READ_OPERAND`, `ALU_CALC`, `ERG_AC_WRITE`, `ERG_VGL_WRITE`, `BZ_WRITE`,
+`HALT`) have no bus packet. They only highlight the active register or unit.
+
+Routes stop at the unit boundaries (memory edge `x = 265`, control/ALU/IO edge
+`x = 301`), so a packet never travels inside a component.
 
 ### 5.6 Animation Timing and Pause
 
-- Each packet takes 600 ms at normal speed; the player scales it by the selected
-  speed and waits 780 ms per microcycle so the packet train can finish.
+- All packets use the same speed: `0.5` SVG units per millisecond. Duration is
+  derived from the route length, so short and long routes move equally fast.
+- The player waits 1100 ms per microcycle at 1x, which is longer than the longest
+  packet route; scaled speeds keep the same relationship.
 - Pause occurs **at microcycle boundaries**, not in the middle of a CSS transition.
   This feels stable and matches the original (which deactivates after each
   microcycle).

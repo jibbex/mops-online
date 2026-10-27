@@ -54,7 +54,8 @@ assembly programs on a simplified von Neumann machine.
 - A virtual machine with fetch, decode, and execute phases.
 - A live SVG diagram of the model computer.
 - Visible registers, memory cells, buses, and control signals.
-- A data-packet layer that moves along the complete bus route for each transfer.
+- One cyan data packet for every real transfer between units; internal
+  micro-ops stay inside their unit and only highlight the active register.
 - Run, pause, step, and stop controls.
 - Configurable execution modes and animation speed.
 - Input and output registers with validation and blocking dialogs.
@@ -71,7 +72,7 @@ assembly programs on a simplified von Neumann machine.
 2. Assemble the program.
 3. Resolve any diagnostics shown in the editor.
 4. Inspect the generated machine code in the listing view.
-5. Start the program and observe the data packets in the diagram.
+5. Start the program and observe the data packet on the bus between units.
 6. Pause, step, or rewind to inspect individual states.
 7. Enter a value when the input register requests one.
 8. Confirm each output value in the output dialog.

@@ -12,8 +12,9 @@ import type { CpuState } from '@/core/vm';
 import { useI18n } from '@/i18n/i18n-context';
 import { formatAddress, formatWord } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { FLOW_DURATION_MS, packetDuration } from '@/player/timing';
 import type { VisualState } from '@/player/visualMap';
-import { useEffect, useRef, type ReactElement } from 'react';
+import { useLayoutEffect, useRef, type ReactElement } from 'react';
 
 interface VnrDiagramProps {
     readonly cpu: CpuState | null;
@@ -54,6 +55,48 @@ export function VnrDiagram({
         >
             <title id="vnr-title">{t('diagram.title')}</title>
             <desc id="vnr-description">{t('diagram.description')}</desc>
+
+            <defs>
+                <radialGradient
+                    id="dataPacketGradient"
+                    cx="50%"
+                    cy="50%"
+                    r="50%"
+                    fx="34%"
+                    fy="28%"
+                >
+                    <stop
+                        offset="0%"
+                        stopColor="var(--diagram-packet-core)"
+                        stopOpacity="1"
+                    />
+                    <stop
+                        offset="35%"
+                        stopColor="var(--diagram-packet)"
+                        stopOpacity="1"
+                    />
+                    <stop
+                        offset="100%"
+                        stopColor="var(--diagram-packet-deep)"
+                        stopOpacity="1"
+                    />
+                </radialGradient>
+                <filter
+                    id="dataPacketGlow"
+                    x="-150%"
+                    y="-150%"
+                    width="400%"
+                    height="400%"
+                >
+                    <feDropShadow
+                        dx="0"
+                        dy="0"
+                        stdDeviation="2.6"
+                        floodColor="var(--diagram-packet)"
+                        floodOpacity="0.8"
+                    />
+                </filter>
+            </defs>
 
             <BusLayer />
 
@@ -506,6 +549,7 @@ export function VnrDiagram({
             </g>
 
             <PacketLayer
+                key={`${visual.transfer?.id ?? 'none'}-${pulseKey}`}
                 transfer={visual.transfer}
                 pulseKey={pulseKey}
                 flowDurationMs={flowDurationMs}
@@ -550,13 +594,15 @@ function BusLayer(): ReactElement {
 }
 
 /**
- * Renders a single data packet that travels along a complete transfer route.
+ * Renders exactly one data packet that travels along the complete bus route.
  *
- * The packet layer sits above the machine units so the route stays visible.
- * A new event remounts the packet, which restarts the motion from the source.
+ * The packet starts at the source component edge and ends at the destination
+ * component edge. It remains at the destination after the traversal and is
+ * replaced only when the next micro-op produces a new route.
  *
- * @param transfer Active transfer route, or null.
+ * @param transfer Active bus route, or null.
  * @param pulseKey Event key that restarts the packet motion.
+ * @param flowDurationMs Time for one packet to traverse the route.
  * @returns The packet layer element.
  */
 function PacketLayer({
@@ -569,69 +615,57 @@ function PacketLayer({
     readonly flowDurationMs: number;
 }): ReactElement | null {
     const motionRef = useRef<SVGAnimateMotionElement>(null);
-    const fadeRef = useRef<SVGAnimateElement>(null);
+    const pathRef = useRef<SVGPathElement>(null);
 
-    useEffect(() => {
-        motionRef.current?.beginElement();
-        fadeRef.current?.beginElement();
-    }, [pulseKey, transfer?.id]);
+    useLayoutEffect(() => {
+        const path = pathRef.current;
+        const motion = motionRef.current;
+
+        if (!path || !motion) {
+            return;
+        }
+
+        const length = path.getTotalLength();
+        const durationScale = flowDurationMs / FLOW_DURATION_MS;
+        motion.setAttribute(
+            'dur',
+            `${packetDuration(length, durationScale)}ms`,
+        );
+        motion.beginElement();
+    }, [pulseKey, transfer?.id, flowDurationMs]);
 
     if (!transfer || flowDurationMs <= 0) {
         return null;
     }
 
-    const width = transfer.size === 'bus' ? 30 : 24;
-    const height = transfer.size === 'bus' ? 18 : 14;
-    const coreWidth = width - 6;
-    const coreHeight = height - 6;
-    const core = [
-        `M${-coreWidth / 2} ${-coreHeight / 2}`,
-        `H${coreWidth / 2 - 2}`,
-        `L${coreWidth / 2} 0`,
-        `L${coreWidth / 2 - 2} ${coreHeight / 2}`,
-        `H${-coreWidth / 2}`,
-        'Z',
-    ].join(' ');
-
     return (
-        <g
-            key={`${transfer.id}-${pulseKey}`}
-            className="diagram-packet-layer"
-            data-transfer={transfer.id}
-            opacity={0}
-        >
-            <rect
-                x={-width / 2}
-                y={-height / 2}
-                width={width}
-                height={height}
-                rx={height / 2}
-                className="diagram-packet-halo"
+        <g className="diagram-packet-layer" data-transfer={transfer.id}>
+            <path
+                ref={pathRef}
+                d={transfer.path}
+                className="diagram-packet-measure"
             />
-            <path d={core} className="diagram-packet-core" />
-            <circle
-                cx={coreWidth / 2 - 2.5}
-                cy="0"
-                r="1"
-                className="diagram-packet-mark"
-            />
-            <animateMotion
-                ref={motionRef}
-                begin="indefinite"
-                dur={`${flowDurationMs}ms`}
-                path={transfer.path}
-                rotate="auto"
-                fill="freeze"
-            />
-            <animate
-                ref={fadeRef}
-                attributeName="opacity"
-                begin="indefinite"
-                values="0;1;1;0"
-                keyTimes="0;0.08;0.86;1"
-                dur={`${flowDurationMs}ms`}
-                fill="freeze"
-            />
+            <g className="diagram-packet" filter="url(#dataPacketGlow)">
+                <circle
+                    r={transfer.size === 'bus' ? 7 : 6}
+                    fill="url(#dataPacketGradient)"
+                    stroke="var(--diagram-packet-ring)"
+                    strokeWidth="1"
+                />
+                <circle
+                    cx={transfer.size === 'bus' ? -2.3 : -2}
+                    cy={transfer.size === 'bus' ? -2.3 : -2}
+                    r={transfer.size === 'bus' ? 1.3 : 1.1}
+                    className="diagram-packet-core"
+                />
+                <animateMotion
+                    ref={motionRef}
+                    begin="indefinite"
+                    dur={`${flowDurationMs}ms`}
+                    path={transfer.path}
+                    fill="freeze"
+                />
+            </g>
         </g>
     );
 }

@@ -14,8 +14,10 @@
     --diagram-active: oklch(0.52 0.19 285);
     --diagram-active-soft: oklch(0.92 0.06 285);
     --diagram-active-text: oklch(0.99 0 0);
-    --diagram-packet: oklch(0.55 0.15 190);
-    --diagram-packet-text: oklch(0.99 0 0);
+    --diagram-packet: oklch(0.72 0.16 210);
+    --diagram-packet-deep: oklch(0.5 0.16 250);
+    --diagram-packet-core: oklch(0.98 0.03 200);
+    --diagram-packet-ring: oklch(0.88 0.08 205);
     --diagram-text: oklch(0.24 0.02 260);
     --diagram-muted: oklch(0.48 0.02 260);
     --diagram-alu: oklch(0.62 0.11 230);
@@ -33,8 +35,10 @@
     --diagram-active: oklch(0.76 0.14 285);
     --diagram-active-soft: oklch(0.38 0.08 285);
     --diagram-active-text: oklch(0.14 0 0);
-    --diagram-packet: oklch(0.8 0.13 190);
-    --diagram-packet-text: oklch(0.14 0 0);
+    --diagram-packet: oklch(0.82 0.14 210);
+    --diagram-packet-deep: oklch(0.62 0.15 250);
+    --diagram-packet-core: oklch(1 0.02 200);
+    --diagram-packet-ring: oklch(0.92 0.06 205);
     --diagram-text: oklch(0.93 0.01 260);
     --diagram-muted: oklch(0.72 0.02 260);
     --diagram-alu: oklch(0.55 0.1 230);
@@ -125,9 +129,8 @@
     stroke-width: 2;
 }
 
-.memory-cell.is-active text {
+.memory-cell.is-active .diagram-value {
     fill: var(--diagram-active-text);
-    font-weight: 700;
 }
 
 .diagram-bus {
@@ -147,28 +150,27 @@
 }
 
 /*
- * A data packet travels along the complete route and fades out at the
- * destination. The wires keep their permanent bus color between steps.
+ * One data packet travels along the complete bus route. The base bus keeps
+ * its permanent color; only this separate packet layer is animated.
  */
-.diagram-packet-layer {
+.diagram-packet-layer,
+.diagram-packet,
+.diagram-packet-measure {
     pointer-events: none;
 }
 
+.diagram-packet-measure {
+    fill: none;
+    stroke: none;
+}
+
 .diagram-packet-halo {
-    fill: color-mix(in oklch, var(--diagram-packet) 32%, transparent);
+    fill: var(--diagram-packet);
+    opacity: 0.18;
 }
 
 .diagram-packet-core {
-    fill: var(--diagram-packet);
-    stroke: var(--diagram-packet-text);
-    stroke-width: 1.5;
-    filter: drop-shadow(
-        0 0 9px color-mix(in oklch, var(--diagram-packet) 75%, transparent)
-    );
-}
-
-.diagram-packet-mark {
-    fill: var(--diagram-packet-text);
+    fill: var(--diagram-packet-core);
 }
 
 .diagram-text {

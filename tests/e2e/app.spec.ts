@@ -131,31 +131,99 @@ test('imports an assembly source file', async ({ page }) => {
     await expect(page.locator('.cm-content')).toContainText('out 7');
 });
 
-test('routes one data packet per step', async ({ page }) => {
+test('routes only real external bus transfers', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Assemble' }).click();
-    await page.getByRole('button', { name: 'Step' }).click();
 
     const packet = page.locator('[data-transfer]');
-    await expect(packet).toHaveCount(1);
-    await expect(packet).toHaveAttribute('data-transfer', 'bz-memory');
-    await expect(packet.locator('animateMotion')).toHaveCount(1);
-    await expect(packet.locator('animate')).toHaveCount(1);
-    await expect(packet.locator('.diagram-packet-core')).toHaveCount(1);
 
     await page.getByRole('button', { name: 'Step' }).click();
-    await expect(packet).toHaveAttribute('data-transfer', 'memory-br');
+    await expect(packet).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Step' }).click();
+    await expect(packet).toHaveCount(1);
+    await expect(packet).toHaveAttribute('data-transfer', 'memory-control');
+    await expect(packet.locator('animateMotion')).toHaveCount(1);
+    await expect(packet.locator('.diagram-packet')).toHaveCount(1);
+    await expect(packet.locator('circle')).toHaveCount(2);
+    await expect(packet.locator('circle.diagram-packet-core')).toHaveCount(1);
+    await expect(packet).toBeVisible();
 
     await page.waitForTimeout(1200);
-    const opacity = await packet.evaluate(
-        (element) => getComputedStyle(element).opacity,
-    );
-    expect(opacity).toBe('0');
+    await expect(packet).toBeVisible();
+
+    await page.getByRole('button', { name: 'Step' }).click();
+    await expect(packet).toHaveCount(0);
 
     const busColor = await page
         .locator('#sl-trunk')
         .evaluate((element) => getComputedStyle(element).stroke);
     expect(busColor).toBe('oklch(0.78 0.14 85)');
+});
+
+test('moves every packet at the same bus speed', async ({ page }) => {
+    await page.goto('/');
+    await setSource(page, ['ld 5', 'mul 2', 'st a', 'out a', 'end'].join('\n'));
+    await page.getByRole('button', { name: 'Assemble' }).click();
+
+    const readPacket = async (): Promise<{
+        length: number;
+        duration: number;
+        speed: number;
+    } | null> =>
+        page.evaluate(() => {
+            const layer = document.querySelector('[data-transfer]');
+            const motion = layer?.querySelector('animateMotion');
+            const svg = document.querySelector('.diagram-svg');
+
+            if (!layer || !motion || !svg) {
+                return null;
+            }
+
+            const pathData = motion.getAttribute('path') ?? '';
+            const duration = Number.parseFloat(
+                motion.getAttribute('dur') ?? '0',
+            );
+            const path = document.createElementNS(
+                'http://www.w3.org/2000/svg',
+                'path',
+            );
+            path.setAttribute('d', pathData);
+            svg.append(path);
+            const length = path.getTotalLength();
+            path.remove();
+
+            return { length, duration, speed: length / duration };
+        });
+
+    const stepUntilPacket = async (): Promise<void> => {
+        for (let step = 0; step < 12; step += 1) {
+            await page.getByRole('button', { name: 'Step' }).click();
+            await page.waitForTimeout(50);
+
+            if ((await page.locator('[data-transfer]').count()) > 0) {
+                return;
+            }
+        }
+    };
+
+    await stepUntilPacket();
+    const first = await readPacket();
+
+    await stepUntilPacket();
+    const second = await readPacket();
+
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+
+    if (!first || !second) {
+        return;
+    }
+
+    expect(first.length).not.toBe(second.length);
+    expect(first.speed).toBeCloseTo(0.5, 1);
+    expect(second.speed).toBeCloseTo(0.5, 1);
+    expect(Math.abs(first.speed - second.speed)).toBeLessThan(0.02);
 });
 
 test('pauses after each instruction in command mode', async ({ page }) => {

@@ -1,21 +1,21 @@
 /**
- * Maps VM events to diagram element identifiers and transfer routes.
+ * Maps VM events to diagram highlights and real bus transfers.
  *
- * Register and unit identifiers select the active highlight. A transfer route
- * is a complete SVG path from the source to the destination so the packet
- * layer can animate one coherent data flow over the bus.
+ * The VM uses internal latches (SL_ADR, SL_VAL, ML_VAL) inside the control
+ * unit. Only micro-ops that cross a unit boundary are drawn as bus packets.
+ * All other micro-ops are internal control or ALU operations and receive only
+ * the active register/unit highlight.
  *
  * @module player/visualMap
  */
 
-import { getOperandModeForOpcode, getOperation } from '@/core/isa';
 import type { VmEvent } from '@/core/vm';
 
-/** One complete data transfer shown by the packet layer. */
+/** One real bus transfer between two machine units. */
 export interface TransferRoute {
     /** Stable route identifier used by tests and diagnostics. */
     readonly id: string;
-    /** SVG path from source to destination. */
+    /** SVG path between two unit boundaries. */
     readonly path: string;
     /** Wire weight controlling the packet size. */
     readonly size: 'bus' | 'signal';
@@ -31,7 +31,7 @@ export interface VisualState {
     readonly memoryCells: readonly number[];
     /** Memory bar indices (1-based) touched by the event. */
     readonly memoryBars: readonly number[];
-    /** Complete data-flow route, or null when nothing moves. */
+    /** Real bus transfer, or null for an internal micro-op. */
     readonly transfer: TransferRoute | null;
 }
 
@@ -111,6 +111,7 @@ export function visualStateFor(event: VmEvent | null): VisualState {
             add(active, 'control', 'bz');
             break;
         case 'HALT':
+            add(active, 'control');
             break;
     }
 
@@ -122,103 +123,51 @@ export function visualStateFor(event: VmEvent | null): VisualState {
     };
 }
 
+/**
+ * Returns the real external bus transfer for a micro-op.
+ *
+ * Internal micro-ops return null. The routes start and end at unit boundaries:
+ * memory (x = 265), control/ALU/IO (x = 301), outside the component frames.
+ *
+ * @param event The current VM event.
+ * @returns The bus route, or null for an internal operation.
+ */
 function transferFor(event: VmEvent): TransferRoute | null {
     switch (event.microOp.kind) {
-        case 'BZ_READ':
-            return route('bz-memory', 'M430 99 H300 V59 H257', 'signal');
         case 'MEM_READ':
-            if (event.microOp.width === 2) {
-                return route('memory-br', 'M257 59 H300 V135 H421 V126', 'bus');
-            }
-
-            switch (operationOf(event)) {
-                case 'load':
-                    return route('memory-ac', 'M257 59 H300 V270 H435', 'bus');
-                case 'output':
-                    return route('memory-aus', 'M257 59 H300 V437 H343', 'bus');
-                default:
-                    return route('memory-op', 'M257 59 H300 V270 H361', 'bus');
-            }
-        case 'DECODE':
-            return route('br-decoder', 'M449 134 V147 H399', 'signal');
-        case 'BR_READ_OPERAND':
-            return operandRoute(event);
+            return route('memory-control', 'M265 59 H300 V158');
         case 'MEM_WRITE':
-            if (operationOf(event) === 'store') {
-                return route('ac-memory', 'M435 270 H300 V59 H257', 'bus');
-            }
-
-            if (operationOf(event) === 'input') {
-                return route('input-memory', 'M343 475 H300 V59 H257', 'bus');
-            }
-
-            return route('bus-memory', 'M300 270 V59 H257', 'bus');
-        case 'AR_WRITE':
-            return route('bus-ar', 'M300 302 H392', 'signal');
-        case 'ALU_CALC':
-            return route('operand-alu', 'M361 270 L398 302 L398 334', 'signal');
-        case 'ERG_AC_WRITE':
-            return route('result-ac', 'M398 334 H469 V270 H435', 'signal');
-        case 'ERG_VGL_WRITE':
-            return route('result-vgl', 'M398 334 H349', 'signal');
-        case 'VGL_READ':
-            return route('vgl-control', 'M349 334 H300 V158', 'signal');
-        case 'BR_WRITE':
-        case 'BZ_UPDATE':
+            return route('control-memory', 'M300 158 V59 H265');
         case 'INPUT_READ':
+            return route('input-control', 'M301 475 H300 V158');
         case 'AC_WRITE':
+            return route('control-ac', 'M300 158 V270');
         case 'AC_READ':
+            return route('ac-control', 'M300 270 V158');
         case 'OP_WRITE':
+            return route('control-op', 'M300 158 V270');
+        case 'AR_WRITE':
+            return route('control-ar', 'M300 158 V302');
         case 'AUS_WRITE':
+            return route('control-aus', 'M300 158 V437');
+        case 'VGL_READ':
+            return route('vgl-control', 'M300 334 V158');
+        case 'BZ_READ':
+        case 'BR_WRITE':
+        case 'DECODE':
+        case 'BZ_UPDATE':
+        case 'BR_READ_OPERAND':
+        case 'ALU_CALC':
+        case 'ERG_AC_WRITE':
+        case 'ERG_VGL_WRITE':
         case 'BZ_WRITE':
         case 'HALT':
             return null;
     }
 }
 
-function operandRoute(event: VmEvent): TransferRoute {
-    if (event.opcode === null) {
-        return route('bus-br', 'M300 135 H421 V126', 'signal');
-    }
-
-    const mode = getOperandModeForOpcode(event.opcode);
-
-    if (mode === 'target') {
-        return route('br-bz', 'M449 126 V135 H300 V99 H421', 'signal');
-    }
-
-    if (mode === 'immediate') {
-        switch (getOperation(event.opcode)) {
-            case 'load':
-                return route('br-ac', 'M449 126 V135 H300 V270 H435', 'signal');
-            case 'output':
-                return route(
-                    'br-aus',
-                    'M449 126 V135 H300 V437 H343',
-                    'signal',
-                );
-            default:
-                return route('br-op', 'M449 126 V135 H300 V270 H361', 'signal');
-        }
-    }
-
-    return route('br-memory', 'M449 126 V135 H300 V59 H257', 'signal');
-}
-
-function operationOf(event: VmEvent): ReturnType<typeof getOperation> | null {
-    if (event.opcode === null) {
-        return null;
-    }
-
-    return getOperation(event.opcode);
-}
-
-function route(
-    id: string,
-    path: string,
-    size: TransferRoute['size'],
-): TransferRoute {
-    return { id, path, size };
+function route(id: string, path: string): TransferRoute {
+    return { id, path, size: 'bus' };
 }
 
 function add(active: Set<string>, ...ids: string[]): void {
