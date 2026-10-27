@@ -9,5 +9,8 @@ describe('App', () => {
         expect(
             screen.getByRole('heading', { name: 'MOPS' }),
         ).toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Assemble' }),
+        ).toBeInTheDocument();
     });
 });

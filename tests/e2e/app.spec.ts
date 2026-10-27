@@ -4,4 +4,5 @@ test('renders the application heading', async ({ page }) => {
     await page.goto('/');
 
     await expect(page.getByRole('heading', { name: 'MOPS' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Assemble' })).toBeVisible();
 });
