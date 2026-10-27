@@ -37,6 +37,7 @@ test('shows an assembly error in the UI', async ({ page }) => {
 
     await expect(page.getByTestId('status-status')).toHaveText('Error');
     await expect(page.getByText(/Unknown instruction/)).toBeVisible();
+    await expect(page.locator('.cm-error-line')).toHaveCount(1);
 });
 
 test('shows the machine code listing in a sheet', async ({ page }) => {
@@ -72,6 +73,7 @@ test('pauses after each instruction in command mode', async ({ page }) => {
 
     await expect(page.getByTestId('status-status')).toHaveText('Paused');
     await expect(page.getByTestId('status-ac')).toHaveText('00005');
+    await expect(page.locator('.cm-current-line')).toHaveCount(1);
 
     await page.getByRole('button', { name: 'Start' }).click();
 

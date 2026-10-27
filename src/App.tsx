@@ -113,6 +113,9 @@ export default function App(): ReactElement {
                             <MopsEditor
                                 value={player.source}
                                 onChange={player.setSource}
+                                diagnostics={player.diagnostics}
+                                warnings={player.warnings}
+                                currentLine={currentLine}
                             />
                         </CardContent>
                     </Card>
