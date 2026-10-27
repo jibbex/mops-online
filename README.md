@@ -115,8 +115,8 @@ not on the Bun runtime.
 #### Windows
 
 ```powershell
-git clone <repository-url>
-cd mops
+git clone https://git.michm.de/manne/mops-online.git
+cd mops-online
 bun install
 bunx playwright install
 ```
@@ -124,8 +124,8 @@ bunx playwright install
 #### Linux
 
 ```shell
-git clone <repository-url>
-cd mops
+git clone https://git.michm.de/manne/mops-online.git
+cd mops-online
 bun install
 bunx playwright install --with-deps
 ```
