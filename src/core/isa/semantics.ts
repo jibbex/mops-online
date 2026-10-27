@@ -9,6 +9,7 @@
 
 import { OPCODES, type Opcode } from './opcodes';
 
+/** Execution operation selected by an opcode. */
 export type Operation =
     | 'load'
     | 'store'

@@ -10,8 +10,10 @@
 
 import { OPCODES, isOpcode, type Opcode } from './opcodes';
 
+/** Encoding family selected by the operand syntax. */
 export type OperandMode = 'address' | 'immediate' | 'target' | 'none';
 
+/** Canonical instruction identifier. */
 export type InstructionId =
     | 'ld'
     | 'st'
@@ -29,9 +31,12 @@ export type InstructionId =
     | 'jgt'
     | 'end';
 
+/** Canonical instruction metadata. */
 export interface InstructionSpec {
     readonly id: InstructionId;
+    /** Default source mnemonic. */
     readonly mnemonic: string;
+    /** Concrete opcodes by operand mode. */
     readonly opcodes: Readonly<Partial<Record<OperandMode, Opcode>>>;
 }
 

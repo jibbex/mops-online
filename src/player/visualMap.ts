@@ -6,12 +6,19 @@
 
 import type { VmEvent } from '@/core/vm';
 
+/**
+ * Active diagram elements for one VM event.
+ */
 export interface VisualState {
+    /** Element IDs that should receive the active treatment. */
     readonly active: ReadonlySet<string>;
+    /** Memory addresses touched by the event. */
     readonly memoryCells: readonly number[];
+    /** Memory bar indices (1-based) touched by the event. */
     readonly memoryBars: readonly number[];
 }
 
+/** Neutral visual state used before the first event. */
 export const EMPTY_VISUAL: VisualState = {
     active: new Set(),
     memoryCells: [],

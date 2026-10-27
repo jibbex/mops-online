@@ -9,13 +9,16 @@
 
 import { INSTRUCTION_IDS, ISA, type InstructionId } from '@/core/isa';
 
+/** Complete mapping from canonical instruction IDs to source mnemonics. */
 export type MnemonicConfig = Readonly<Record<InstructionId, string>>;
 
+/** One validation problem in a mnemonic configuration. */
 export interface MnemonicConfigIssue {
     readonly instruction?: InstructionId;
     readonly message: string;
 }
 
+/** Raised when a mnemonic configuration is invalid. */
 export class MnemonicConfigError extends Error {
     readonly issues: readonly MnemonicConfigIssue[];
 
@@ -31,12 +34,18 @@ export class MnemonicConfigError extends Error {
 /**
  * Returns the default canonical mnemonics.
  */
+/**
+ * Returns the canonical default mnemonic for every instruction.
+ *
+ * @returns A fresh configuration object.
+ */
 export function createDefaultMnemonicConfig(): MnemonicConfig {
     return Object.fromEntries(
         INSTRUCTION_IDS.map((id) => [id, ISA[id].mnemonic]),
     ) as MnemonicConfig;
 }
 
+/** Canonical mnemonic set used when no overrides are supplied. */
 export const DEFAULT_MNEMONICS = createDefaultMnemonicConfig();
 
 /**

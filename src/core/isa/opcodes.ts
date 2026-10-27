@@ -34,6 +34,7 @@ export const OPCODES = {
     HALT: 60,
 } as const;
 
+/** Numeric opcode accepted by the machine. */
 export type Opcode = (typeof OPCODES)[keyof typeof OPCODES];
 
 /**

@@ -1,3 +1,9 @@
+/**
+ * Vite, React, Tailwind, and Vitest configuration.
+ *
+ * @module vite.config
+ */
+
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';

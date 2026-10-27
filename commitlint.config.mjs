@@ -1,3 +1,9 @@
+/**
+ * Conventional Commit rules for the repository.
+ *
+ * @module commitlint.config
+ */
+
 export default {
     extends: ['@commitlint/config-conventional'],
     rules: {

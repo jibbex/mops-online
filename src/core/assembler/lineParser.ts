@@ -12,11 +12,13 @@ import { resolveMnemonic, type MnemonicConfig } from './config';
 import { createDiagnostic, type Diagnostic } from './diagnostics';
 import type { ScannedLine } from './lineScanner';
 
+/** Instruction reference and raw operand text from one line. */
 export interface ParsedInstruction {
     readonly id: InstructionId;
     readonly operand: string;
 }
 
+/** One structurally parsed source line. */
 export interface ParsedLine {
     readonly number: number;
     readonly raw: string;
@@ -24,6 +26,7 @@ export interface ParsedLine {
     readonly instruction: ParsedInstruction;
 }
 
+/** Parsed lines and any syntax diagnostics. */
 export interface ParseSourceResult {
     readonly lines: readonly ParsedLine[];
     readonly diagnostics: readonly Diagnostic[];

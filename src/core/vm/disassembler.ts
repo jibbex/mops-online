@@ -12,10 +12,12 @@ import {
 } from '@/core/isa';
 import type { Address, Word } from '@/core/object';
 
+/** One decoded memory location or instruction. */
 export interface DisassembledInstruction {
     readonly address: Address;
     readonly opcode: Opcode | null;
     readonly operand: Word | null;
+    /** Human-readable mnemonic or `.word` fallback. */
     readonly text: string;
 }
 

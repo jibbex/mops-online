@@ -16,6 +16,7 @@ import {
     type Word,
 } from './program';
 
+/** JSON-safe listing entry. */
 export interface SerializedListingEntry {
     readonly line: number;
     readonly address: Address;
@@ -23,6 +24,7 @@ export interface SerializedListingEntry {
     readonly source: string;
 }
 
+/** JSON-safe object-program representation. */
 export interface SerializedObjectProgram {
     readonly memory: readonly Word[];
     readonly sourceMap: readonly number[];

@@ -14,48 +14,85 @@ import type { Address, ObjectProgram, Word } from '@/core/object';
 import type { Compare, MicroOp, Phase } from './microops';
 import type { Trap } from './traps';
 
+/** Decoded instruction register. */
 export interface BranchRegister {
+    /** Opcode, or null before the first fetch completes. */
     readonly opcode: Opcode | null;
     readonly operand: Word;
 }
 
+/** Internal latch value; fetch uses a two-cell tuple. */
 export type BusValue = Word | readonly [Word, Word];
 
+/** Complete machine state after a microcycle. */
 export interface CpuState {
+    /** Complete memory image. */
     readonly memory: readonly Word[];
+    /** Instruction counter. */
     readonly bz: Address;
+    /** Address of the instruction currently being processed. */
     readonly instructionAddress: Address;
+    /** Decoded instruction register. */
     readonly br: BranchRegister;
+    /** Accumulator. */
     readonly ac: Word;
+    /** Operand latch used by the ALU. */
     readonly op: Word;
+    /** Visible operation symbol. */
     readonly ar: string;
+    /** Operation selected for the current execute phase. */
     readonly operation: Operation | null;
+    /** ALU result. */
     readonly erg: Word;
+    /** Last comparison result. */
     readonly vgl: Compare;
+    /** Input register. */
     readonly ein: Word;
+    /** Output register. */
     readonly aus: Word;
+    /** Decoded instruction text for display. */
     readonly decoded: string;
+    /** Internal address latch. */
     readonly slAdr: Address;
+    /** Internal value latch. */
     readonly slVal: BusValue;
+    /** Memory latch. */
     readonly mlVal: BusValue;
+    /** Current machine phase. */
     readonly phase: Phase;
+    /** Micro-ops remaining in the current phase. */
     readonly queue: readonly MicroOp[];
+    /** Next micro-op index in {@link queue}. */
     readonly queueIndex: number;
+    /** Whether the machine has reached `end`. */
     readonly halted: boolean;
+    /** Runtime trap, if the machine stopped abnormally. */
     readonly trap: Trap | null;
 }
 
+/** One executed microcycle and the state transition it caused. */
 export interface VmEvent {
+    /** Phase active before the micro-op ran. */
     readonly phase: Phase;
+    /** Address of the instruction being processed. */
     readonly address: Address;
+    /** Instruction opcode, if decode has completed. */
     readonly opcode: Opcode | null;
+    /** Instruction operand, if decode has completed. */
     readonly operand: Word | null;
     readonly microOp: MicroOp;
     readonly before: CpuState;
     readonly after: CpuState;
+    /** Short English description for the UI. */
     readonly description: string;
 }
 
+/**
+ * Result of one VM step.
+ *
+ * `input-required` leaves the input micro-op pending so the caller can retry it
+ * with a value.
+ */
 export type VmStepResult =
     | {
           readonly kind: 'step';

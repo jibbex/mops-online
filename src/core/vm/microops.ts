@@ -7,6 +7,12 @@
  * @module core/vm/microops
  */
 
+/**
+ * One machine transfer or calculation.
+ *
+ * The player derives visual cues from these values; the VM does not know about
+ * diagram elements.
+ */
 export type MicroOp =
     | { readonly kind: 'BZ_READ' }
     | { readonly kind: 'MEM_READ'; readonly width: 1 | 2 }
@@ -28,6 +34,8 @@ export type MicroOp =
     | { readonly kind: 'BZ_WRITE' }
     | { readonly kind: 'HALT' };
 
+/** Instruction-processing phase. */
 export type Phase = 'FETCH' | 'DECODE' | 'EXECUTE' | 'HALTED';
 
+/** Last comparison result, or empty when no comparison has run. */
 export type Compare = '' | '<' | '=' | '>';

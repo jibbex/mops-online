@@ -10,6 +10,11 @@
 import { createDiagnostic, type Diagnostic } from './diagnostics';
 import type { ParsedLine } from './lineParser';
 
+/**
+ * Labels collected from parsed source lines.
+ *
+ * Values are one-based source lines; addresses are resolved after encoding.
+ */
 export interface SymbolCollectionResult {
     readonly labels: ReadonlyMap<string, number>;
     readonly diagnostics: readonly Diagnostic[];

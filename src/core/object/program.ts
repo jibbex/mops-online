@@ -8,37 +8,64 @@
  * @module core/object/program
  */
 
+/** Number of addressable memory cells in the model machine. */
 export const MEMORY_SIZE = 72;
+/** Smallest valid machine word. */
 export const MIN_WORD = -9999;
+/** Largest valid machine word. */
 export const MAX_WORD = 9999;
+/** First data-cell address. */
 export const DATA_START = 64;
+/** Last data-cell address. */
 export const DATA_END = 71;
+/** Source-map marker for cells that are not associated with source code. */
 export const NO_SOURCE_LINE = 0;
 
+/** Integer in the MOPS word range. */
 export type Word = number;
+/** Integer in the MOPS address range. */
 export type Address = number;
 
+/** One source line and the machine words produced from it. */
 export interface ListingEntry {
+    /** One-based source line. */
     readonly line: number;
+    /** First memory cell of the encoded instruction. */
     readonly address: Address;
+    /** One or two encoded cells. */
     readonly words: readonly Word[];
+    /** Original source line. */
     readonly source: string;
 }
 
+/**
+ * Assembler output consumed by the VM and debugger.
+ *
+ * The object program is the only runtime input: the VM never sees source text.
+ */
 export interface ObjectProgram {
+    /** Complete 72-cell memory image. */
     readonly memory: readonly Word[];
+    /** Source line per memory cell, or {@link NO_SOURCE_LINE}. */
     readonly sourceMap: readonly number[];
+    /** Resolved label-to-address map. */
     readonly symbols: ReadonlyMap<string, Address>;
+    /** Source-to-machine-code listing. */
     readonly listing: readonly ListingEntry[];
+    /** First instruction address. */
     readonly entry: Address;
+    /** Address of the terminating `end` instruction, when present. */
     readonly endAddress?: Address;
 }
 
+/** One validation problem in an object program. */
 export interface ObjectProgramIssue {
+    /** JSON-style path to the invalid field. */
     readonly path: string;
     readonly message: string;
 }
 
+/** Result of validating an unknown object-program candidate. */
 export type ObjectProgramValidationResult =
     | { readonly ok: true; readonly program: ObjectProgram }
     | { readonly ok: false; readonly issues: readonly ObjectProgramIssue[] };
@@ -47,6 +74,7 @@ export type ObjectProgramValidationResult =
  * Error raised when an object program cannot be validated or parsed.
  */
 export class ObjectProgramValidationError extends Error {
+    /** All validation problems that caused the failure. */
     readonly issues: readonly ObjectProgramIssue[];
 
     constructor(issues: readonly ObjectProgramIssue[]) {

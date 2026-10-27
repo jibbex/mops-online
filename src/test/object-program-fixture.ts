@@ -1,3 +1,9 @@
+/**
+ * Shared object-program fixture for unit tests.
+ *
+ * @module test/object-program-fixture
+ */
+
 import { MEMORY_SIZE, NO_SOURCE_LINE, type ObjectProgram } from '@/core/object';
 
 /**

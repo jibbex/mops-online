@@ -7,10 +7,17 @@
  * @module core/assembler/lineScanner
  */
 
+/**
+ * One non-empty source line after comment and whitespace normalization.
+ */
 export interface ScannedLine {
+    /** One-based source line number. */
     readonly number: number;
+    /** Original line text without the line terminator. */
     readonly raw: string;
+    /** Lowercased, comment-free, tab-normalized code. */
     readonly code: string;
+    /** Whether the code starts with whitespace. */
     readonly indented: boolean;
 }
 

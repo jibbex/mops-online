@@ -22,9 +22,14 @@ import {
 } from './diagnostics';
 import type { ParsedLine } from './lineParser';
 
+/** Last memory address available to encoded instructions. */
 const PROGRAM_LAST_CELL = 63;
+/** Encoded value of the `end` instruction. */
 const END_OPCODE = 60;
 
+/**
+ * Complete encoder output before the assembler wraps it in an object program.
+ */
 export interface EncoderResult {
     readonly memory: readonly Word[];
     readonly sourceMap: readonly number[];

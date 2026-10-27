@@ -23,6 +23,7 @@ import {
 } from '@/core/vm';
 import { create } from 'zustand';
 
+/** Lifecycle states of the execution player. */
 export type PlayerStatus =
     | 'idle'
     | 'ready'
@@ -32,17 +33,29 @@ export type PlayerStatus =
     | 'finished'
     | 'error';
 
+/** Pause boundary used while running the machine. */
 export type ExecutionMode =
     'micro' | 'phase' | 'instruction' | 'output' | 'run';
 
+/** Playback multiplier; zero disables the delay between microcycles. */
 export type PlayerSpeed = 0 | 0.5 | 1 | 2 | 4;
 
+/** One completed microcycle captured for backward stepping. */
 export interface HistoryEntry {
+    /** Event emitted by the VM. */
     readonly event: VmEvent;
+    /** State before the event was applied. */
     readonly before: CpuState;
+    /** State after the event was applied. */
     readonly after: CpuState;
 }
 
+/**
+ * Public player store.
+ *
+ * The store owns timers and orchestration state; CPU and assembler modules stay
+ * pure and do not import it.
+ */
 export interface PlayerState {
     readonly source: string;
     readonly program: ObjectProgram | null;
@@ -67,6 +80,7 @@ export interface PlayerState {
     readonly provideInput: (value: Word) => void;
 }
 
+/** Source shown when the application starts. */
 export const INITIAL_SOURCE = [
     '; Double a number',
     'in a',
@@ -108,6 +122,9 @@ function withHistory(
     return [...history.slice(-4999), entry];
 }
 
+/**
+ * Player store and command surface used by the UI.
+ */
 export const usePlayer = create<PlayerState>((set, get) => {
     function scheduleNext(): void {
         clearTimer();
@@ -390,6 +407,12 @@ export const usePlayer = create<PlayerState>((set, get) => {
     };
 });
 
+/**
+ * Stops the module-level playback timer.
+ *
+ * Intended for test cleanup and for callers that must guarantee no pending
+ * timer survives a test boundary.
+ */
 export function resetPlayerTimerForTests(): void {
     clearTimer();
 }
