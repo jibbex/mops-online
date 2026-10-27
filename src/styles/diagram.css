@@ -2,33 +2,67 @@
     --font-mono:
         ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Roboto Mono', Menlo,
         Consolas, monospace;
-    --diagram-bg: #f8fafc;
-    --diagram-unit: #eef2f7;
-    --diagram-head: #dbe7f3;
-    --diagram-border: #94a3b8;
+    --diagram-bg: transparent;
+    --diagram-memory: #e0e0e8;
+    --diagram-control: #a6e0fb;
+    --diagram-alu-unit: #d4f1ff;
+    --diagram-io: #c3f691;
+    --diagram-head: #fffde7;
+    --diagram-border: #64748b;
     --diagram-register: #fff7cc;
     --diagram-bus: #e2b93b;
-    --diagram-active: #2563eb;
-    --diagram-active-soft: #bfdbfe;
-    --diagram-active-text: #0f172a;
+    --diagram-active: #dc2626;
+    --diagram-active-soft: #fecaca;
+    --diagram-active-text: #450a0a;
     --diagram-text: #1e293b;
     --diagram-muted: #64748b;
-    --diagram-alu: #dbeafe;
+    --diagram-alu: #2693c6;
+}
+
+.dark {
+    --diagram-memory: #1e293b;
+    --diagram-control: #0c4a6e;
+    --diagram-alu-unit: #172554;
+    --diagram-io: #14532d;
+    --diagram-head: #3f3a1f;
+    --diagram-border: #64748b;
+    --diagram-register: #3f3a1f;
+    --diagram-bus: #b45309;
+    --diagram-active: #f87171;
+    --diagram-active-soft: #7f1d1d;
+    --diagram-active-text: #fef2f2;
+    --diagram-text: #e2e8f0;
+    --diagram-muted: #94a3b8;
+    --diagram-alu: #0e7490;
 }
 
 .diagram-svg {
     display: block;
     width: 100%;
-    height: auto;
-    min-height: 420px;
+    height: 100%;
     background: var(--diagram-bg);
-    border-radius: 0.75rem;
 }
 
 .diagram-unit .unit-frame {
-    fill: var(--diagram-unit);
+    fill: var(--diagram-unit-fill);
     stroke: var(--diagram-border);
     stroke-width: 1.5;
+}
+
+.unit-memory .unit-frame {
+    --diagram-unit-fill: var(--diagram-memory);
+}
+
+.unit-control .unit-frame {
+    --diagram-unit-fill: var(--diagram-control);
+}
+
+.unit-alu .unit-frame {
+    --diagram-unit-fill: var(--diagram-alu-unit);
+}
+
+.unit-io .unit-frame {
+    --diagram-unit-fill: var(--diagram-io);
 }
 
 .diagram-unit .unit-head {
@@ -91,27 +125,31 @@
 .diagram-bus {
     fill: none;
     stroke: var(--diagram-bus);
-    stroke-width: 8;
+    stroke-width: 7;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 
 .diagram-bus.is-active {
     stroke: var(--diagram-active);
-    filter: drop-shadow(0 0 4px rgb(37 99 235 / 45%));
+    filter: drop-shadow(
+        0 0 4px color-mix(in srgb, var(--diagram-active) 45%, transparent)
+    );
 }
 
 .diagram-signal {
     fill: none;
     stroke: var(--diagram-bus);
-    stroke-width: 4;
+    stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 
 .diagram-signal.is-active {
     stroke: var(--diagram-active);
-    filter: drop-shadow(0 0 4px rgb(37 99 235 / 45%));
+    filter: drop-shadow(
+        0 0 4px color-mix(in srgb, var(--diagram-active) 45%, transparent)
+    );
 }
 
 .diagram-text {
@@ -122,7 +160,7 @@
 .diagram-label {
     fill: var(--diagram-muted);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 6px;
 }
 
 .diagram-value {
@@ -134,7 +172,7 @@
 .diagram-title {
     fill: var(--diagram-text);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.08em;
 }
@@ -143,13 +181,25 @@
     fill: var(--diagram-active-text);
 }
 
+.diagram-triangle {
+    fill: var(--diagram-alu);
+    stroke: var(--diagram-border);
+    stroke-width: 1.2;
+}
+
+.diagram-unit.is-active .diagram-triangle {
+    fill: var(--diagram-active-soft);
+    stroke: var(--diagram-active);
+}
+
 @media (prefers-reduced-motion: no-preference) {
     .diagram-bus,
     .diagram-signal,
     .memory-cell rect,
     .diagram-register rect,
     .unit-head,
-    .unit-frame {
+    .unit-frame,
+    .diagram-triangle {
         transition:
             stroke 120ms ease,
             fill 120ms ease,

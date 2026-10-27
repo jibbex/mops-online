@@ -117,6 +117,42 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+:root[data-accent='blue'] {
+    --primary: oklch(0.55 0.18 255);
+    --primary-foreground: oklch(0.985 0 0);
+    --ring: oklch(0.62 0.16 255);
+}
+
+:root[data-accent='emerald'] {
+    --primary: oklch(0.55 0.15 155);
+    --primary-foreground: oklch(0.985 0 0);
+    --ring: oklch(0.62 0.13 155);
+}
+
+:root[data-accent='violet'] {
+    --primary: oklch(0.55 0.2 300);
+    --primary-foreground: oklch(0.985 0 0);
+    --ring: oklch(0.62 0.18 300);
+}
+
+.dark[data-accent='blue'] {
+    --primary: oklch(0.72 0.14 255);
+    --primary-foreground: oklch(0.16 0 0);
+    --ring: oklch(0.66 0.14 255);
+}
+
+.dark[data-accent='emerald'] {
+    --primary: oklch(0.72 0.12 155);
+    --primary-foreground: oklch(0.16 0 0);
+    --ring: oklch(0.66 0.12 155);
+}
+
+.dark[data-accent='violet'] {
+    --primary: oklch(0.72 0.16 300);
+    --primary-foreground: oklch(0.16 0 0);
+    --ring: oklch(0.66 0.14 300);
+}
+
 @layer base {
     * {
         @apply border-border outline-ring/50;
