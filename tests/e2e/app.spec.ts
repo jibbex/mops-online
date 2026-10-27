@@ -81,6 +81,34 @@ test('switches the interface to German', async ({ page }) => {
     await expect(page.getByText('SPEICHERWERK')).toBeVisible();
 });
 
+test('shows the machine on mobile and switches to the editor', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    const machineTitle = page
+        .locator('[data-slot="card-title"]')
+        .filter({ hasText: 'Machine' });
+    const editorTitle = page
+        .locator('[data-slot="card-title"]')
+        .filter({ hasText: 'Assembly source' });
+
+    await expect(page.locator('.diagram-svg')).toBeVisible();
+    await expect(machineTitle).toBeVisible();
+    await expect(editorTitle).toBeHidden();
+
+    await page.getByRole('radio', { name: 'Editor' }).click();
+
+    await expect(editorTitle).toBeVisible();
+    await expect(machineTitle).toBeHidden();
+
+    const overflows = await page.evaluate(
+        () => document.documentElement.scrollHeight > window.innerHeight,
+    );
+    expect(overflows).toBe(false);
+});
+
 test('opens the command reference', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Reference' }).click();

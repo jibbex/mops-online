@@ -104,6 +104,8 @@
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
     --radius: 0.625rem;
+    --ui-font-size: clamp(0.75rem, 0.6rem + 0.22vw, 0.95rem);
+    --ui-font-size-sm: clamp(0.7rem, 0.58rem + 0.17vw, 0.85rem);
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.205 0 0);
@@ -216,6 +218,14 @@
     color: transparent;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+.ui-text {
+    font-size: var(--ui-font-size);
+}
+
+.ui-text-sm {
+    font-size: var(--ui-font-size-sm);
 }
 
 .brand-mark {

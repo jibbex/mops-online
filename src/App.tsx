@@ -66,6 +66,7 @@ import {
     type MessageKey,
 } from '@/i18n/messages';
 import { formatAddress, formatWord } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import {
     isTaskContext,
     PRACTICE_TASK_ID,
@@ -134,6 +135,9 @@ export default function App(): ReactElement {
     const [task] = useState<TaskInfo>(() =>
         readTaskInfo(window.location.search),
     );
+    const [mobileView, setMobileView] = useState<'editor' | 'machine'>(
+        'machine',
+    );
     const currentLine = player.lastEvent
         ? player.program?.sourceMap[player.lastEvent.address]
         : undefined;
@@ -147,8 +151,36 @@ export default function App(): ReactElement {
         <div className="app-shell flex h-screen flex-col overflow-hidden text-foreground">
             <Header task={task} />
             <Toolbar task={task} />
-            <main className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.7fr)]">
-                <section className="flex min-h-0 flex-col gap-2">
+            <main className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.7fr)] lg:grid-rows-[minmax(0,1fr)]">
+                <div className="flex items-center lg:hidden">
+                    <ToggleGroup
+                        type="single"
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        value={mobileView}
+                        onValueChange={(value) => {
+                            if (value === 'editor' || value === 'machine') {
+                                setMobileView(value);
+                            }
+                        }}
+                        aria-label={t('view.label')}
+                    >
+                        <ToggleGroupItem value="editor" className="flex-1">
+                            {t('view.editor')}
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="machine" className="flex-1">
+                            {t('view.machine')}
+                        </ToggleGroupItem>
+                    </ToggleGroup>
+                </div>
+                <section
+                    className={cn(
+                        'flex min-h-0 flex-col gap-2',
+                        mobileView !== 'editor' && 'hidden',
+                        'lg:flex',
+                    )}
+                >
                     <Card className="app-card flex min-h-0 flex-1 flex-col gap-0 py-0">
                         <CardHeader className="shrink-0 border-b">
                             <CardTitle>{t('editor.title')}</CardTitle>
@@ -171,7 +203,13 @@ export default function App(): ReactElement {
                     <Diagnostics />
                 </section>
 
-                <section className="flex min-h-0 flex-col gap-2">
+                <section
+                    className={cn(
+                        'flex min-h-0 flex-col gap-2',
+                        mobileView !== 'machine' && 'hidden',
+                        'lg:flex',
+                    )}
+                >
                     <Card className="app-card flex min-h-0 flex-1 flex-col gap-0 py-0">
                         <CardHeader className="shrink-0 border-b">
                             <CardTitle>{t('machine.title')}</CardTitle>
@@ -210,7 +248,7 @@ function Header({ task }: { readonly task: TaskInfo }): ReactElement {
         (task.id === PRACTICE_TASK_ID ? t('task.practice') : task.id);
 
     return (
-        <header className="app-header flex h-14 shrink-0 items-center gap-3 border-b px-4">
+        <header className="app-header flex h-14 shrink-0 items-center gap-2 border-b px-3 sm:gap-3 sm:px-4">
             <span className="brand-mark" aria-hidden="true">
                 <Cpu />
             </span>
@@ -218,12 +256,15 @@ function Header({ task }: { readonly task: TaskInfo }): ReactElement {
                 <h1 className="brand-title text-lg leading-none font-semibold tracking-tight">
                     MOPS
                 </h1>
-                <p className="mt-1 truncate text-[11px] leading-none text-muted-foreground">
+                <p className="ui-text-sm mt-1 hidden truncate leading-none text-muted-foreground sm:block">
                     {t('app.subtitle')}
                 </p>
             </div>
             {isTaskContext(task) ? (
-                <Badge variant="outline" className="ml-1 max-w-64">
+                <Badge
+                    variant="outline"
+                    className="ui-text ml-1 hidden max-w-64 sm:inline-flex"
+                >
                     <ClipboardList data-icon="inline-start" />
                     <span className="truncate">{taskName}</span>
                 </Badge>
@@ -251,7 +292,7 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
         player.status === 'waiting-input' || player.status === 'waiting-output';
 
     return (
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b px-4 py-2">
+        <div className="flex shrink-0 flex-nowrap items-center gap-1.5 overflow-x-auto border-b px-3 py-2 lg:flex-wrap lg:overflow-visible lg:px-4">
             <Button size="sm" onClick={player.assemble}>
                 <Wand2 data-icon="inline-start" />
                 {t('toolbar.assemble')}
@@ -318,7 +359,7 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
 
             <Separator orientation="vertical" className="h-6" />
 
-            <Field orientation="horizontal" className="w-auto">
+            <Field orientation="horizontal" className="w-auto shrink-0">
                 <FieldLabel className="sr-only">{t('mode.label')}</FieldLabel>
                 <ToggleGroup
                     type="single"
@@ -340,7 +381,7 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
                 </ToggleGroup>
             </Field>
 
-            <Field orientation="horizontal" className="w-auto">
+            <Field orientation="horizontal" className="w-auto shrink-0">
                 <FieldLabel className="sr-only">{t('speed.label')}</FieldLabel>
                 <ToggleGroup
                     type="single"
@@ -386,8 +427,10 @@ function StatusBar({
     return (
         <Card size="sm" className="app-card shrink-0">
             <CardHeader>
-                <CardTitle>{t('status.title')}</CardTitle>
-                <CardDescription>{t('status.description')}</CardDescription>
+                <CardTitle className="ui-text">{t('status.title')}</CardTitle>
+                <CardDescription className="ui-text hidden sm:block">
+                    {t('status.description')}
+                </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap items-center gap-2">
                 <StatusValue
@@ -462,10 +505,13 @@ function StatusValue({
     readonly accent?: boolean;
 }): ReactElement {
     return (
-        <span className="flex items-center gap-1">
-            <Badge variant="outline">{label}</Badge>
+        <span className="flex items-center gap-1.5">
+            <Badge variant="outline" className="ui-text">
+                {label}
+            </Badge>
             <Badge
                 variant={accent ? 'destructive' : 'secondary'}
+                className="ui-text"
                 data-testid={`status-${id}`}
             >
                 {value}

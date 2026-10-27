@@ -62,6 +62,8 @@ assembly programs on a simplified von Neumann machine.
 - Runtime traps for division by zero, overflow, and invalid instructions.
 - Execution history with backward stepping.
 - English and German interfaces with established technical terms.
+- Fluid header and status typography for high-resolution displays.
+- Responsive layout with a machine/editor switch on small screens.
 - Light, dark, and system themes with a modern gradient palette.
 - An instruction reference generated from the canonical ISA.
 - Plain source file export and import for Moodle submissions.
