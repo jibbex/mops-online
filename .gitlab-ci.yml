@@ -1,0 +1,42 @@
+# The runner already provides the container environment.
+# Do not add image: or services: to this file.
+
+stages:
+    - quality
+    - test
+    - build
+
+variables:
+    BUN_INSTALL_CACHE_DIR: '$CI_PROJECT_DIR/.bun-cache'
+
+default:
+    cache:
+        key:
+            files:
+                - bun.lock
+        paths:
+            - node_modules/
+            - .bun-cache/
+    before_script:
+        - bun install --frozen-lockfile
+
+quality:
+    stage: quality
+    script:
+        - bun run lint
+        - bun run format:check
+        - bun run typecheck
+
+unit:
+    stage: test
+    script:
+        - bun run test:unit
+
+build:
+    stage: build
+    script:
+        - bun run build
+    artifacts:
+        paths:
+            - dist/
+        expire_in: 1 week
