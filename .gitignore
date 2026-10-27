@@ -9,3 +9,6 @@ test-results/
 !.env.example
 
 *.local
+
+.agents/
+skills-lock.json

@@ -1,3 +1,12 @@
+/**
+ * ESLint flat configuration for TypeScript and React.
+ *
+ * Formatting belongs to Prettier; ESLint enforces code quality and the curly
+ * brace contract.
+ *
+ * @module eslint.config
+ */
+
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import reactHooks from 'eslint-plugin-react-hooks';
@@ -7,7 +16,14 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
     {
-        ignores: ['dist', 'coverage', 'playwright-report', 'test-results'],
+        ignores: [
+            'dist',
+            'coverage',
+            'playwright-report',
+            'test-results',
+            '.agents',
+            'skills-lock.json',
+        ],
     },
     {
         files: ['**/*.{js,mjs,cjs}'],
@@ -33,22 +49,13 @@ export default tseslint.config(
             curly: ['error', 'all'],
             'react-hooks/rules-of-hooks': 'error',
             'react-hooks/exhaustive-deps': 'warn',
-            'react-refresh/only-export-components': [
-                'warn',
-                { allowConstantExport: true },
-            ],
+            'react-refresh/only-export-components': 'warn',
         },
     },
     {
         files: ['vite.config.ts', 'playwright.config.ts'],
         languageOptions: {
             globals: { ...globals.node },
-        },
-    },
-    {
-        files: ['src/components/ui/**/*.{ts,tsx}'],
-        rules: {
-            'react-refresh/only-export-components': 'off',
         },
     },
     prettier,
