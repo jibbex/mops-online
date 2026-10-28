@@ -36,6 +36,24 @@ test('assembles and runs a program with input', async ({ page }) => {
     expect(overflows).toBe(false);
 });
 
+test('pauses after a manual step that requests input', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Assemble' }).click();
+
+    for (let step = 0; step < 12; step += 1) {
+        await page.getByRole('button', { name: 'Step' }).click();
+
+        if (await page.getByLabel('Input value').isVisible()) {
+            break;
+        }
+    }
+
+    await page.getByLabel('Input value').fill('21');
+    await page.getByRole('button', { name: 'Submit' }).click();
+
+    await expect(page.getByTestId('status-status')).toHaveText('Paused');
+});
+
 test('requires assembly after a source change', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Assemble' }).click();

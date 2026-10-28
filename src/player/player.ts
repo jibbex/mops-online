@@ -71,6 +71,7 @@ export interface PlayerState {
     readonly lastEvent: VmEvent | null;
     readonly lastOutput: Word | null;
     readonly resumeAfterOutput: boolean;
+    readonly resumeAfterInput: boolean;
     readonly history: readonly HistoryEntry[];
     readonly setSource: (source: string) => void;
     readonly assemble: () => void;
@@ -159,10 +160,14 @@ export const usePlayer = create<PlayerState>((set, get) => {
             result.kind === 'step'
                 ? shouldPause(result.event, state.mode)
                 : false;
-        record(result, pause);
+        record(result, pause, true);
     }
 
-    function record(result: VmStepResult, pause: boolean): void {
+    function record(
+        result: VmStepResult,
+        pause: boolean,
+        resumeAfterInput = false,
+    ): void {
         if (result.kind === 'input-required') {
             set({
                 cpu: result.state,
@@ -170,6 +175,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 lastEvent: result.event,
                 lastOutput: null,
                 resumeAfterOutput: false,
+                resumeAfterInput,
             });
             clearTimer();
             return;
@@ -183,6 +189,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 lastEvent: result.event,
                 lastOutput: null,
                 resumeAfterOutput: false,
+                resumeAfterInput: false,
                 history: withHistory(get().history, {
                     event: result.event,
                     before: result.event.before,
@@ -208,6 +215,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 lastEvent: result.event,
                 lastOutput: result.event.after.aus,
                 resumeAfterOutput: get().status === 'running',
+                resumeAfterInput: false,
                 history: withHistory(get().history, {
                     event: result.event,
                     before: result.event.before,
@@ -225,6 +233,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
             lastEvent: result.event,
             lastOutput: null,
             resumeAfterOutput: false,
+            resumeAfterInput: false,
             history: withHistory(get().history, {
                 event: result.event,
                 before: result.event.before,
@@ -253,6 +262,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
         lastEvent: null,
         lastOutput: null,
         resumeAfterOutput: false,
+        resumeAfterInput: false,
         history: [],
 
         setSource: (source) => {
@@ -268,6 +278,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 lastEvent: null,
                 lastOutput: null,
                 resumeAfterOutput: false,
+                resumeAfterInput: false,
                 history: [],
             });
         },
@@ -288,6 +299,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                     lastEvent: null,
                     lastOutput: null,
                     resumeAfterOutput: false,
+                    resumeAfterInput: false,
                     history: [],
                 });
                 return;
@@ -303,6 +315,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 lastEvent: null,
                 lastOutput: null,
                 resumeAfterOutput: false,
+                resumeAfterInput: false,
                 history: [],
             });
         },
@@ -326,6 +339,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                     lastEvent: null,
                     lastOutput: null,
                     resumeAfterOutput: false,
+                    resumeAfterInput: false,
                     history: [],
                 });
             }
@@ -367,7 +381,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
             }
 
             const result = stepCpu(state.cpu, undefined);
-            record(result, true);
+            record(result, true, false);
         },
 
         stop: () => {
@@ -382,6 +396,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 lastEvent: null,
                 lastOutput: null,
                 resumeAfterOutput: false,
+                resumeAfterInput: false,
                 history: [],
             });
         },
@@ -405,6 +420,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 lastEvent: entry.event,
                 lastOutput: null,
                 resumeAfterOutput: false,
+                resumeAfterInput: false,
                 history: history.slice(0, -1),
                 trap: null,
             });
@@ -429,10 +445,11 @@ export const usePlayer = create<PlayerState>((set, get) => {
 
             const result = stepCpu(state.cpu, value);
             const pause =
-                result.kind === 'step'
+                !state.resumeAfterInput ||
+                (result.kind === 'step'
                     ? shouldPause(result.event, state.mode)
-                    : false;
-            record(result, pause);
+                    : false);
+            record(result, pause, state.resumeAfterInput);
         },
 
         acknowledgeOutput: () => {

@@ -21,6 +21,7 @@ function resetPlayer(source = SIMPLE_SOURCE): void {
         lastEvent: null,
         lastOutput: null,
         resumeAfterOutput: false,
+        resumeAfterInput: false,
         history: [],
     });
 }
@@ -133,6 +134,7 @@ describe('player', () => {
         vi.runAllTimers();
 
         expect(usePlayer.getState().status).toBe('waiting-input');
+        expect(usePlayer.getState().resumeAfterInput).toBe(true);
 
         usePlayer.getState().provideInput(42);
         vi.runAllTimers();
@@ -146,6 +148,27 @@ describe('player', () => {
         expect(usePlayer.getState().status).toBe('ready');
         expect(usePlayer.getState().cpu?.memory[64]).toBe(0);
         expect(usePlayer.getState().cpu?.aus).toBe(0);
+    });
+
+    it('pauses after input during manual stepping', () => {
+        resetPlayer(INPUT_SOURCE);
+        usePlayer.getState().assemble();
+
+        for (let step = 0; step < 10; step += 1) {
+            usePlayer.getState().step();
+
+            if (usePlayer.getState().status === 'waiting-input') {
+                break;
+            }
+        }
+
+        expect(usePlayer.getState().status).toBe('waiting-input');
+        expect(usePlayer.getState().resumeAfterInput).toBe(false);
+
+        usePlayer.getState().provideInput(42);
+
+        expect(usePlayer.getState().status).toBe('paused');
+        expect(usePlayer.getState().resumeAfterInput).toBe(false);
     });
 
     it('pauses on output in manual stepping and resets after end', () => {
