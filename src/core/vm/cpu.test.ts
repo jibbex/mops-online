@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import type { Opcode } from '@/core/isa';
+import type { Word } from '@/core/object';
 import { createObjectProgramFixture } from '@/test/object-program-fixture';
 import { describe, expect, it } from 'vitest';
 import {
@@ -59,8 +60,9 @@ describe('cloneCpuState', () => {
     it('does not share memory mutations with the original state', () => {
         const cpu = stateWithMutableParts();
         const clone = cloneCpuState(cpu);
+        const cloneMemory = clone.memory as Word[];
 
-        clone.memory[0] = 99;
+        cloneMemory[0] = 99;
 
         expect(cpu.memory[0]).toBe(11);
     });
