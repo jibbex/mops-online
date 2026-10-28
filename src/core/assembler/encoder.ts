@@ -49,6 +49,19 @@ export interface EncoderResult {
     readonly warnings: readonly AssembleWarning[];
 }
 
+interface EncoderContext {
+    readonly memory: Word[];
+    readonly sourceMap: number[];
+    readonly listing: ListingEntry[];
+    readonly lineToAddress: Map<number, Address>;
+    readonly diagnostics: Diagnostic[];
+    readonly warnings: AssembleWarning[];
+    readonly fixups: JumpFixup[];
+    pointer: number;
+    endAddress: Address | undefined;
+    hasCompare: boolean;
+}
+
 interface JumpFixup {
     readonly address: Address;
     readonly line: number;
@@ -76,176 +89,247 @@ export function encodeProgram(
     lines: readonly ParsedLine[],
     labels: ReadonlyMap<string, number>,
 ): EncoderResult {
-    const memory: Word[] = Array<Word>(MEMORY_SIZE).fill(0);
-    const sourceMap: number[] = Array<number>(MEMORY_SIZE).fill(0);
-    const listing: ListingEntry[] = [];
-    const diagnostics: Diagnostic[] = [];
-    const warnings: AssembleWarning[] = [];
-    const lineToAddress = new Map<number, Address>();
-    const fixups: JumpFixup[] = [];
-    const usedLabels = new Set<string>();
-
-    let pointer = 0;
-    let endAddress: Address | undefined;
-    let hasCompare = false;
+    const context = createEncoderContext();
 
     for (const [index, line] of lines.entries()) {
         if (line.instruction.id === 'end') {
-            if (pointer > PROGRAM_LAST_CELL) {
-                diagnostics.push(
-                    createDiagnostic(
-                        line.number,
-                        0,
-                        line.raw.length,
-                        'program-overflow',
-                        'Program is too large for the available memory.',
-                    ),
-                );
-                break;
-            }
-
-            memory[pointer] = OPCODES.HALT;
-            sourceMap[pointer] = line.number;
-            lineToAddress.set(line.number, pointer);
-            listing.push({
-                line: line.number,
-                address: pointer,
-                words: [OPCODES.HALT],
-                source: line.raw,
-            });
-            endAddress = pointer;
-
-            for (const remaining of lines.slice(index + 1)) {
-                warnings.push(
-                    createWarning(
-                        remaining.number,
-                        0,
-                        remaining.raw.length,
-                        'code-after-end',
-                        `Instructions after "end" are not executed.`,
-                    ),
-                );
-            }
-
+            encodeEndInstruction(context, line, lines.slice(index + 1));
             break;
         }
 
-        const resolution = resolveOperand(line, line.instruction.id);
-
-        if (!resolution.ok) {
-            diagnostics.push(resolution.diagnostic);
-            continue;
-        }
-
-        const { mode, value, fixup } = resolution.operand;
-        const opcode = getOpcode(line.instruction.id, mode);
-
-        if (opcode === undefined) {
-            diagnostics.push(
-                createDiagnostic(
-                    line.number,
-                    0,
-                    line.raw.length,
-                    'invalid-operand-mode',
-                    `Instruction "${line.instruction.id}" does not support this operand.`,
-                ),
-            );
-            continue;
-        }
-
-        const hasOperand = mode !== 'none';
-        const wordCount = hasOperand ? 2 : 1;
-
-        if (pointer + wordCount > PROGRAM_LAST_CELL + 1) {
-            diagnostics.push(
-                createDiagnostic(
-                    line.number,
-                    0,
-                    line.raw.length,
-                    'program-overflow',
-                    'Program is too large for the available memory.',
-                ),
-            );
-            break;
-        }
-
-        const address = pointer;
-        memory[pointer] = opcode;
-        sourceMap[pointer] = line.number;
-        pointer += 1;
-
-        const words: Word[] = [opcode];
-
-        if (hasOperand) {
-            const operandValue = value ?? 0;
-            memory[pointer] = operandValue;
-            sourceMap[pointer] = line.number;
-            words.push(operandValue);
-            pointer += 1;
-        }
-
-        lineToAddress.set(line.number, address);
-        listing.push({
-            line: line.number,
-            address,
-            words,
-            source: line.raw,
-        });
-
-        if (line.instruction.id === 'cmp') {
-            hasCompare = true;
-        }
-
-        if (
-            line.instruction.id === 'jlt' ||
-            line.instruction.id === 'jeq' ||
-            line.instruction.id === 'jgt'
-        ) {
-            if (!hasCompare) {
-                diagnostics.push(
-                    createDiagnostic(
-                        line.number,
-                        0,
-                        line.raw.length,
-                        'conditional-without-compare',
-                        'Conditional jump requires a preceding cmp instruction.',
-                    ),
-                );
-            }
-        }
-
-        if (fixup !== undefined) {
-            fixups.push({
-                address: pointer - 1,
-                line: line.number,
-                ...fixup,
-            });
-        }
+        encodeInstruction(context, line);
     }
 
-    if (endAddress === undefined) {
-        const lastLine = lines.at(-1)?.number ?? 1;
+    if (context.endAddress === undefined) {
+        reportMissingEnd(context, lines);
+    }
 
-        diagnostics.push(
-            createDiagnostic(
-                lastLine,
-                0,
-                lines.at(-1)?.raw.length ?? 0,
-                'missing-end',
-                'Program must end with the end instruction.',
+    const usedLabels = resolveJumpFixups(context, labels);
+    const symbols = collectSymbols(context, labels, usedLabels);
+
+    return {
+        memory: context.memory,
+        sourceMap: context.sourceMap,
+        symbols,
+        listing: resolveListing(context.listing, context.memory),
+        entry: 0,
+        ...(context.endAddress === undefined
+            ? {}
+            : { endAddress: context.endAddress }),
+        diagnostics: context.diagnostics,
+        warnings: context.warnings,
+    };
+}
+
+function createEncoderContext(): EncoderContext {
+    return {
+        memory: Array<Word>(MEMORY_SIZE).fill(0),
+        sourceMap: Array<number>(MEMORY_SIZE).fill(0),
+        listing: [],
+        lineToAddress: new Map(),
+        diagnostics: [],
+        warnings: [],
+        fixups: [],
+        pointer: 0,
+        endAddress: undefined,
+        hasCompare: false,
+    };
+}
+
+/**
+ * Encodes the terminating `end` instruction and warns about trailing lines.
+ *
+ * @param context Mutable encoder state.
+ * @param line Parsed `end` line.
+ * @param remainingLines Lines after `end` in source order.
+ */
+function encodeEndInstruction(
+    context: EncoderContext,
+    line: ParsedLine,
+    remainingLines: readonly ParsedLine[],
+): void {
+    if (!reserveCells(context, line, 1)) {
+        return;
+    }
+
+    const address = context.pointer;
+
+    context.memory[address] = OPCODES.HALT;
+    context.sourceMap[address] = line.number;
+    context.lineToAddress.set(line.number, address);
+    context.listing.push({
+        line: line.number,
+        address,
+        words: [OPCODES.HALT],
+        source: line.raw,
+    });
+    context.endAddress = address;
+
+    for (const remaining of remainingLines) {
+        context.warnings.push(
+            createLineWarning(
+                remaining,
+                'code-after-end',
+                'Instructions after "end" are not executed.',
+            ),
+        );
+    }
+}
+
+/**
+ * Encodes one instruction line and records fixups for jump targets.
+ *
+ * @param context Mutable encoder state.
+ * @param line Parsed instruction line.
+ */
+function encodeInstruction(context: EncoderContext, line: ParsedLine): void {
+    const resolution = resolveOperand(line, line.instruction.id);
+
+    if (!resolution.ok) {
+        context.diagnostics.push(resolution.diagnostic);
+        return;
+    }
+
+    const { mode, value, fixup } = resolution.operand;
+    const opcode = getOpcode(line.instruction.id, mode);
+
+    if (opcode === undefined) {
+        context.diagnostics.push(
+            createLineDiagnostic(
+                line,
+                'invalid-operand-mode',
+                `Instruction "${line.instruction.id}" does not support this operand.`,
+            ),
+        );
+        return;
+    }
+
+    const hasOperand = mode !== 'none';
+    const wordCount = hasOperand ? 2 : 1;
+
+    if (!reserveCells(context, line, wordCount)) {
+        return;
+    }
+
+    const address = context.pointer;
+
+    context.memory[address] = opcode;
+    context.sourceMap[address] = line.number;
+    context.pointer += 1;
+
+    const words: Word[] = [opcode];
+
+    if (hasOperand) {
+        const operandValue = value ?? 0;
+
+        context.memory[context.pointer] = operandValue;
+        context.sourceMap[context.pointer] = line.number;
+        words.push(operandValue);
+        context.pointer += 1;
+    }
+
+    context.lineToAddress.set(line.number, address);
+    context.listing.push({
+        line: line.number,
+        address,
+        words,
+        source: line.raw,
+    });
+
+    if (line.instruction.id === 'cmp') {
+        context.hasCompare = true;
+    }
+
+    if (isConditionalJump(line.instruction.id) && !context.hasCompare) {
+        context.diagnostics.push(
+            createLineDiagnostic(
+                line,
+                'conditional-without-compare',
+                'Conditional jump requires a preceding cmp instruction.',
             ),
         );
     }
 
-    for (const fixup of fixups) {
+    if (fixup !== undefined) {
+        context.fixups.push({
+            address: context.pointer - 1,
+            line: line.number,
+            ...fixup,
+        });
+    }
+}
+
+/**
+ * Reserves memory cells for an encoded line.
+ *
+ * @param context Mutable encoder state.
+ * @param line Source line that needs the cells.
+ * @param wordCount Number of cells required.
+ * @returns Whether the cells fit in the program area.
+ */
+function reserveCells(
+    context: EncoderContext,
+    line: ParsedLine,
+    wordCount: number,
+): boolean {
+    if (context.pointer + wordCount <= PROGRAM_LAST_CELL + 1) {
+        return true;
+    }
+
+    context.diagnostics.push(
+        createLineDiagnostic(
+            line,
+            'program-overflow',
+            'Program is too large for the available memory.',
+        ),
+    );
+
+    return false;
+}
+
+/**
+ * Reports a missing `end` instruction on the last source line.
+ *
+ * @param context Mutable encoder state.
+ * @param lines Parsed source lines.
+ */
+function reportMissingEnd(
+    context: EncoderContext,
+    lines: readonly ParsedLine[],
+): void {
+    const lastLine = lines.at(-1);
+
+    context.diagnostics.push(
+        createDiagnostic(
+            lastLine?.number ?? 1,
+            0,
+            lastLine?.raw.length ?? 0,
+            'missing-end',
+            'Program must end with the end instruction.',
+        ),
+    );
+}
+
+/**
+ * Resolves every jump fixup against the final instruction addresses.
+ *
+ * @param context Mutable encoder state.
+ * @param labels Label-to-source-line map.
+ * @returns Labels that were used by jump targets.
+ */
+function resolveJumpFixups(
+    context: EncoderContext,
+    labels: ReadonlyMap<string, number>,
+): ReadonlySet<string> {
+    const usedLabels = new Set<string>();
+
+    for (const fixup of context.fixups) {
         const targetLine = fixup.targetLine ?? labels.get(fixup.label ?? '');
 
         if (targetLine === undefined) {
-            diagnostics.push(
-                createDiagnostic(
+            context.diagnostics.push(
+                createPointDiagnostic(
                     fixup.line,
-                    0,
-                    0,
                     'undefined-jump-target',
                     `Jump target "${fixup.label ?? ''}" is not defined.`,
                 ),
@@ -253,14 +337,12 @@ export function encodeProgram(
             continue;
         }
 
-        const targetAddress = lineToAddress.get(targetLine);
+        const targetAddress = context.lineToAddress.get(targetLine);
 
         if (targetAddress === undefined) {
-            diagnostics.push(
-                createDiagnostic(
+            context.diagnostics.push(
+                createPointDiagnostic(
                     fixup.line,
-                    0,
-                    0,
                     'invalid-jump-target',
                     'Jump target does not refer to an instruction.',
                 ),
@@ -268,17 +350,32 @@ export function encodeProgram(
             continue;
         }
 
-        memory[fixup.address] = targetAddress;
+        context.memory[fixup.address] = targetAddress;
 
         if (fixup.label !== undefined) {
             usedLabels.add(fixup.label);
         }
     }
 
+    return usedLabels;
+}
+
+/**
+ * Builds the resolved symbol table and warns about unused labels.
+ *
+ * @param context Mutable encoder state.
+ * @param labels Label-to-source-line map.
+ * @param usedLabels Labels referenced by jump targets.
+ */
+function collectSymbols(
+    context: EncoderContext,
+    labels: ReadonlyMap<string, number>,
+    usedLabels: ReadonlySet<string>,
+): ReadonlyMap<string, Address> {
     const symbols = new Map<string, Address>();
 
     for (const [label, lineNumber] of labels) {
-        const address = lineToAddress.get(lineNumber);
+        const address = context.lineToAddress.get(lineNumber);
 
         if (address === undefined) {
             continue;
@@ -287,11 +384,9 @@ export function encodeProgram(
         symbols.set(label, address);
 
         if (!usedLabels.has(label)) {
-            warnings.push(
-                createWarning(
+            context.warnings.push(
+                createPointWarning(
                     lineNumber,
-                    0,
-                    0,
                     'unused-label',
                     `Label "${label}" is never used.`,
                 ),
@@ -299,23 +394,61 @@ export function encodeProgram(
         }
     }
 
-    const resolvedListing = listing.map((item) => ({
+    return symbols;
+}
+
+/**
+ * Resolves listing words against the final memory image.
+ *
+ * @param listing Raw listing entries.
+ * @param memory Complete memory image.
+ */
+function resolveListing(
+    listing: readonly ListingEntry[],
+    memory: readonly Word[],
+): readonly ListingEntry[] {
+    return listing.map((item) => ({
         ...item,
         words: item.words.map(
             (_, offset) => memory[item.address + offset] ?? 0,
         ),
     }));
+}
 
-    return {
-        memory,
-        sourceMap,
-        symbols,
-        listing: resolvedListing,
-        entry: 0,
-        ...(endAddress === undefined ? {} : { endAddress }),
-        diagnostics,
-        warnings,
-    };
+function isConditionalJump(id: InstructionId): boolean {
+    return id === 'jlt' || id === 'jeq' || id === 'jgt';
+}
+
+function createLineDiagnostic(
+    line: ParsedLine,
+    code: DiagnosticCode,
+    message: string,
+): Diagnostic {
+    return createDiagnostic(line.number, 0, line.raw.length, code, message);
+}
+
+function createLineWarning(
+    line: ParsedLine,
+    code: DiagnosticCode,
+    message: string,
+): AssembleWarning {
+    return createWarning(line.number, 0, line.raw.length, code, message);
+}
+
+function createPointDiagnostic(
+    line: number,
+    code: DiagnosticCode,
+    message: string,
+): Diagnostic {
+    return createDiagnostic(line, 0, 0, code, message);
+}
+
+function createPointWarning(
+    line: number,
+    code: DiagnosticCode,
+    message: string,
+): AssembleWarning {
+    return createWarning(line, 0, 0, code, message);
 }
 
 function resolveOperand(
@@ -400,13 +533,7 @@ function fail(
 ): OperandResolution {
     return {
         ok: false,
-        diagnostic: createDiagnostic(
-            line.number,
-            0,
-            line.raw.length,
-            code,
-            message,
-        ),
+        diagnostic: createLineDiagnostic(line, code, message),
     };
 }
 
