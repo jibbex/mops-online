@@ -49,9 +49,7 @@ describe('Diagnostics', () => {
             </LanguageProvider>,
         );
 
-        expect(
-            screen.getByText('Zeile 1: Operand fehlt.'),
-        ).toBeInTheDocument();
+        expect(screen.getByText('Zeile 1: Operand fehlt.')).toBeInTheDocument();
     });
 
     it('renders nothing without messages', () => {

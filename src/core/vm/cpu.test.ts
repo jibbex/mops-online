@@ -4,12 +4,7 @@ import type { Opcode } from '@/core/isa';
 import type { Word } from '@/core/object';
 import { createObjectProgramFixture } from '@/test/object-program-fixture';
 import { describe, expect, it } from 'vitest';
-import {
-    cloneCpuState,
-    createCpu,
-    formatDecoded,
-    type CpuState,
-} from './cpu';
+import { cloneCpuState, createCpu, formatDecoded, type CpuState } from './cpu';
 import { createTrap } from './traps';
 
 function stateWithMutableParts(): CpuState {

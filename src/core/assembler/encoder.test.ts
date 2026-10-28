@@ -54,9 +54,7 @@ describe('encodeProgram', () => {
     it('encodes data aliases and negative immediates', () => {
         const result = encode('ld a\nld $71\nld -5\nend');
 
-        expect(result.memory.slice(0, 7)).toEqual([
-            10, 64, 10, 71, 11, -5, 60,
-        ]);
+        expect(result.memory.slice(0, 7)).toEqual([10, 64, 10, 71, 11, -5, 60]);
     });
 
     it('reports a missing end on the last source line', () => {
@@ -96,9 +94,7 @@ describe('encodeProgram', () => {
     });
 
     it('reports undefined and non-instruction jump targets', () => {
-        expect(codes('jmp missing\nend')).toContain(
-            'undefined-jump-target',
-        );
+        expect(codes('jmp missing\nend')).toContain('undefined-jump-target');
         expect(codes('jmp #2\n\nend')).toContain('invalid-jump-target');
     });
 
@@ -128,9 +124,9 @@ describe('encodeProgram', () => {
         expect(codes('jlt done\nend :done')).toContain(
             'conditional-without-compare',
         );
-        expect(
-            codes('cmp 1\njlt done\nend :done'),
-        ).not.toContain('conditional-without-compare');
+        expect(codes('cmp 1\njlt done\nend :done')).not.toContain(
+            'conditional-without-compare',
+        );
     });
 
     it('reports invalid addresses and operands', () => {
