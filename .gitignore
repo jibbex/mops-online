@@ -5,6 +5,8 @@ playwright-report/
 test-results/
 .bun-cache/
 .npm/
+bun.lock
+bun.lockb
 
 .env
 .env.*

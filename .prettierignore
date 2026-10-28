@@ -7,5 +7,6 @@ test-results/
 .npm/
 bun.lock
 bun.lockb
+package-lock.json
 .agents/
 skills-lock.json
