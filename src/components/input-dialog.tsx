@@ -20,6 +20,7 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MAX_WORD, MIN_WORD, isWord } from '@/core/object';
 import { useI18n } from '@/i18n/i18n-context';
 import { usePlayer } from '@/player/player';
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
@@ -47,7 +48,7 @@ export function InputDialog(): ReactElement {
         event.preventDefault();
         const parsed = Number.parseInt(value, 10);
 
-        if (!Number.isInteger(parsed) || parsed < -9999 || parsed > 9999) {
+        if (!isWord(parsed)) {
             setInvalid(true);
             return;
         }
@@ -74,8 +75,8 @@ export function InputDialog(): ReactElement {
                             <Input
                                 id="input-value"
                                 type="number"
-                                min={-9999}
-                                max={9999}
+                                min={MIN_WORD}
+                                max={MAX_WORD}
                                 value={value}
                                 aria-invalid={invalid}
                                 onChange={(event) => {
