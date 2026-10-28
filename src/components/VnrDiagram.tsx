@@ -51,9 +51,9 @@ export function VnrDiagram({
             className="diagram-svg"
             viewBox="0 0 520 510"
             role="img"
-            aria-labelledby="vnr-title vnr-description"
+            aria-label={t('diagram.title')}
+            aria-describedby="vnr-description"
         >
-            <title id="vnr-title">{t('diagram.title')}</title>
             <desc id="vnr-description">{t('diagram.description')}</desc>
 
             <defs>
