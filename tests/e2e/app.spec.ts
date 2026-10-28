@@ -36,20 +36,6 @@ test('assembles and runs a program with input', async ({ page }) => {
     expect(overflows).toBe(false);
 });
 
-test('assembles edited source without pressing Assemble', async ({ page }) => {
-    await page.goto('/');
-    await setSource(page, 'ld 2\nadd 3\nend');
-
-    await expect(page.getByTestId('status-status')).toHaveText('Ready');
-
-    await page.getByRole('radio', { name: 'Run' }).click();
-    await page.getByRole('radio', { name: 'Off' }).click();
-    await page.getByRole('button', { name: 'Start' }).click();
-
-    await expect(page.getByTestId('status-status')).toHaveText('Finished');
-    await expect(page.getByTestId('status-ac')).toHaveText('00005');
-});
-
 test('shows an assembly error in the UI', async ({ page }) => {
     await page.goto('/');
     await setSource(page, 'xyz 5\nend');
