@@ -128,6 +128,19 @@ function withHistory(
     return [...history.slice(-4999), entry];
 }
 
+const RESET_OUTPUT = {
+    lastOutput: null,
+    resumeAfterOutput: false,
+    resumeAfterInput: false,
+} as const;
+
+const RESET_EXECUTION = {
+    trap: null,
+    lastEvent: null,
+    history: [] as readonly HistoryEntry[],
+    ...RESET_OUTPUT,
+} as const;
+
 /**
  * Player store and command surface used by the UI.
  */
@@ -172,9 +185,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
             set({
                 cpu: result.state,
                 status: 'waiting-input',
+                ...RESET_OUTPUT,
                 lastEvent: result.event,
-                lastOutput: null,
-                resumeAfterOutput: false,
                 resumeAfterInput,
             });
             clearTimer();
@@ -185,11 +197,9 @@ export const usePlayer = create<PlayerState>((set, get) => {
             set({
                 cpu: result.state,
                 status: 'error',
+                ...RESET_OUTPUT,
                 trap: result.trap,
                 lastEvent: result.event,
-                lastOutput: null,
-                resumeAfterOutput: false,
-                resumeAfterInput: false,
                 history: withHistory(get().history, {
                     event: result.event,
                     before: result.event.before,
@@ -206,11 +216,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
             set({
                 cpu: result.state,
                 status: 'finished',
-                trap: null,
+                ...RESET_EXECUTION,
                 lastEvent: event ?? get().lastEvent,
-                lastOutput: null,
-                resumeAfterOutput: false,
-                resumeAfterInput: false,
                 history: event
                     ? withHistory(get().history, {
                           event,
@@ -230,10 +237,10 @@ export const usePlayer = create<PlayerState>((set, get) => {
             set({
                 cpu: result.state,
                 status: 'waiting-output',
+                ...RESET_OUTPUT,
                 lastEvent: result.event,
                 lastOutput: result.event.after.aus,
                 resumeAfterOutput: get().status === 'running',
-                resumeAfterInput: false,
                 history: withHistory(get().history, {
                     event: result.event,
                     before: result.event.before,
@@ -248,16 +255,13 @@ export const usePlayer = create<PlayerState>((set, get) => {
         set({
             cpu: result.state,
             status: pause ? 'paused' : 'running',
+            ...RESET_EXECUTION,
             lastEvent: result.event,
-            lastOutput: null,
-            resumeAfterOutput: false,
-            resumeAfterInput: false,
             history: withHistory(get().history, {
                 event: result.event,
                 before: result.event.before,
                 after: result.state,
             }),
-            trap: null,
         });
 
         if (pause) {
@@ -276,12 +280,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
         speed: 1,
         diagnostics: [],
         warnings: [],
-        trap: null,
-        lastEvent: null,
-        lastOutput: null,
-        resumeAfterOutput: false,
-        resumeAfterInput: false,
-        history: [],
+        ...RESET_EXECUTION,
 
         setSource: (source) => {
             clearTimer();
@@ -292,12 +291,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 status: 'idle',
                 diagnostics: [],
                 warnings: [],
-                trap: null,
-                lastEvent: null,
-                lastOutput: null,
-                resumeAfterOutput: false,
-                resumeAfterInput: false,
-                history: [],
+                ...RESET_EXECUTION,
             });
         },
 
@@ -313,12 +307,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                     status: 'error',
                     diagnostics: result.diagnostics,
                     warnings: result.warnings,
-                    trap: null,
-                    lastEvent: null,
-                    lastOutput: null,
-                    resumeAfterOutput: false,
-                    resumeAfterInput: false,
-                    history: [],
+                    ...RESET_EXECUTION,
                 });
                 return;
             }
@@ -329,12 +318,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 status: 'ready',
                 diagnostics: result.diagnostics,
                 warnings: result.warnings,
-                trap: null,
-                lastEvent: null,
-                lastOutput: null,
-                resumeAfterOutput: false,
-                resumeAfterInput: false,
-                history: [],
+                ...RESET_EXECUTION,
             });
         },
 
@@ -353,12 +337,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 set({
                     cpu: initial.program ? createCpu(initial.program) : null,
                     status: initial.program ? 'ready' : 'idle',
-                    trap: null,
-                    lastEvent: null,
-                    lastOutput: null,
-                    resumeAfterOutput: false,
-                    resumeAfterInput: false,
-                    history: [],
+                    ...RESET_EXECUTION,
                 });
             }
 
@@ -410,12 +389,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
             set({
                 cpu: program ? createCpu(program) : null,
                 status: program ? 'ready' : 'idle',
-                trap: null,
-                lastEvent: null,
-                lastOutput: null,
-                resumeAfterOutput: false,
-                resumeAfterInput: false,
-                history: [],
+                ...RESET_EXECUTION,
             });
         },
 
@@ -435,12 +409,9 @@ export const usePlayer = create<PlayerState>((set, get) => {
             set({
                 cpu: entry.before,
                 status: 'paused',
+                ...RESET_EXECUTION,
                 lastEvent: entry.event,
-                lastOutput: null,
-                resumeAfterOutput: false,
-                resumeAfterInput: false,
                 history: history.slice(0, -1),
-                trap: null,
             });
         },
 
