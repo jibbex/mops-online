@@ -44,6 +44,26 @@ describe('player', () => {
         expect(usePlayer.getState().diagnostics).toHaveLength(0);
     });
 
+    it('assembles edited source in the background', () => {
+        usePlayer.getState().setSource(SIMPLE_SOURCE);
+
+        expect(usePlayer.getState().program).toBeNull();
+
+        vi.advanceTimersByTime(250);
+
+        expect(usePlayer.getState().program).not.toBeNull();
+        expect(usePlayer.getState().status).toBe('ready');
+    });
+
+    it('reports errors for edited source without a manual assemble', () => {
+        usePlayer.getState().setSource('ld');
+
+        vi.advanceTimersByTime(250);
+
+        expect(usePlayer.getState().status).toBe('error');
+        expect(usePlayer.getState().diagnostics.length).toBeGreaterThan(0);
+    });
+
     it('reports assembly errors', () => {
         resetPlayer('ld');
         usePlayer.getState().assemble();

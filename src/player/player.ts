@@ -96,12 +96,23 @@ export const INITIAL_SOURCE = [
     'end',
 ].join('\n');
 
+/** Delay before an edited source is assembled in the background. */
+const AUTO_ASSEMBLE_DELAY_MS = 250;
+
 let timer: ReturnType<typeof setTimeout> | null = null;
+let assembleTimer: ReturnType<typeof setTimeout> | null = null;
 
 function clearTimer(): void {
     if (timer !== null) {
         clearTimeout(timer);
         timer = null;
+    }
+}
+
+function clearAssembleTimer(): void {
+    if (assembleTimer !== null) {
+        clearTimeout(assembleTimer);
+        assembleTimer = null;
     }
 }
 
@@ -274,6 +285,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
 
         setSource: (source) => {
             clearTimer();
+            clearAssembleTimer();
             set({
                 source,
                 program: null,
@@ -287,10 +299,15 @@ export const usePlayer = create<PlayerState>((set, get) => {
                 resumeAfterOutput: false,
                 history: [],
             });
+            assembleTimer = setTimeout(() => {
+                assembleTimer = null;
+                get().assemble();
+            }, AUTO_ASSEMBLE_DELAY_MS);
         },
 
         assemble: () => {
             clearTimer();
+            clearAssembleTimer();
 
             const result = assemble(get().source);
 
@@ -500,4 +517,5 @@ export const usePlayer = create<PlayerState>((set, get) => {
  */
 export function resetPlayerTimerForTests(): void {
     clearTimer();
+    clearAssembleTimer();
 }
