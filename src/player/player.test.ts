@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { DATA_START } from '@/core/object';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { INITIAL_SOURCE, resetPlayerTimerForTests, usePlayer } from './player';
 
@@ -75,7 +76,7 @@ describe('player', () => {
         expect(usePlayer.getState().diagnostics.length).toBeGreaterThan(0);
     });
 
-    it('pauses on output and resets after the program ends', () => {
+    it('finishes with the final machine state after the program ends', () => {
         usePlayer.getState().assemble();
         usePlayer.getState().setMode('run');
         usePlayer.getState().setSpeed(0);
@@ -91,11 +92,13 @@ describe('player', () => {
 
         const state = usePlayer.getState();
 
-        expect(state.status).toBe('ready');
-        expect(state.cpu?.ac).toBe(0);
-        expect(state.cpu?.aus).toBe(0);
+        expect(state.status).toBe('finished');
+        expect(state.cpu?.ac).toBe(8);
+        expect(state.cpu?.aus).toBe(8);
+        expect(state.cpu?.memory[DATA_START]).toBe(8);
         expect(state.lastOutput).toBeNull();
-        expect(state.history).toHaveLength(0);
+        expect(state.lastEvent?.microOp.kind).toBe('HALT');
+        expect(state.history.length).toBeGreaterThan(0);
     });
 
     it('pauses after an instruction in instruction mode', () => {
@@ -125,7 +128,7 @@ describe('player', () => {
         expect(usePlayer.getState().history).toHaveLength(1);
     });
 
-    it('waits for input and resets after the program ends', () => {
+    it('waits for input and finishes with the final machine state', () => {
         resetPlayer(INPUT_SOURCE);
         usePlayer.getState().assemble();
         usePlayer.getState().setMode('run');
@@ -145,9 +148,10 @@ describe('player', () => {
         usePlayer.getState().acknowledgeOutput();
         vi.runAllTimers();
 
-        expect(usePlayer.getState().status).toBe('ready');
-        expect(usePlayer.getState().cpu?.memory[64]).toBe(0);
-        expect(usePlayer.getState().cpu?.aus).toBe(0);
+        expect(usePlayer.getState().status).toBe('finished');
+        expect(usePlayer.getState().cpu?.memory[DATA_START]).toBe(42);
+        expect(usePlayer.getState().cpu?.aus).toBe(42);
+        expect(usePlayer.getState().history.length).toBeGreaterThan(0);
     });
 
     it('pauses after input during manual stepping', () => {
@@ -171,7 +175,7 @@ describe('player', () => {
         expect(usePlayer.getState().resumeAfterInput).toBe(false);
     });
 
-    it('pauses on output in manual stepping and resets after end', () => {
+    it('pauses on output in manual stepping and finishes after end', () => {
         resetPlayer(['out 5', 'end'].join('\n'));
         usePlayer.getState().assemble();
 
@@ -195,14 +199,57 @@ describe('player', () => {
         for (let step = 0; step < 10; step += 1) {
             usePlayer.getState().step();
 
-            if (usePlayer.getState().status === 'ready') {
+            if (usePlayer.getState().status === 'finished') {
                 break;
             }
         }
 
-        expect(usePlayer.getState().status).toBe('ready');
-        expect(usePlayer.getState().cpu?.aus).toBe(0);
-        expect(usePlayer.getState().history).toHaveLength(0);
+        expect(usePlayer.getState().status).toBe('finished');
+        expect(usePlayer.getState().cpu?.aus).toBe(5);
+        expect(usePlayer.getState().history.length).toBeGreaterThan(0);
+    });
+
+    it('steps back from the finished state', () => {
+        resetPlayer(['ld 5', 'end'].join('\n'));
+        usePlayer.getState().assemble();
+
+        for (let step = 0; step < 20; step += 1) {
+            usePlayer.getState().step();
+
+            if (usePlayer.getState().status === 'finished') {
+                break;
+            }
+        }
+
+        const finished = usePlayer.getState();
+
+        expect(finished.status).toBe('finished');
+        expect(finished.lastEvent?.microOp.kind).toBe('HALT');
+
+        usePlayer.getState().stepBack();
+
+        const rewound = usePlayer.getState();
+
+        expect(rewound.status).toBe('paused');
+        expect(rewound.cpu).not.toBe(finished.cpu);
+        expect(rewound.history).toHaveLength(finished.history.length - 1);
+    });
+
+    it('restarts from the finished state', () => {
+        resetPlayer(['ld 5', 'end'].join('\n'));
+        usePlayer.getState().assemble();
+        usePlayer.getState().setMode('run');
+        usePlayer.getState().setSpeed(0);
+        usePlayer.getState().start();
+        vi.runAllTimers();
+
+        expect(usePlayer.getState().status).toBe('finished');
+
+        usePlayer.getState().start();
+        vi.runAllTimers();
+
+        expect(usePlayer.getState().status).toBe('finished');
+        expect(usePlayer.getState().history.length).toBeGreaterThan(0);
     });
 
     it('steps one microcycle at a time', () => {

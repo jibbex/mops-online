@@ -201,7 +201,25 @@ export const usePlayer = create<PlayerState>((set, get) => {
         }
 
         if (result.kind === 'halted') {
-            get().stop();
+            const event = result.event;
+
+            set({
+                cpu: result.state,
+                status: 'finished',
+                trap: null,
+                lastEvent: event ?? get().lastEvent,
+                lastOutput: null,
+                resumeAfterOutput: false,
+                resumeAfterInput: false,
+                history: event
+                    ? withHistory(get().history, {
+                          event,
+                          before: event.before,
+                          after: result.state,
+                      })
+                    : get().history,
+            });
+            clearTimer();
             return;
         }
 
