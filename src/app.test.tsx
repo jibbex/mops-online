@@ -20,5 +20,18 @@ describe('App', () => {
         expect(
             screen.getByRole('button', { name: 'Assemble' }),
         ).toBeInTheDocument();
+        expect(screen.getByTestId('app-version')).toHaveTextContent(
+            /^v\d+\.\d+\.\d+$/,
+        );
+
+        const repository = screen.getByRole('link', {
+            name: 'GitHub repository',
+        });
+
+        expect(repository).toHaveAttribute(
+            'href',
+            'https://github.com/jibbex/mops-online',
+        );
+        expect(repository).toHaveAttribute('target', '_blank');
     });
 });

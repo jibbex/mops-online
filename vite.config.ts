@@ -6,12 +6,20 @@
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vitest/config';
+
+const packageJson = JSON.parse(
+    readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+) as { version: string };
 
 export default defineConfig({
     // GitHub Pages builds set this to the repository base path.
     base: process.env.VITE_BASE_PATH ?? '/',
+    define: {
+        __APP_VERSION__: JSON.stringify(packageJson.version),
+    },
     plugins: [react(), tailwindcss()],
     resolve: {
         alias: {

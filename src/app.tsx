@@ -10,6 +10,7 @@
  */
 
 import { CommandReference } from '@/components/command-reference';
+import { GithubIcon } from '@/components/github-icon';
 import { LanguageToggle } from '@/components/language-toggle';
 import { MopsEditor } from '@/components/mops-editor';
 import { SourceFileDialog } from '@/components/source-file-dialog';
@@ -243,6 +244,7 @@ export default function App(): ReactElement {
                     />
                 </section>
             </main>
+            <Footer />
             <InputDialog />
             <OutputDialog />
         </div>
@@ -289,6 +291,35 @@ function Header({ task }: { readonly task: TaskInfo }): ReactElement {
                 <ThemeToggle />
             </div>
         </header>
+    );
+}
+
+/**
+ * Compact application footer with the version and repository link.
+ *
+ * @returns The footer element.
+ */
+function Footer(): ReactElement {
+    const { t } = useI18n();
+
+    return (
+        <footer className="text-muted-foreground flex h-7 shrink-0 items-center justify-center gap-2 border-t px-3 text-xs">
+            <span>MOPS Online</span>
+            <span className="font-mono" data-testid="app-version">
+                v{__APP_VERSION__}
+            </span>
+            <span aria-hidden="true">·</span>
+            <a
+                href="https://github.com/jibbex/mops-online"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-foreground inline-flex items-center gap-1"
+                aria-label={t('footer.repository')}
+            >
+                <GithubIcon className="size-3.5" />
+                <span>{t('footer.repository')}</span>
+            </a>
+        </footer>
     );
 }
 

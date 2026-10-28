@@ -86,6 +86,22 @@ test('switches to dark mode', async ({ page }) => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });
 
+test('shows the app version and links to the repository', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.getByTestId('app-version')).toHaveText(
+        /^v\d+\.\d+\.\d+$/,
+    );
+
+    const repository = page.getByRole('link', { name: 'GitHub repository' });
+
+    await expect(repository).toHaveAttribute(
+        'href',
+        'https://github.com/jibbex/mops-online',
+    );
+    await expect(repository).toHaveAttribute('target', '_blank');
+});
+
 test('switches the interface to German', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Language settings' }).click();
