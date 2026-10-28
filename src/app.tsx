@@ -217,7 +217,8 @@ export default function App(): ReactElement {
                     className={cn(
                         'flex min-h-0 flex-col gap-2',
                         mobileView !== 'machine' && 'hidden',
-                        'lg:flex',
+                        'lg:max-wide:flex',
+                        'wide:grid wide:grid-cols-[minmax(0,1fr)_16rem] wide:grid-rows-[minmax(0,1fr)]',
                     )}
                 >
                     <Card className="app-card flex min-h-0 flex-1 flex-col gap-0 py-0">
@@ -236,7 +237,10 @@ export default function App(): ReactElement {
                             />
                         </CardContent>
                     </Card>
-                    <StatusBar currentLine={currentLine} />
+                    <StatusBar
+                        currentLine={currentLine}
+                        className="wide:self-start"
+                    />
                 </section>
             </main>
             <InputDialog />
@@ -491,26 +495,29 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
  * Compact machine status summary.
  *
  * @param currentLine Source line associated with the last machine event.
+ * @param className Additional layout classes.
  * @returns The status card element.
  */
 function StatusBar({
     currentLine,
+    className,
 }: {
     readonly currentLine?: number;
+    readonly className?: string;
 }): ReactElement {
     const { language, t } = useI18n();
     const player = usePlayer();
     const cpu = player.cpu;
 
     return (
-        <Card size="sm" className="app-card shrink-0">
+        <Card size="sm" className={cn('app-card shrink-0', className)}>
             <CardHeader>
                 <CardTitle>{t('status.title')}</CardTitle>
                 <CardDescription className="hidden sm:block">
                     {t('status.description')}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-wrap items-center gap-2">
+            <CardContent className="flex flex-wrap items-center gap-2 wide:grid wide:grid-cols-2 wide:items-center wide:gap-x-3 wide:gap-y-1.5">
                 <StatusValue
                     id="status"
                     label={t('status.status')}
@@ -583,10 +590,13 @@ function StatusValue({
     readonly accent?: boolean;
 }): ReactElement {
     return (
-        <span className="flex items-center gap-1.5">
-            <Badge variant="outline">{label}</Badge>
+        <span className="flex items-center gap-1.5 wide:contents">
+            <Badge variant="outline" className="wide:w-full wide:justify-start">
+                {label}
+            </Badge>
             <Badge
                 variant={accent ? 'destructive' : 'secondary'}
+                className="wide:w-full wide:justify-start"
                 data-testid={`status-${id}`}
             >
                 {value}
