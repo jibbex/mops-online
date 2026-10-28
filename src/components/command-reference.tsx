@@ -68,6 +68,18 @@ function operandForms(
  */
 export function CommandReference(): ReactElement {
     const { t } = useI18n();
+    const instructions = INSTRUCTIONS.map((instruction) => ({
+        id: instruction.id,
+        mnemonic: instruction.mnemonic,
+        forms: operandForms(
+            instruction.mnemonic,
+            Object.keys(instruction.opcodes) as OperandMode[],
+            t,
+        ),
+        opcodes: Object.values(instruction.opcodes).sort(
+            (left, right) => left - right,
+        ),
+    }));
 
     return (
         <Dialog>
@@ -84,28 +96,52 @@ export function CommandReference(): ReactElement {
                         {t('reference.description')}
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="h-[60vh]">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>{t('reference.mnemonic')}</TableHead>
-                                <TableHead>{t('reference.operands')}</TableHead>
-                                <TableHead>{t('reference.opcode')}</TableHead>
-                                <TableHead>
-                                    {t('reference.descriptionColumn')}
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {INSTRUCTIONS.map((instruction) => {
-                                const modes = Object.keys(
-                                    instruction.opcodes,
-                                ) as OperandMode[];
-                                const opcodes = Object.values(
-                                    instruction.opcodes,
-                                ).sort((left, right) => left - right);
-
-                                return (
+                <ScrollArea className="h-[60dvh]">
+                    <ul className="flex flex-col gap-3 pr-3 sm:hidden">
+                        {instructions.map((instruction) => (
+                            <li
+                                key={instruction.id}
+                                className="flex flex-col gap-1.5 border-b pb-3 last:border-b-0 last:pb-0"
+                            >
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <Badge variant="secondary">
+                                        {instruction.mnemonic}
+                                    </Badge>
+                                    <span className="font-mono text-xs text-muted-foreground">
+                                        {instruction.opcodes.join(' · ')}
+                                    </span>
+                                </div>
+                                <p className="font-mono text-xs break-words">
+                                    {instruction.forms}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    {t(
+                                        `instruction.${instruction.id}` as MessageKey,
+                                    )}
+                                </p>
+                            </li>
+                        ))}
+                    </ul>
+                    <div className="hidden sm:block">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>
+                                        {t('reference.mnemonic')}
+                                    </TableHead>
+                                    <TableHead>
+                                        {t('reference.operands')}
+                                    </TableHead>
+                                    <TableHead>
+                                        {t('reference.opcode')}
+                                    </TableHead>
+                                    <TableHead>
+                                        {t('reference.descriptionColumn')}
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {instructions.map((instruction) => (
                                     <TableRow key={instruction.id}>
                                         <TableCell>
                                             <Badge variant="secondary">
@@ -113,14 +149,10 @@ export function CommandReference(): ReactElement {
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="font-mono text-xs">
-                                            {operandForms(
-                                                instruction.mnemonic,
-                                                modes,
-                                                t,
-                                            )}
+                                            {instruction.forms}
                                         </TableCell>
                                         <TableCell className="font-mono text-xs text-muted-foreground">
-                                            {opcodes.join(' · ')}
+                                            {instruction.opcodes.join(' · ')}
                                         </TableCell>
                                         <TableCell>
                                             {t(
@@ -128,10 +160,10 @@ export function CommandReference(): ReactElement {
                                             )}
                                         </TableCell>
                                     </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </ScrollArea>
             </DialogContent>
         </Dialog>

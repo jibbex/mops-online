@@ -190,8 +190,32 @@ test('opens the command reference', async ({ page }) => {
         dialog.getByRole('cell', { name: 'ld', exact: true }),
     ).toBeVisible();
     await expect(
-        dialog.getByText('Load a value into the accumulator.'),
+        dialog.getByRole('cell', {
+            name: 'Load a value into the accumulator.',
+        }),
     ).toBeVisible();
+});
+
+test('fits the command reference on a phone', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Reference' }).click();
+
+    const dialog = page.getByRole('dialog');
+    const list = dialog.locator('ul');
+
+    await expect(list.getByText('ld', { exact: true })).toBeVisible();
+    await expect(
+        list.getByText('Load a value into the accumulator.'),
+    ).toBeVisible();
+    await expect(dialog.locator('table')).toBeHidden();
+
+    const overflow = await page.evaluate(() => ({
+        document: document.documentElement.scrollWidth,
+        viewport: window.innerWidth,
+    }));
+
+    expect(overflow.document).toBe(overflow.viewport);
 });
 
 test('downloads the assembly source for Moodle', async ({ page }) => {
