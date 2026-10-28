@@ -181,7 +181,7 @@
 .diagram-label {
     fill: var(--diagram-muted);
     font-family: var(--font-mono);
-    font-size: 6px;
+    font-size: 7px;
 }
 
 .diagram-value {

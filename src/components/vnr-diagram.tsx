@@ -193,7 +193,7 @@ export function VnrDiagram({
                                         x={x + 18.5}
                                         y={y + 11}
                                         textAnchor="middle"
-                                        fontSize="7"
+                                        fontSize="8"
                                     >
                                         {formatWord(memory[address] ?? 0)}
                                     </text>
@@ -269,7 +269,7 @@ export function VnrDiagram({
                         x="430.5"
                         y="102"
                         textAnchor="middle"
-                        fontSize="7"
+                        fontSize="8"
                     >
                         {formatAddress(cpu?.bz ?? 0)}
                     </text>
@@ -292,7 +292,7 @@ export function VnrDiagram({
                         x="430.5"
                         y="129"
                         textAnchor="middle"
-                        fontSize="7"
+                        fontSize="8"
                     >
                         {formatAddress(cpu?.br.opcode ?? 0)}
                     </text>
@@ -304,7 +304,7 @@ export function VnrDiagram({
                         x="458.5"
                         y="129"
                         textAnchor="middle"
-                        fontSize="7"
+                        fontSize="8"
                     >
                         {formatWord(cpu?.br.operand ?? 0)}
                     </text>
@@ -325,7 +325,7 @@ export function VnrDiagram({
                         className="diagram-text diagram-value"
                         x="330"
                         y="162"
-                        fontSize="7"
+                        fontSize="8"
                     >
                         {cpu?.decoded || '—'}
                     </text>
@@ -356,7 +356,7 @@ export function VnrDiagram({
                     {t('diagram.alu')}
                 </text>
 
-                <text className="diagram-label" x="343" y="260">
+                <text className="diagram-label" x="343" y="257">
                     {t('diagram.operand')}
                 </text>
                 <g
@@ -372,13 +372,13 @@ export function VnrDiagram({
                         x="361.5"
                         y="273"
                         textAnchor="middle"
-                        fontSize="7"
+                        fontSize="8"
                     >
                         {formatWord(cpu?.op ?? 0)}
                     </text>
                 </g>
 
-                <text className="diagram-label" x="417" y="260">
+                <text className="diagram-label" x="417" y="257">
                     {t('diagram.accumulator')}
                 </text>
                 <g
@@ -394,7 +394,7 @@ export function VnrDiagram({
                         x="435.5"
                         y="273"
                         textAnchor="middle"
-                        fontSize="7"
+                        fontSize="8"
                     >
                         {formatWord(cpu?.ac ?? 0)}
                     </text>
@@ -421,13 +421,13 @@ export function VnrDiagram({
                         x="398.5"
                         y="305"
                         textAnchor="middle"
-                        fontSize="7"
+                        fontSize="8"
                     >
                         {cpu?.ar || '?'}
                     </text>
                 </g>
 
-                <text className="diagram-label" x="343" y="347">
+                <text className="diagram-label" x="343" y="352">
                     {t('diagram.compare')}
                 </text>
                 <g
@@ -443,13 +443,13 @@ export function VnrDiagram({
                         x="349.5"
                         y="337"
                         textAnchor="middle"
-                        fontSize="7"
+                        fontSize="8"
                     >
                         {cpu?.vgl || '—'}
                     </text>
                 </g>
 
-                <text className="diagram-label" x="380" y="347">
+                <text className="diagram-label" x="380" y="352">
                     {t('diagram.result')}
                 </text>
                 <g
@@ -465,7 +465,7 @@ export function VnrDiagram({
                         x="398.5"
                         y="337"
                         textAnchor="middle"
-                        fontSize="7"
+                        fontSize="8"
                     >
                         {formatWord(cpu?.erg ?? 0)}
                     </text>
@@ -511,7 +511,7 @@ export function VnrDiagram({
                         x="343.5"
                         y="440"
                         textAnchor="middle"
-                        fontSize="7"
+                        fontSize="8"
                     >
                         {formatWord(cpu?.aus ?? 0)}
                     </text>
@@ -541,7 +541,7 @@ export function VnrDiagram({
                         x="343.5"
                         y="478"
                         textAnchor="middle"
-                        fontSize="7"
+                        fontSize="8"
                     >
                         {formatWord(cpu?.ein ?? 0)}
                     </text>
