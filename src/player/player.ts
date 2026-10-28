@@ -163,8 +163,6 @@ export const usePlayer = create<PlayerState>((set, get) => {
     }
 
     function record(result: VmStepResult, pause: boolean): void {
-        const event = 'event' in result ? result.event : undefined;
-
         if (result.kind === 'input-required') {
             set({
                 cpu: result.state,
@@ -196,22 +194,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
         }
 
         if (result.kind === 'halted') {
-            set({
-                cpu: result.state,
-                status: 'finished',
-                lastEvent: event ?? get().lastEvent,
-                lastOutput: null,
-                resumeAfterOutput: false,
-                history:
-                    event === undefined
-                        ? get().history
-                        : withHistory(get().history, {
-                              event,
-                              before: event.before,
-                              after: result.state,
-                          }),
-            });
-            clearTimer();
+            get().stop();
             return;
         }
 

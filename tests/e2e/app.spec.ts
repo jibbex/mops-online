@@ -27,8 +27,8 @@ test('assembles and runs a program with input', async ({ page }) => {
     await expect(page.getByTestId('output-value')).toHaveText('00042');
     await page.getByRole('button', { name: 'Continue' }).click();
 
-    await expect(page.getByTestId('status-status')).toHaveText('Finished');
-    await expect(page.getByTestId('status-aus')).toHaveText('00042');
+    await expect(page.getByTestId('status-status')).toHaveText('Ready');
+    await expect(page.getByTestId('status-aus')).toHaveText('00000');
 
     const overflows = await page.evaluate(
         () => document.documentElement.scrollHeight > window.innerHeight,
