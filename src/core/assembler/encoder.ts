@@ -1,15 +1,24 @@
 /**
  * Assembler encoder.
  *
- * Encodes parsed lines into a 72-cell memory image, resolves symbols and jump
- * targets, and produces a listing and source map.
+ * Encodes parsed lines into a fixed-size memory image, resolves symbols and
+ * jump targets, and produces a listing and source map.
  *
  * @module core/assembler/encoder
  */
 
-import { getOpcode, type InstructionId, type OperandMode } from '@/core/isa';
 import {
+    OPCODES,
+    getOpcode,
+    type InstructionId,
+    type OperandMode,
+} from '@/core/isa';
+import {
+    DATA_END,
+    DATA_START,
+    MAX_WORD,
     MEMORY_SIZE,
+    MIN_WORD,
     type Address,
     type ListingEntry,
     type Word,
@@ -24,9 +33,7 @@ import {
 import type { ParsedLine } from './line-parser';
 
 /** Last memory address available to encoded instructions. */
-const PROGRAM_LAST_CELL = 63;
-/** Encoded value of the `end` instruction. */
-const END_OPCODE = 60;
+const PROGRAM_LAST_CELL = DATA_START - 1;
 
 /**
  * Complete encoder output before the assembler wraps it in an object program.
@@ -97,13 +104,13 @@ export function encodeProgram(
                 break;
             }
 
-            memory[pointer] = END_OPCODE;
+            memory[pointer] = OPCODES.HALT;
             sourceMap[pointer] = line.number;
             lineToAddress.set(line.number, pointer);
             listing.push({
                 line: line.number,
                 address: pointer,
-                words: [END_OPCODE],
+                words: [OPCODES.HALT],
                 source: line.raw,
             });
             endAddress = pointer;
@@ -405,7 +412,7 @@ function fail(
 
 function parseAddress(value: string): Address | undefined {
     if (/^[a-h]$/.test(value)) {
-        return 64 + value.charCodeAt(0) - 'a'.charCodeAt(0);
+        return DATA_START + value.charCodeAt(0) - 'a'.charCodeAt(0);
     }
 
     const match = /^\$(\d+)$/.exec(value);
@@ -416,13 +423,13 @@ function parseAddress(value: string): Address | undefined {
 
     const address = Number.parseInt(match[1] ?? '', 10);
 
-    return address >= 64 && address <= 71 ? address : undefined;
+    return address >= DATA_START && address <= DATA_END ? address : undefined;
 }
 
 function parseImmediate(value: string): Word | undefined {
     const parsed = parseInteger(value);
 
-    if (parsed === undefined || parsed < -9999 || parsed > 9999) {
+    if (parsed === undefined || parsed < MIN_WORD || parsed > MAX_WORD) {
         return undefined;
     }
 

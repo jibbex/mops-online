@@ -5,6 +5,7 @@
  */
 
 import {
+    OPCODES,
     findInstructionByOpcode,
     getOperandModeForOpcode,
     isOpcode,
@@ -73,7 +74,7 @@ export function disassemble(
 
         address += mode === 'none' ? 1 : 2;
 
-        if (opcode === 60) {
+        if (opcode === OPCODES.HALT) {
             break;
         }
     }
