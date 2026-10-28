@@ -14,9 +14,7 @@
 </p>
 
 <p align="center">
-
-  <img src="https://github.com/jibbex/mops-online/public/favicon.svg" alt="logo" width="64" height="64">
-
+  <img src="public/favicon.svg" alt="MOPS logo" width="64" height="64">
 </p>
 
 # MOPS
