@@ -56,9 +56,9 @@ function operandForms(
         return t('reference.none');
     }
 
-    return modes
-        .map((mode) => `${mnemonic} ${t(OPERAND_KEYS[mode])}`)
-        .join(' | ');
+    return `${mnemonic} ${modes
+        .map((mode) => t(OPERAND_KEYS[mode]))
+        .join(' | ')}`;
 }
 
 /**
