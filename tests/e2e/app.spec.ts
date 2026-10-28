@@ -117,6 +117,67 @@ test('shows the machine on mobile and switches to the editor', async ({
     expect(overflows).toBe(false);
 });
 
+test('scales interface text fluidly with hierarchy', async ({ page }) => {
+    await page.setViewportSize({ width: 2560, height: 1440 });
+    await page.goto('/');
+
+    const readSizes = async (): Promise<{
+        badge: number;
+        control: number;
+        title: number;
+    }> =>
+        page.evaluate(() => ({
+            badge: Number.parseFloat(
+                getComputedStyle(
+                    document.querySelector('[data-testid="status-status"]')!,
+                ).fontSize,
+            ),
+            control: Number.parseFloat(
+                getComputedStyle(document.querySelector('header + div button')!)
+                    .fontSize,
+            ),
+            title: Number.parseFloat(
+                getComputedStyle(
+                    document.querySelector('[data-slot="card-title"]')!,
+                ).fontSize,
+            ),
+        }));
+
+    const settle = async (): Promise<void> => {
+        let previous = '';
+
+        await expect
+            .poll(
+                async () => {
+                    const sizes = await readSizes();
+                    const current = `${sizes.badge}/${sizes.control}/${sizes.title}`;
+                    const stable = current === previous;
+                    previous = current;
+
+                    return stable;
+                },
+                { intervals: [120, 120, 200] },
+            )
+            .toBe(true);
+    };
+
+    const large = await readSizes();
+
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await settle();
+    const medium = await readSizes();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await settle();
+    const small = await readSizes();
+
+    expect(large.badge).toBeGreaterThan(medium.badge);
+    expect(medium.badge).toBeGreaterThan(small.badge);
+    expect(large.title).toBeGreaterThan(large.control);
+    expect(small.title).toBeGreaterThan(small.control);
+    expect(small.control).toBeLessThanOrEqual(14);
+});
+
 test('opens the command reference', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Reference' }).click();

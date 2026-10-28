@@ -266,14 +266,14 @@ function Header({ task }: { readonly task: TaskInfo }): ReactElement {
                 <h1 className="brand-title text-lg leading-none font-semibold tracking-tight">
                     MOPS
                 </h1>
-                <p className="ui-text-sm mt-1 hidden truncate leading-none text-muted-foreground sm:block">
+                <p className="mt-1 hidden truncate text-xs leading-none text-muted-foreground sm:block">
                     {t('app.subtitle')}
                 </p>
             </div>
             {isTaskContext(task) ? (
                 <Badge
                     variant="outline"
-                    className="ui-text ml-1 hidden max-w-64 sm:inline-flex"
+                    className="ml-1 hidden max-w-64 sm:inline-flex"
                 >
                     <ClipboardList data-icon="inline-start" />
                     <span className="truncate">{taskName}</span>
@@ -504,8 +504,8 @@ function StatusBar({
     return (
         <Card size="sm" className="app-card shrink-0">
             <CardHeader>
-                <CardTitle className="ui-text">{t('status.title')}</CardTitle>
-                <CardDescription className="ui-text hidden sm:block">
+                <CardTitle>{t('status.title')}</CardTitle>
+                <CardDescription className="hidden sm:block">
                     {t('status.description')}
                 </CardDescription>
             </CardHeader>
@@ -583,12 +583,9 @@ function StatusValue({
 }): ReactElement {
     return (
         <span className="flex items-center gap-1.5">
-            <Badge variant="outline" className="ui-text">
-                {label}
-            </Badge>
+            <Badge variant="outline">{label}</Badge>
             <Badge
                 variant={accent ? 'destructive' : 'secondary'}
-                className="ui-text"
                 data-testid={`status-${id}`}
             >
                 {value}

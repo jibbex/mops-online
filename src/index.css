@@ -104,8 +104,14 @@
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
     --radius: 0.625rem;
-    --ui-font-size: clamp(0.75rem, 0.6rem + 0.22vw, 0.95rem);
-    --ui-font-size-sm: clamp(0.7rem, 0.58rem + 0.17vw, 0.85rem);
+    --text-xs: clamp(0.7rem, 0.5rem + 0.3vw, 0.9rem);
+    --text-sm: clamp(0.8rem, 0.55rem + 0.38vw, 1.05rem);
+    --text-base: clamp(0.95rem, 0.7rem + 0.42vw, 1.3rem);
+    --text-lg: clamp(1.1rem, 0.8rem + 0.45vw, 1.4rem);
+    --text-xl: clamp(1.1rem, 0.8rem + 0.5vw, 1.5rem);
+    --text-2xl: clamp(1.3rem, 0.95rem + 0.6vw, 1.85rem);
+    --text-3xl: clamp(1.55rem, 1.05rem + 0.85vw, 2.3rem);
+    --editor-font-size: clamp(0.8rem, 0.62rem + 0.25vw, 1rem);
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.205 0 0);
@@ -218,14 +224,6 @@
     color: transparent;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-}
-
-.ui-text {
-    font-size: var(--ui-font-size);
-}
-
-.ui-text-sm {
-    font-size: var(--ui-font-size-sm);
 }
 
 .brand-mark {
