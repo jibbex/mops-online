@@ -20,6 +20,7 @@ import {
     StateField,
 } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
+import { useI18n } from '@/i18n/i18n-context';
 import { tags } from '@lezer/highlight';
 import { basicSetup } from 'codemirror';
 import { useEffect, useRef, type ReactElement } from 'react';
@@ -251,6 +252,7 @@ export function MopsEditor({
     warnings,
     currentLine,
 }: MopsEditorProps): ReactElement {
+    const { t } = useI18n();
     const containerRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
     const onChangeRef = useRef(onChange);
@@ -375,7 +377,7 @@ export function MopsEditor({
         <div
             ref={containerRef}
             className="h-full min-h-0 overflow-hidden bg-background"
-            aria-label="Assembly source editor"
+            aria-label={t('editor.ariaLabel')}
         />
     );
 }
