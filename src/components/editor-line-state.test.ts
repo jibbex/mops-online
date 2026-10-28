@@ -13,7 +13,7 @@ function diagnostic(
         column: 0,
         length: 1,
         severity,
-        code: 'test',
+        code: 'missing-operand',
         message: 'test',
     };
 }

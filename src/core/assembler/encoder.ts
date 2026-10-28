@@ -19,6 +19,7 @@ import {
     createWarning,
     type AssembleWarning,
     type Diagnostic,
+    type DiagnosticCode,
 } from './diagnostics';
 import type { ParsedLine } from './line-parser';
 
@@ -387,7 +388,7 @@ function resolveOperand(
 
 function fail(
     line: ParsedLine,
-    code: string,
+    code: DiagnosticCode,
     message: string,
 ): OperandResolution {
     return {

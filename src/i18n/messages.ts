@@ -8,6 +8,8 @@
  * @module i18n/messages
  */
 
+import type { DiagnosticCode } from '@/core/assembler/diagnostics';
+
 export type Language = 'en' | 'de';
 
 const en = {
@@ -287,7 +289,7 @@ export const messages: Record<Language, Record<MessageKey, string>> = {
 
 export const LANGUAGES: readonly Language[] = ['en', 'de'];
 
-const diagnosticDe: Readonly<Record<string, string>> = {
+const diagnosticDe: Readonly<Record<DiagnosticCode, string>> = {
     indentation: 'Befehle dürfen nicht eingerückt werden.',
     'empty-label': 'Markenname fehlt.',
     'empty-line': 'Die Zeile enthält keinen Befehl.',
@@ -356,7 +358,9 @@ export function translateDiagnostic(
     code: string,
     fallback: string,
 ): string {
-    return language === 'de' ? (diagnosticDe[code] ?? fallback) : fallback;
+    return language === 'de'
+        ? (diagnosticDe[code as DiagnosticCode] ?? fallback)
+        : fallback;
 }
 
 /**

@@ -7,6 +7,29 @@
 /** Severity of an assembler message. */
 export type DiagnosticSeverity = 'error' | 'warning';
 
+/** Stable diagnostic codes shared by the assembler, editor, and translations. */
+export type DiagnosticCode =
+    | 'indentation'
+    | 'empty-label'
+    | 'empty-line'
+    | 'label-without-instruction'
+    | 'invalid-label'
+    | 'unknown-mnemonic'
+    | 'missing-operand'
+    | 'end-with-operand'
+    | 'duplicate-label'
+    | 'invalid-address'
+    | 'invalid-operand'
+    | 'invalid-line-target'
+    | 'invalid-jump-target'
+    | 'undefined-jump-target'
+    | 'conditional-without-compare'
+    | 'missing-end'
+    | 'program-overflow'
+    | 'code-after-end'
+    | 'unused-label'
+    | 'invalid-operand-mode';
+
 /**
  * One source-anchored assembler message.
  */
@@ -19,7 +42,7 @@ export interface Diagnostic {
     readonly length: number;
     readonly severity: DiagnosticSeverity;
     /** Stable diagnostic code for tests and editor integration. */
-    readonly code: string;
+    readonly code: DiagnosticCode;
     readonly message: string;
 }
 
@@ -54,7 +77,7 @@ export function createDiagnostic(
     line: number,
     column: number,
     length: number,
-    code: string,
+    code: DiagnosticCode,
     message: string,
     severity: DiagnosticSeverity = 'error',
 ): Diagnostic {
@@ -82,7 +105,7 @@ export function createWarning(
     line: number,
     column: number,
     length: number,
-    code: string,
+    code: DiagnosticCode,
     message: string,
 ): AssembleWarning {
     return {
