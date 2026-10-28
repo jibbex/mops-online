@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="public/favicon.svg" alt="MOPS logo" width="64" height="64">
+  <img src="public/favicon.svg" alt="MOPS logo" width="96" height="96">
 </p>
 
 # MOPS
