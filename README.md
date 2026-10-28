@@ -263,7 +263,7 @@ src/
   player/           Timing, playback, history, and visual event mapping
   styles/           Diagram tokens and SVG animation styles
   test/             Shared test setup and fixtures
-  App.tsx
+  app.tsx
   main.tsx
 tests/
   e2e/              Playwright user-visible flows

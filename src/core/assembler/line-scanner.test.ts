@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vitest';
-import { scanSource } from './lineScanner';
+import { scanSource } from './line-scanner';
 
 describe('line scanner', () => {
     it('skips blank lines and comments', () => {

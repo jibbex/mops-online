@@ -20,7 +20,7 @@ import {
     type AssembleWarning,
     type Diagnostic,
 } from './diagnostics';
-import type { ParsedLine } from './lineParser';
+import type { ParsedLine } from './line-parser';
 
 /** Last memory address available to encoded instructions. */
 const PROGRAM_LAST_CELL = 63;

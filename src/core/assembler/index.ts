@@ -8,8 +8,8 @@ import type { ObjectProgram } from '@/core/object';
 import { DEFAULT_MNEMONICS, type MnemonicConfig } from './config';
 import type { AssembleResult } from './diagnostics';
 import { encodeProgram } from './encoder';
-import { parseSource } from './lineParser';
-import { scanSource } from './lineScanner';
+import { parseSource } from './line-parser';
+import { scanSource } from './line-scanner';
 import { collectSymbols } from './symbols';
 
 /**
@@ -68,6 +68,6 @@ export function assemble(
 export * from './config';
 export * from './diagnostics';
 export * from './encoder';
-export * from './lineParser';
-export * from './lineScanner';
+export * from './line-parser';
+export * from './line-scanner';
 export * from './symbols';

@@ -8,7 +8,7 @@
  */
 
 import { createDiagnostic, type Diagnostic } from './diagnostics';
-import type { ParsedLine } from './lineParser';
+import type { ParsedLine } from './line-parser';
 
 /**
  * Labels collected from parsed source lines.

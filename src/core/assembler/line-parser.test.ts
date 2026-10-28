@@ -2,8 +2,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_MNEMONICS, createMnemonicConfig } from './config';
-import { parseSource } from './lineParser';
-import { scanSource } from './lineScanner';
+import { parseSource } from './line-parser';
+import { scanSource } from './line-scanner';
 
 function parse(source: string, config = DEFAULT_MNEMONICS) {
     return parseSource(scanSource(source), config);

@@ -4,13 +4,13 @@
  * The parser is intentionally flat: one source line becomes one parsed line.
  * There is no AST and no expression grammar.
  *
- * @module core/assembler/lineParser
+ * @module core/assembler/line-parser
  */
 
 import type { InstructionId } from '@/core/isa';
 import { resolveMnemonic, type MnemonicConfig } from './config';
 import { createDiagnostic, type Diagnostic } from './diagnostics';
-import type { ScannedLine } from './lineScanner';
+import type { ScannedLine } from './line-scanner';
 
 /** Instruction reference and raw operand text from one line. */
 export interface ParsedInstruction {

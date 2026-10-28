@@ -91,8 +91,8 @@ E2E: not applicable.
 
 Deliverables:
 
-- `core/assembler/lineScanner.ts`
-- `core/assembler/lineParser.ts`
+- `core/assembler/line-scanner.ts`
+- `core/assembler/line-parser.ts`
 - `core/assembler/symbols.ts`
 
 Unit tests:

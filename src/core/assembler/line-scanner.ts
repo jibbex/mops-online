@@ -4,7 +4,7 @@
  * The scanner removes comments and normalizes line endings and tabs. It keeps
  * the original raw line for listings and diagnostics.
  *
- * @module core/assembler/lineScanner
+ * @module core/assembler/line-scanner
  */
 
 /**

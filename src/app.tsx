@@ -11,10 +11,10 @@
 
 import { CommandReference } from '@/components/command-reference';
 import { LanguageToggle } from '@/components/language-toggle';
-import { MopsEditor } from '@/components/MopsEditor';
+import { MopsEditor } from '@/components/mops-editor';
 import { SourceFileDialog } from '@/components/source-file-dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { VnrDiagram } from '@/components/VnrDiagram';
+import { VnrDiagram } from '@/components/vnr-diagram';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -89,7 +89,7 @@ import {
     type PlayerStatus,
 } from '@/player/player';
 import { FLOW_DURATION_MS } from '@/player/timing';
-import { visualStateFor } from '@/player/visualMap';
+import { visualStateFor } from '@/player/visual-map';
 import {
     ClipboardList,
     Code2,

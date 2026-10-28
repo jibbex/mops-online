@@ -6,7 +6,7 @@
  * All other micro-ops are internal control or ALU operations and receive only
  * the active register/unit highlight.
  *
- * @module player/visualMap
+ * @module player/visual-map
  */
 
 import type { VmEvent } from '@/core/vm';

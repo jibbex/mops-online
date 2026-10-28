@@ -3,7 +3,7 @@
 import { MEMORY_SIZE, type ObjectProgram, type Word } from '@/core/object';
 import { createCpu, type VmEvent } from '@/core/vm';
 import { describe, expect, it } from 'vitest';
-import { EMPTY_VISUAL, visualStateFor } from './visualMap';
+import { EMPTY_VISUAL, visualStateFor } from './visual-map';
 
 const program: ObjectProgram = {
     memory: Array<Word>(MEMORY_SIZE).fill(0),

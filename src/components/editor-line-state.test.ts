@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Diagnostic } from '@/core/assembler';
-import { createEditorLineState } from './editorLineState';
+import { createEditorLineState } from './editor-line-state';
 
 function diagnostic(
     line: number,

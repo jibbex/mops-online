@@ -1085,8 +1085,8 @@ src/
       program.ts              # ObjectProgram, ListingEntry, SymbolTable
       serialize.ts            # object program JSON import/export
     assembler/
-      lineScanner.ts          # lines, comments, whitespace, spans
-      lineParser.ts           # label, mnemonic, operand, operand type
+      line-scanner.ts          # lines, comments, whitespace, spans
+      line-parser.ts           # label, mnemonic, operand, operand type
       symbols.ts              # collect and validate labels
       encoder.ts              # ParsedLine -> opcode/operand
       resolver.ts             # labels/#lines -> addresses
@@ -1105,26 +1105,26 @@ src/
   player/
     player.ts
     scheduler.ts
-    visualMap.ts
+    visual-map.ts
   ui/
-    App.tsx
+    app.tsx
     components/
-      Editor/
-      Toolbar/
-      StatusBar/
-      Timeline/
-      InputPanel/
-      ListingView/
+      editor/
+      toolbar/
+      status-bar/
+      timeline/
+      input-panel/
+      listing-view/
     diagram/
-      VnrDiagram.tsx
-      MemoryUnit.tsx
-      ControlUnit.tsx
-      AluUnit.tsx
-      IoUnit.tsx
-      BusLayer.tsx
-      FlowOverlay.tsx
-      Register.tsx
-      UnitFrame.tsx
+      vnr-diagram.tsx
+      memory-unit.tsx
+      control-unit.tsx
+      alu-unit.tsx
+      io-unit.tsx
+      bus-layer.tsx
+      flow-overlay.tsx
+      register.tsx
+      unit-frame.tsx
       layout.ts
     styles/
       tokens.css
@@ -1295,7 +1295,7 @@ start from hand-written object code.
 
 ### Phase 3: Teaching and Comfort (about 2-3 weeks)
 
-- Timeline/event log.
+- timeline/event log.
 - Backward stepping and time travel.
 - Breakpoints.
 - Explanation panel ("What is happening?").

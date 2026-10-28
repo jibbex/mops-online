@@ -1,7 +1,7 @@
 /**
  * Editor line state derived from assembler diagnostics and player position.
  *
- * @module components/editorLineState
+ * @module components/editor-line-state
  */
 
 import type { Diagnostic } from '@/core/assembler';

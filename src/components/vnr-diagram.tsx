@@ -5,7 +5,7 @@
  * measuring the container. Element IDs are the contract with the player's
  * visual mapping; changing an ID requires updating that mapping and its tests.
  *
- * @module components/VnrDiagram
+ * @module components/vnr-diagram
  */
 
 import type { CpuState } from '@/core/vm';
@@ -13,7 +13,7 @@ import { useI18n } from '@/i18n/i18n-context';
 import { formatAddress, formatWord } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { FLOW_DURATION_MS, packetDuration } from '@/player/timing';
-import type { VisualState } from '@/player/visualMap';
+import type { VisualState } from '@/player/visual-map';
 import { useLayoutEffect, useRef, type ReactElement } from 'react';
 
 interface VnrDiagramProps {

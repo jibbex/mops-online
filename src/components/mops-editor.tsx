@@ -4,7 +4,7 @@
  * The editor owns document editing only. Assembly, diagnostics, and execution
  * remain outside the editor; the parent receives every document change.
  *
- * @module components/MopsEditor
+ * @module components/mops-editor
  */
 
 import type { Diagnostic } from '@/core/assembler';
@@ -23,7 +23,10 @@ import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { basicSetup } from 'codemirror';
 import { useEffect, useRef, type ReactElement } from 'react';
-import { createEditorLineState, type EditorLineState } from './editorLineState';
+import {
+    createEditorLineState,
+    type EditorLineState,
+} from './editor-line-state';
 
 interface MopsEditorProps {
     readonly value: string;
