@@ -321,7 +321,7 @@ function applyMemRead(next: MutableCpuState, width: 1 | 2): ApplyResult {
 function applyBrWrite(next: MutableCpuState): ApplyResult {
     const value = next.slVal;
 
-    if (!Array.isArray(value) || !isOpcode(value[0])) {
+    if (!isBusTuple(value) || !isOpcode(value[0])) {
         return trap(
             next,
             'INVALID_OPCODE',
@@ -329,10 +329,9 @@ function applyBrWrite(next: MutableCpuState): ApplyResult {
         );
     }
 
-    next.br = {
-        opcode: value[0],
-        operand: value[1] ?? 0,
-    };
+    const [opcode, operand] = value;
+
+    next.br = { opcode, operand };
     return { state: next };
 }
 
@@ -691,6 +690,10 @@ function compareSymbol(value: Word): Compare {
     }
 
     return '=';
+}
+
+function isBusTuple(value: BusValue): value is readonly [Word, Word] {
+    return Array.isArray(value);
 }
 
 function asWord(value: BusValue): Word | undefined {
