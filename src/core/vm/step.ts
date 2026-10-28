@@ -11,7 +11,7 @@ import {
     isOpcode,
     type Operation,
 } from '@/core/isa';
-import { isWord, type Word } from '@/core/object';
+import { MAX_WORD, MIN_WORD, isWord, type Word } from '@/core/object';
 import {
     cloneCpuState,
     formatDecoded,
@@ -474,44 +474,36 @@ function calculate(state: MutableCpuState): ApplyResult {
 
     let result: number;
 
-    try {
-        switch (operation) {
-            case 'add':
-                result = state.ac + state.op;
-                break;
-            case 'subtract':
-                result = state.ac - state.op;
-                break;
-            case 'multiply':
-                result = state.ac * state.op;
-                break;
-            case 'divide':
-                if (state.op === 0) {
-                    return trap(state, 'DIVISION_BY_ZERO', 'Division by zero.');
-                }
-                result = Math.floor(state.ac / state.op);
-                break;
-            case 'modulo':
-                if (state.op === 0) {
-                    return trap(state, 'DIVISION_BY_ZERO', 'Modulo by zero.');
-                }
-                result = ((state.ac % state.op) + state.op) % state.op;
-                break;
-            case 'compare':
-                result = state.ac < state.op ? -1 : state.ac > state.op ? 1 : 0;
-                break;
-            default:
-                return trap(
-                    state,
-                    'INVALID_OPCODE',
-                    'Unsupported ALU operation.',
-                );
-        }
-    } catch {
-        return trap(state, 'DIVISION_BY_ZERO', 'Arithmetic operation failed.');
+    switch (operation) {
+        case 'add':
+            result = state.ac + state.op;
+            break;
+        case 'subtract':
+            result = state.ac - state.op;
+            break;
+        case 'multiply':
+            result = state.ac * state.op;
+            break;
+        case 'divide':
+            if (state.op === 0) {
+                return trap(state, 'DIVISION_BY_ZERO', 'Division by zero.');
+            }
+            result = Math.floor(state.ac / state.op);
+            break;
+        case 'modulo':
+            if (state.op === 0) {
+                return trap(state, 'DIVISION_BY_ZERO', 'Modulo by zero.');
+            }
+            result = ((state.ac % state.op) + state.op) % state.op;
+            break;
+        case 'compare':
+            result = state.ac < state.op ? -1 : state.ac > state.op ? 1 : 0;
+            break;
+        default:
+            return trap(state, 'INVALID_OPCODE', 'Unsupported ALU operation.');
     }
 
-    if (result < -9999 || result > 9999) {
+    if (result < MIN_WORD || result > MAX_WORD) {
         return trap(
             state,
             'OVERFLOW',
