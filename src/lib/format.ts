@@ -7,7 +7,7 @@
 /**
  * Formats a machine word as five decimal characters.
  *
- * @param value Word in the range -9999..9999.
+ * @param value Word in the MOPS word range.
  * @returns Zero-padded, sign-preserving text.
  */
 export function formatWord(value: number): string {
