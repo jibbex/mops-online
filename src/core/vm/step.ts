@@ -6,6 +6,7 @@
 
 import {
     OPCODES,
+    getOperandLatch,
     getOperandModeForOpcode,
     getOperation,
     isOpcode,
@@ -322,7 +323,17 @@ function applyMicroOp(
                 );
             }
 
-            if (opcode % 2 === 0) {
+            const latch = getOperandLatch(getOperandModeForOpcode(opcode));
+
+            if (latch === undefined) {
+                return trap(
+                    next,
+                    'INVALID_OPCODE',
+                    'Instruction does not take an operand.',
+                );
+            }
+
+            if (latch === 'address') {
                 next.slAdr = next.br.operand;
             } else {
                 next.slVal = next.br.operand;

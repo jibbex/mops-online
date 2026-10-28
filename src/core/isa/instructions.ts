@@ -13,6 +13,32 @@ import { OPCODES, isOpcode, type Opcode } from './opcodes';
 /** Encoding family selected by the operand syntax. */
 export type OperandMode = 'address' | 'immediate' | 'target' | 'none';
 
+/**
+ * Internal latch that carries an operand into the execute phase.
+ *
+ * Address and target operands use the address latch; immediate operands use
+ * the value latch.
+ */
+export type OperandLatch = 'address' | 'value';
+
+/**
+ * Returns the operand latch selected by an operand mode.
+ *
+ * @param mode The operand mode encoded by the opcode.
+ * @returns The latch name, or `undefined` for instructions without an operand.
+ */
+export function getOperandLatch(mode: OperandMode): OperandLatch | undefined {
+    switch (mode) {
+        case 'address':
+        case 'target':
+            return 'address';
+        case 'immediate':
+            return 'value';
+        case 'none':
+            return undefined;
+    }
+}
+
 /** Canonical instruction identifier. */
 export type InstructionId =
     | 'ld'

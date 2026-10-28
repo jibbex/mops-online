@@ -12,6 +12,7 @@ import {
     getInstruction,
     getInstructionByOpcode,
     getOpcode,
+    getOperandLatch,
     getOperandModeForOpcode,
     isInstructionId,
     type InstructionId,
@@ -93,6 +94,13 @@ describe('instruction table', () => {
                 expect(OPERAND_MODE_BY_OPCODE.get(opcode)).toBe(mode);
             }
         }
+    });
+
+    it('selects the operand latch from the operand mode', () => {
+        expect(getOperandLatch('address')).toBe('address');
+        expect(getOperandLatch('target')).toBe('address');
+        expect(getOperandLatch('immediate')).toBe('value');
+        expect(getOperandLatch('none')).toBeUndefined();
     });
 
     it('returns the requested instruction', () => {
