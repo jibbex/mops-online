@@ -41,4 +41,15 @@ describe('disassemble', () => {
             { address: 0, opcode: 10, operand: 0, text: 'ld $0' },
         ]);
     });
+
+    it('falls back to .word for a missing opcode cell', () => {
+        const memory = Array<number>(2);
+
+        memory[1] = 60;
+
+        expect(disassemble(memory)).toEqual([
+            { address: 0, opcode: null, operand: 0, text: '.word 0' },
+            { address: 1, opcode: 60, operand: null, text: 'end' },
+        ]);
+    });
 });

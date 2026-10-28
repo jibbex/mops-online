@@ -38,12 +38,14 @@ export function disassemble(
     while (address < memory.length) {
         const opcode = memory[address];
 
-        if (!isOpcode(opcode)) {
+        if (opcode === undefined || !isOpcode(opcode)) {
+            const value = opcode ?? 0;
+
             instructions.push({
                 address,
                 opcode: null,
-                operand: opcode ?? 0,
-                text: `.word ${opcode ?? 0}`,
+                operand: value,
+                text: `.word ${value}`,
             });
             address += 1;
             continue;

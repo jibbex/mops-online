@@ -72,10 +72,13 @@ export const OPCODE_VALUES = [
 const OPCODE_SET: ReadonlySet<number> = new Set(OPCODE_VALUES);
 
 /**
- * Returns whether a value is a valid MOPS opcode.
+ * Returns whether a numeric value is a valid MOPS opcode.
  *
- * @param value The value read from memory or supplied by a caller.
+ * Callers that read from an array must handle a missing cell before calling
+ * this guard.
+ *
+ * @param value The numeric value to test.
  */
-export function isOpcode(value: unknown): value is Opcode {
-    return typeof value === 'number' && OPCODE_SET.has(value);
+export function isOpcode(value: number): value is Opcode {
+    return OPCODE_SET.has(value);
 }
