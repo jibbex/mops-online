@@ -89,7 +89,7 @@ export function CommandReference(): ReactElement {
                     {t('reference.trigger')}
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-5xl">
+            <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>{t('reference.title')}</DialogTitle>
                     <DialogDescription>
