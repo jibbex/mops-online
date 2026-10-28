@@ -350,13 +350,6 @@ export const usePlayer = create<PlayerState>((set, get) => {
             const state = get();
 
             if (!state.program || !state.cpu) {
-                get().assemble();
-            }
-
-            const assembled = get();
-
-            if (!assembled.program || !assembled.cpu) {
-                set({ status: 'error' });
                 return;
             }
 
@@ -387,17 +380,10 @@ export const usePlayer = create<PlayerState>((set, get) => {
             }
 
             if (!state.program || !state.cpu) {
-                get().assemble();
-            }
-
-            const assembled = get();
-
-            if (!assembled.cpu) {
-                set({ status: 'error' });
                 return;
             }
 
-            const result = stepCpu(assembled.cpu, undefined);
+            const result = stepCpu(state.cpu, undefined);
             record(result, true);
         },
 

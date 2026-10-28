@@ -316,7 +316,7 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
             <Button
                 size="sm"
                 onClick={player.start}
-                disabled={running || waiting}
+                disabled={!player.program || running || waiting}
                 aria-label={t('toolbar.start')}
             >
                 <Play data-icon="inline-start" />
@@ -337,6 +337,7 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
                 variant="outline"
                 onClick={player.step}
                 disabled={
+                    !player.program ||
                     running ||
                     waiting ||
                     player.status === 'finished' ||

@@ -44,6 +44,27 @@ describe('player', () => {
         expect(usePlayer.getState().diagnostics).toHaveLength(0);
     });
 
+    it('requires manual assembly after editing the source', () => {
+        usePlayer.getState().assemble();
+        usePlayer.getState().setSource(SIMPLE_SOURCE);
+
+        vi.advanceTimersByTime(1000);
+
+        expect(usePlayer.getState().program).toBeNull();
+        expect(usePlayer.getState().cpu).toBeNull();
+        expect(usePlayer.getState().status).toBe('idle');
+    });
+
+    it('does not assemble implicitly when starting or stepping', () => {
+        usePlayer.getState().setSource(SIMPLE_SOURCE);
+        usePlayer.getState().start();
+        usePlayer.getState().step();
+
+        expect(usePlayer.getState().program).toBeNull();
+        expect(usePlayer.getState().cpu).toBeNull();
+        expect(usePlayer.getState().status).toBe('idle');
+    });
+
     it('reports assembly errors', () => {
         resetPlayer('ld');
         usePlayer.getState().assemble();

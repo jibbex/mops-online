@@ -36,6 +36,23 @@ test('assembles and runs a program with input', async ({ page }) => {
     expect(overflows).toBe(false);
 });
 
+test('requires assembly after a source change', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Assemble' }).click();
+    await expect(page.getByTestId('status-status')).toHaveText('Ready');
+
+    await setSource(page, 'ld 2\nadd 3\nend');
+
+    await expect(page.getByTestId('status-status')).toHaveText('Idle');
+    await expect(page.getByRole('button', { name: 'Start' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Step' })).toBeDisabled();
+
+    await page.getByRole('button', { name: 'Assemble' }).click();
+
+    await expect(page.getByRole('button', { name: 'Start' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Step' })).toBeEnabled();
+});
+
 test('shows an assembly error in the UI', async ({ page }) => {
     await page.goto('/');
     await setSource(page, 'xyz 5\nend');
@@ -104,6 +121,7 @@ test('shows the machine on mobile and switches to the editor', async ({
     ).toBeVisible();
     await page.getByRole('menuitemradio', { name: 'Commands' }).click();
 
+    await page.getByRole('button', { name: 'Assemble' }).click();
     await page.getByRole('button', { name: 'Step' }).click();
     await page.getByRole('radio', { name: 'Editor' }).click();
 
