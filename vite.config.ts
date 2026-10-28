@@ -25,7 +25,6 @@ export default defineConfig({
                             name: 'codemirror',
                             test: /node_modules[\\/](?:@codemirror|@lezer|codemirror)[\\/]/,
                             priority: 30,
-                            maxSize: 350 * 1024,
                         },
                         {
                             name: 'react',
