@@ -58,7 +58,7 @@ function operandForms(
 
     return `${mnemonic} ${modes
         .map((mode) => t(OPERAND_KEYS[mode]))
-        .join(' | ')}`;
+        .join('|')}`;
 }
 
 /**
