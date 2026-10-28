@@ -95,9 +95,15 @@ export function SourceFileDialog({
             }}
         >
             <DialogTrigger asChild>
-                <Button size="sm" variant="outline">
+                <Button
+                    size="sm"
+                    variant="outline"
+                    aria-label={t('file.trigger')}
+                >
                     <FileCode2 data-icon="inline-start" />
-                    {t('file.trigger')}
+                    <span className="hidden sm:inline">
+                        {t('file.trigger')}
+                    </span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">

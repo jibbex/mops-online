@@ -98,10 +98,18 @@ test('shows the machine on mobile and switches to the editor', async ({
     await expect(machineTitle).toBeVisible();
     await expect(editorTitle).toBeHidden();
 
+    await page.getByRole('button', { name: 'Run settings' }).click();
+    await expect(
+        page.getByRole('menuitemradio', { name: 'Commands' }),
+    ).toBeVisible();
+    await page.getByRole('menuitemradio', { name: 'Commands' }).click();
+
+    await page.getByRole('button', { name: 'Step' }).click();
     await page.getByRole('radio', { name: 'Editor' }).click();
 
     await expect(editorTitle).toBeVisible();
     await expect(machineTitle).toBeHidden();
+    await expect(page.locator('.cm-current-line')).toBeVisible();
 
     const overflows = await page.evaluate(
         () => document.documentElement.scrollHeight > window.innerHeight,

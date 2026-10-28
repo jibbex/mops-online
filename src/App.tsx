@@ -34,6 +34,15 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
     Field,
     FieldDescription,
     FieldGroup,
@@ -87,6 +96,7 @@ import {
     Cpu,
     Pause,
     Play,
+    SlidersHorizontal,
     Square,
     StepBack,
     StepForward,
@@ -292,27 +302,35 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
         player.status === 'waiting-input' || player.status === 'waiting-output';
 
     return (
-        <div className="flex shrink-0 flex-nowrap items-center gap-1.5 overflow-x-auto border-b px-3 py-2 lg:flex-wrap lg:overflow-visible lg:px-4">
-            <Button size="sm" onClick={player.assemble}>
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b px-3 py-2 lg:px-4">
+            <Button
+                size="sm"
+                onClick={player.assemble}
+                aria-label={t('toolbar.assemble')}
+            >
                 <Wand2 data-icon="inline-start" />
-                {t('toolbar.assemble')}
+                <span className="hidden sm:inline">
+                    {t('toolbar.assemble')}
+                </span>
             </Button>
             <Button
                 size="sm"
                 onClick={player.start}
                 disabled={running || waiting}
+                aria-label={t('toolbar.start')}
             >
                 <Play data-icon="inline-start" />
-                {t('toolbar.start')}
+                <span className="hidden sm:inline">{t('toolbar.start')}</span>
             </Button>
             <Button
                 size="sm"
                 variant="outline"
                 onClick={player.pause}
                 disabled={!running}
+                aria-label={t('toolbar.pause')}
             >
                 <Pause data-icon="inline-start" />
-                {t('toolbar.pause')}
+                <span className="hidden sm:inline">{t('toolbar.pause')}</span>
             </Button>
             <Button
                 size="sm"
@@ -324,9 +342,10 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
                     player.status === 'finished' ||
                     player.status === 'error'
                 }
+                aria-label={t('toolbar.step')}
             >
                 <StepForward data-icon="inline-start" />
-                {t('toolbar.step')}
+                <span className="hidden sm:inline">{t('toolbar.step')}</span>
             </Button>
             <Button
                 size="sm"
@@ -337,18 +356,20 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
                     running ||
                     player.status === 'waiting-output'
                 }
+                aria-label={t('toolbar.back')}
             >
                 <StepBack data-icon="inline-start" />
-                {t('toolbar.back')}
+                <span className="hidden sm:inline">{t('toolbar.back')}</span>
             </Button>
             <Button
                 size="sm"
                 variant="destructive"
                 onClick={player.stop}
                 disabled={!player.program}
+                aria-label={t('toolbar.stop')}
             >
                 <Square data-icon="inline-start" />
-                {t('toolbar.stop')}
+                <span className="hidden sm:inline">{t('toolbar.stop')}</span>
             </Button>
             <ListingSheet />
             <SourceFileDialog
@@ -357,9 +378,12 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
                 onImport={player.setSource}
             />
 
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="hidden h-6 lg:block" />
 
-            <Field orientation="horizontal" className="w-auto shrink-0">
+            <Field
+                orientation="horizontal"
+                className="hidden w-auto shrink-0 lg:flex"
+            >
                 <FieldLabel className="sr-only">{t('mode.label')}</FieldLabel>
                 <ToggleGroup
                     type="single"
@@ -381,7 +405,10 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
                 </ToggleGroup>
             </Field>
 
-            <Field orientation="horizontal" className="w-auto shrink-0">
+            <Field
+                orientation="horizontal"
+                className="hidden w-auto shrink-0 lg:flex"
+            >
                 <FieldLabel className="sr-only">{t('speed.label')}</FieldLabel>
                 <ToggleGroup
                     type="single"
@@ -405,6 +432,56 @@ function Toolbar({ task }: { readonly task: TaskInfo }): ReactElement {
                     ))}
                 </ToggleGroup>
             </Field>
+
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="icon-sm"
+                        className="lg:hidden"
+                        aria-label={t('settings.label')}
+                    >
+                        <SlidersHorizontal />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuLabel>{t('mode.label')}</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                        value={player.mode}
+                        onValueChange={(value) =>
+                            player.setMode(value as ExecutionMode)
+                        }
+                    >
+                        {MODES.map((mode) => (
+                            <DropdownMenuRadioItem
+                                key={mode.value}
+                                value={mode.value}
+                            >
+                                {t(mode.key)}
+                            </DropdownMenuRadioItem>
+                        ))}
+                    </DropdownMenuRadioGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>{t('speed.label')}</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                        value={String(player.speed)}
+                        onValueChange={(value) =>
+                            player.setSpeed(Number(value) as PlayerSpeed)
+                        }
+                    >
+                        {SPEEDS.map((speed) => (
+                            <DropdownMenuRadioItem
+                                key={speed.value}
+                                value={String(speed.value)}
+                            >
+                                {speed.value === 0
+                                    ? t('speed.off')
+                                    : speed.label}
+                            </DropdownMenuRadioItem>
+                        ))}
+                    </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
     );
 }
@@ -699,9 +776,16 @@ function ListingSheet(): ReactElement {
     return (
         <Sheet>
             <SheetTrigger asChild>
-                <Button size="sm" variant="outline" disabled={!player.program}>
+                <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!player.program}
+                    aria-label={t('listing.trigger')}
+                >
                     <Code2 data-icon="inline-start" />
-                    {t('listing.trigger')}
+                    <span className="hidden sm:inline">
+                        {t('listing.trigger')}
+                    </span>
                 </Button>
             </SheetTrigger>
             <SheetContent className="w-full sm:max-w-2xl">
