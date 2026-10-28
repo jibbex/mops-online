@@ -8,6 +8,7 @@
  * @module components/vnr-diagram
  */
 
+import { DATA_START, MEMORY_SIZE } from '@/core/object';
 import type { CpuState } from '@/core/vm';
 import { useI18n } from '@/i18n/i18n-context';
 import { formatAddress, formatWord } from '@/lib/format';
@@ -43,7 +44,7 @@ export function VnrDiagram({
     flowDurationMs,
 }: VnrDiagramProps): ReactElement {
     const { t } = useI18n();
-    const memory = cpu?.memory ?? Array<number>(72).fill(0);
+    const memory = cpu?.memory ?? Array<number>(MEMORY_SIZE).fill(0);
     const active = (id: string) => visual.active.has(id);
 
     return (
@@ -158,8 +159,10 @@ export function VnrDiagram({
                             const x = 48 + column * 74;
                             const y = 91 + row * 16;
                             const alias =
-                                address >= 64
-                                    ? String.fromCharCode(97 + address - 64)
+                                address >= DATA_START
+                                    ? String.fromCharCode(
+                                          97 + address - DATA_START,
+                                      )
                                     : '';
 
                             return (
