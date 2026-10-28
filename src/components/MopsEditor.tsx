@@ -106,7 +106,7 @@ const mopsHighlightStyle = HighlightStyle.define([
 const editorTheme = EditorView.theme({
     '&': {
         height: '100%',
-        fontSize: '13px',
+        fontSize: 'var(--editor-font-size)',
         backgroundColor: 'var(--background)',
         color: 'var(--foreground)',
     },
@@ -132,6 +132,7 @@ const editorTheme = EditorView.theme({
         backgroundColor: 'color-mix(in oklch, var(--primary) 24%, transparent)',
     },
     '.cm-current-line': {
+        backgroundColor: 'color-mix(in oklch, var(--primary) 8%, transparent)',
         boxShadow: 'inset 3px 0 0 var(--primary)',
     },
     '.cm-error-line': {
@@ -212,6 +213,24 @@ function buildLineDecorations(
 }
 
 /**
+ * Scrolls a source line to the center of the editor viewport.
+ *
+ * @param view Active editor view.
+ * @param lineNumber One-based source line.
+ */
+function scrollToLine(view: EditorView, lineNumber: number): void {
+    if (lineNumber < 1 || lineNumber > view.state.doc.lines) {
+        return;
+    }
+
+    const line = view.state.doc.line(lineNumber);
+
+    view.dispatch({
+        effects: EditorView.scrollIntoView(line.from, { y: 'center' }),
+    });
+}
+
+/**
  * Mounts a CodeMirror editor and keeps it synchronized with the controlled
  * value.
  *
@@ -233,10 +252,16 @@ export function MopsEditor({
     const viewRef = useRef<EditorView | null>(null);
     const onChangeRef = useRef(onChange);
     const initialValueRef = useRef(value);
+    const currentLineRef = useRef(currentLine);
+    const lastScrolledLineRef = useRef<number | undefined>(undefined);
 
     useEffect(() => {
         onChangeRef.current = onChange;
     }, [onChange]);
+
+    useEffect(() => {
+        currentLineRef.current = currentLine;
+    }, [currentLine]);
 
     useEffect(() => {
         if (!containerRef.current) {
@@ -273,6 +298,34 @@ export function MopsEditor({
     }, []);
 
     useEffect(() => {
+        const container = containerRef.current;
+        const view = viewRef.current;
+
+        if (!container || !view || typeof ResizeObserver === 'undefined') {
+            return;
+        }
+
+        let visible = container.clientHeight > 0;
+        const observer = new ResizeObserver(() => {
+            const nextVisible = container.clientHeight > 0;
+
+            if (nextVisible) {
+                view.requestMeasure();
+
+                if (!visible && currentLineRef.current) {
+                    scrollToLine(view, currentLineRef.current);
+                }
+            }
+
+            visible = nextVisible;
+        });
+
+        observer.observe(container);
+
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
         const view = viewRef.current;
 
         if (!view) {
@@ -304,6 +357,15 @@ export function MopsEditor({
                 createEditorLineState(currentLine, diagnostics, warnings),
             ),
         });
+
+        if (currentLine && currentLine !== lastScrolledLineRef.current) {
+            scrollToLine(view, currentLine);
+            lastScrolledLineRef.current = currentLine;
+        }
+
+        if (!currentLine) {
+            lastScrolledLineRef.current = undefined;
+        }
     }, [currentLine, diagnostics, warnings]);
 
     return (
