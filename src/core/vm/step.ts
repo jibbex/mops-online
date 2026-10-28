@@ -232,240 +232,272 @@ function applyMicroOp(
 
     switch (microOp.kind) {
         case 'BZ_READ':
-            if (next.bz < 0 || next.bz >= next.memory.length) {
-                return trap(
-                    next,
-                    'PC_OUT_OF_RANGE',
-                    'Instruction counter is out of range.',
-                );
-            }
-
-            next.slAdr = next.bz;
-            next.instructionAddress = next.bz;
-            return { state: next };
-
-        case 'MEM_READ': {
-            const address = next.slAdr;
-
-            if (address < 0 || address >= next.memory.length) {
-                return trap(
-                    next,
-                    'MEMORY_OUT_OF_RANGE',
-                    'Memory address is out of range.',
-                );
-            }
-
-            const value =
-                microOp.width === 1
-                    ? next.memory[address]
-                    : [next.memory[address], next.memory[address + 1]];
-
-            if (
-                value === undefined ||
-                (Array.isArray(value) &&
-                    value.some((cell) => cell === undefined))
-            ) {
-                return trap(
-                    next,
-                    'MEMORY_OUT_OF_RANGE',
-                    'Memory read is out of range.',
-                );
-            }
-
-            next.mlVal = value as BusValue;
-            next.slVal = value as BusValue;
-            return { state: next };
-        }
-
-        case 'BR_WRITE': {
-            const value = next.slVal;
-
-            if (!Array.isArray(value) || !isOpcode(value[0])) {
-                return trap(
-                    next,
-                    'INVALID_OPCODE',
-                    'Fetched value is not a valid opcode.',
-                );
-            }
-
-            next.br = {
-                opcode: value[0],
-                operand: value[1] ?? 0,
-            };
-            return { state: next };
-        }
-
-        case 'DECODE': {
-            if (next.br.opcode === null || !isOpcode(next.br.opcode)) {
-                return trap(
-                    next,
-                    'INVALID_OPCODE',
-                    'Cannot decode an invalid opcode.',
-                );
-            }
-
-            next.decoded = formatDecoded(next.br.opcode, next.br.operand);
-            return { state: next };
-        }
-
+            return applyBzRead(next);
+        case 'MEM_READ':
+            return applyMemRead(next, microOp.width);
+        case 'BR_WRITE':
+            return applyBrWrite(next);
+        case 'DECODE':
+            return applyDecode(next);
         case 'BZ_UPDATE':
-            next.bz += next.br.opcode === OPCODES.HALT ? 1 : 2;
-            return { state: next };
-
-        case 'BR_READ_OPERAND': {
-            const opcode = next.br.opcode;
-
-            if (opcode === null) {
-                return trap(
-                    next,
-                    'INVALID_OPCODE',
-                    'No instruction is loaded.',
-                );
-            }
-
-            const latch = getOperandLatch(getOperandModeForOpcode(opcode));
-
-            if (latch === undefined) {
-                return trap(
-                    next,
-                    'INVALID_OPCODE',
-                    'Instruction does not take an operand.',
-                );
-            }
-
-            if (latch === 'address') {
-                next.slAdr = next.br.operand;
-            } else {
-                next.slVal = next.br.operand;
-            }
-
-            return { state: next };
-        }
-
-        case 'INPUT_READ': {
-            if (input === undefined) {
-                return { state: next, needsInput: true };
-            }
-
-            if (!isWord(input)) {
-                return trap(
-                    next,
-                    'INPUT_OUT_OF_RANGE',
-                    'Input value is outside the valid range.',
-                );
-            }
-
-            next.ein = input;
-            next.slVal = input;
-            return { state: next };
-        }
-
-        case 'MEM_WRITE': {
-            const value = asWord(next.slVal);
-
-            if (value === undefined) {
-                return trap(
-                    next,
-                    'MEMORY_OUT_OF_RANGE',
-                    'Cannot store a multi-cell value.',
-                );
-            }
-
-            if (next.slAdr < 0 || next.slAdr >= next.memory.length) {
-                return trap(
-                    next,
-                    'MEMORY_OUT_OF_RANGE',
-                    'Memory address is out of range.',
-                );
-            }
-
-            const memory = [...next.memory];
-            memory[next.slAdr] = value;
-            next.memory = memory;
-            return { state: next };
-        }
-
-        case 'AC_WRITE': {
-            const value = asWord(next.slVal);
-
-            if (value === undefined) {
-                return trap(
-                    next,
-                    'OVERFLOW',
-                    'Cannot load a multi-cell value into AC.',
-                );
-            }
-
-            next.ac = value;
-            return { state: next };
-        }
-
+            return applyBzUpdate(next);
+        case 'BR_READ_OPERAND':
+            return applyBrReadOperand(next);
+        case 'INPUT_READ':
+            return applyInputRead(next, input);
+        case 'MEM_WRITE':
+            return applyMemWrite(next);
+        case 'AC_WRITE':
+            return applyAcWrite(next);
         case 'AC_READ':
-            next.slVal = next.ac;
-            return { state: next };
-
-        case 'OP_WRITE': {
-            const value = asWord(next.slVal);
-
-            if (value === undefined) {
-                return trap(
-                    next,
-                    'OVERFLOW',
-                    'Cannot load a multi-cell value into OP.',
-                );
-            }
-
-            next.op = value;
-            return { state: next };
-        }
-
-        case 'AR_WRITE': {
-            const operation = next.br.opcode
-                ? getOperation(next.br.opcode)
-                : null;
-
-            next.operation = operation;
-            next.ar = operationSymbol(operation);
-            return { state: next };
-        }
-
+            return applyAcRead(next);
+        case 'OP_WRITE':
+            return applyOpWrite(next);
+        case 'AR_WRITE':
+            return applyArWrite(next);
         case 'ALU_CALC':
             return calculate(next);
-
         case 'ERG_AC_WRITE':
-            next.ac = next.erg;
-            return { state: next };
-
+            return applyErgAcWrite(next);
         case 'ERG_VGL_WRITE':
-            next.vgl = compareSymbol(next.erg);
-            return { state: next };
-
-        case 'AUS_WRITE': {
-            const value = asWord(next.slVal);
-
-            if (value === undefined) {
-                return trap(
-                    next,
-                    'OVERFLOW',
-                    'Cannot write a multi-cell value to AUS.',
-                );
-            }
-
-            next.aus = value;
-            return { state: next };
-        }
-
+            return applyErgVglWrite(next);
+        case 'AUS_WRITE':
+            return applyAusWrite(next);
         case 'VGL_READ':
             return checkCompare(next);
-
         case 'BZ_WRITE':
-            next.bz = next.slAdr;
-            return { state: next };
-
+            return applyBzWrite(next);
         case 'HALT':
-            next.halted = true;
-            return { state: next };
+            return applyHalt(next);
     }
+}
+
+function applyBzRead(next: MutableCpuState): ApplyResult {
+    if (next.bz < 0 || next.bz >= next.memory.length) {
+        return trap(
+            next,
+            'PC_OUT_OF_RANGE',
+            'Instruction counter is out of range.',
+        );
+    }
+
+    next.slAdr = next.bz;
+    next.instructionAddress = next.bz;
+    return { state: next };
+}
+
+function applyMemRead(next: MutableCpuState, width: 1 | 2): ApplyResult {
+    const address = next.slAdr;
+
+    if (address < 0 || address >= next.memory.length) {
+        return trap(
+            next,
+            'MEMORY_OUT_OF_RANGE',
+            'Memory address is out of range.',
+        );
+    }
+
+    const value =
+        width === 1
+            ? next.memory[address]
+            : [next.memory[address], next.memory[address + 1]];
+
+    if (
+        value === undefined ||
+        (Array.isArray(value) && value.some((cell) => cell === undefined))
+    ) {
+        return trap(
+            next,
+            'MEMORY_OUT_OF_RANGE',
+            'Memory read is out of range.',
+        );
+    }
+
+    next.mlVal = value as BusValue;
+    next.slVal = value as BusValue;
+    return { state: next };
+}
+
+function applyBrWrite(next: MutableCpuState): ApplyResult {
+    const value = next.slVal;
+
+    if (!Array.isArray(value) || !isOpcode(value[0])) {
+        return trap(
+            next,
+            'INVALID_OPCODE',
+            'Fetched value is not a valid opcode.',
+        );
+    }
+
+    next.br = {
+        opcode: value[0],
+        operand: value[1] ?? 0,
+    };
+    return { state: next };
+}
+
+function applyDecode(next: MutableCpuState): ApplyResult {
+    if (next.br.opcode === null || !isOpcode(next.br.opcode)) {
+        return trap(next, 'INVALID_OPCODE', 'Cannot decode an invalid opcode.');
+    }
+
+    next.decoded = formatDecoded(next.br.opcode, next.br.operand);
+    return { state: next };
+}
+
+function applyBzUpdate(next: MutableCpuState): ApplyResult {
+    next.bz += next.br.opcode === OPCODES.HALT ? 1 : 2;
+    return { state: next };
+}
+
+function applyBrReadOperand(next: MutableCpuState): ApplyResult {
+    const opcode = next.br.opcode;
+
+    if (opcode === null) {
+        return trap(next, 'INVALID_OPCODE', 'No instruction is loaded.');
+    }
+
+    const latch = getOperandLatch(getOperandModeForOpcode(opcode));
+
+    if (latch === undefined) {
+        return trap(
+            next,
+            'INVALID_OPCODE',
+            'Instruction does not take an operand.',
+        );
+    }
+
+    if (latch === 'address') {
+        next.slAdr = next.br.operand;
+    } else {
+        next.slVal = next.br.operand;
+    }
+
+    return { state: next };
+}
+
+function applyInputRead(
+    next: MutableCpuState,
+    input: Word | undefined,
+): ApplyResult {
+    if (input === undefined) {
+        return { state: next, needsInput: true };
+    }
+
+    if (!isWord(input)) {
+        return trap(
+            next,
+            'INPUT_OUT_OF_RANGE',
+            'Input value is outside the valid range.',
+        );
+    }
+
+    next.ein = input;
+    next.slVal = input;
+    return { state: next };
+}
+
+function applyMemWrite(next: MutableCpuState): ApplyResult {
+    const value = asWord(next.slVal);
+
+    if (value === undefined) {
+        return trap(
+            next,
+            'MEMORY_OUT_OF_RANGE',
+            'Cannot store a multi-cell value.',
+        );
+    }
+
+    if (next.slAdr < 0 || next.slAdr >= next.memory.length) {
+        return trap(
+            next,
+            'MEMORY_OUT_OF_RANGE',
+            'Memory address is out of range.',
+        );
+    }
+
+    const memory = [...next.memory];
+    memory[next.slAdr] = value;
+    next.memory = memory;
+    return { state: next };
+}
+
+function applyAcWrite(next: MutableCpuState): ApplyResult {
+    const value = asWord(next.slVal);
+
+    if (value === undefined) {
+        return trap(
+            next,
+            'OVERFLOW',
+            'Cannot load a multi-cell value into AC.',
+        );
+    }
+
+    next.ac = value;
+    return { state: next };
+}
+
+function applyAcRead(next: MutableCpuState): ApplyResult {
+    next.slVal = next.ac;
+    return { state: next };
+}
+
+function applyOpWrite(next: MutableCpuState): ApplyResult {
+    const value = asWord(next.slVal);
+
+    if (value === undefined) {
+        return trap(
+            next,
+            'OVERFLOW',
+            'Cannot load a multi-cell value into OP.',
+        );
+    }
+
+    next.op = value;
+    return { state: next };
+}
+
+function applyArWrite(next: MutableCpuState): ApplyResult {
+    const operation = next.br.opcode ? getOperation(next.br.opcode) : null;
+
+    next.operation = operation;
+    next.ar = operationSymbol(operation);
+    return { state: next };
+}
+
+function applyErgAcWrite(next: MutableCpuState): ApplyResult {
+    next.ac = next.erg;
+    return { state: next };
+}
+
+function applyErgVglWrite(next: MutableCpuState): ApplyResult {
+    next.vgl = compareSymbol(next.erg);
+    return { state: next };
+}
+
+function applyAusWrite(next: MutableCpuState): ApplyResult {
+    const value = asWord(next.slVal);
+
+    if (value === undefined) {
+        return trap(
+            next,
+            'OVERFLOW',
+            'Cannot write a multi-cell value to AUS.',
+        );
+    }
+
+    next.aus = value;
+    return { state: next };
+}
+
+function applyBzWrite(next: MutableCpuState): ApplyResult {
+    next.bz = next.slAdr;
+    return { state: next };
+}
+
+function applyHalt(next: MutableCpuState): ApplyResult {
+    next.halted = true;
+    return { state: next };
 }
 
 function calculate(state: MutableCpuState): ApplyResult {
