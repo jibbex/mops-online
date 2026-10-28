@@ -21,15 +21,17 @@
 
 ## Verification
 
+npm is the canonical package manager. Bun is optional for running scripts.
+
 Run all of these after changes:
 
 ```sh
-bun run format
-bun run lint
-bun run typecheck
-bun run test:unit
-bun run test:e2e
-bun run build
+npm run format
+npm run lint
+npm run typecheck
+npm run test:unit
+npm run test:e2e
+npm run build
 ```
 
 For UI work, additionally verify at 390, 768, 1366, 1920, and 2560 px in Chromium. Measure computed font sizes and `scrollWidth` against `innerWidth`, and inspect screenshots before committing.
