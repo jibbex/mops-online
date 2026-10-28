@@ -2,7 +2,7 @@
  * Source file exchange for Moodle submissions.
  *
  * The assembly source is the submission artifact. It can be downloaded as a
- * plain `.ass` file, uploaded to Moodle, and imported again later.
+ * plain `.asm` file, uploaded to Moodle, and imported again later.
  *
  * @module lib/exchange
  */
@@ -16,21 +16,21 @@ export const SOURCE_MIME_TYPE = 'text/plain';
  * Builds the file name for an exported source file.
  *
  * A Moodle task identifier or title is used when available; otherwise the
- * generic name `mops.ass` is returned.
+ * generic name `mops.asm` is returned.
  *
  * @param task Task metadata.
  * @returns A safe file name.
  */
 export function sourceFilename(task: TaskInfo): string {
     if (task.id !== PRACTICE_TASK_ID) {
-        return `mops-${sanitizeTaskId(task.id)}.ass`;
+        return `mops-${sanitizeTaskId(task.id)}.asm`;
     }
 
     if (task.title.length > 0) {
-        return `mops-${sanitizeTaskId(task.title)}.ass`;
+        return `mops-${sanitizeTaskId(task.title)}.asm`;
     }
 
-    return 'mops.ass';
+    return 'mops.asm';
 }
 
 /**

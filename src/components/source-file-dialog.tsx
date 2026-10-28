@@ -1,7 +1,7 @@
 /**
  * Source file dialog.
  *
- * Exports the assembly source as a plain `.ass` file for Moodle uploads and
+ * Exports the assembly source as a plain `.asm` file for Moodle uploads and
  * imports a previously downloaded file back into the editor.
  *
  * @module components/source-file-dialog
@@ -139,7 +139,7 @@ export function SourceFileDialog({
                     <input
                         ref={fileInput}
                         type="file"
-                        accept=".ass,.txt,text/plain"
+                        accept=".asm,.txt,text/plain"
                         className="sr-only"
                         aria-label={t('file.choose')}
                         onChange={onFileChange}

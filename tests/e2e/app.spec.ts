@@ -255,7 +255,7 @@ test('downloads the assembly source for Moodle', async ({ page }) => {
     await page.getByRole('button', { name: /Download source/ }).click();
     const download = await downloadPromise;
 
-    expect(download.suggestedFilename()).toBe('mops-42.ass');
+    expect(download.suggestedFilename()).toBe('mops-42.asm');
 
     const path = await download.path();
     expect(path).not.toBeNull();
@@ -269,7 +269,7 @@ test('imports an assembly source file', async ({ page }) => {
     await page.getByRole('button', { name: 'File' }).click();
 
     await page.locator('input[type="file"]').setInputFiles({
-        name: 'mops.ass',
+        name: 'mops.asm',
         mimeType: 'text/plain',
         buffer: Buffer.from('ld 7\nout 7\nend'),
     });
