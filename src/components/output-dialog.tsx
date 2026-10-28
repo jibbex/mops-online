@@ -17,6 +17,7 @@ import { useI18n } from '@/i18n/i18n-context';
 import { formatWord } from '@/lib/format';
 import { usePlayer } from '@/player/player';
 import type { ReactElement } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 
 /**
  * Renders the output dialog.
@@ -25,8 +26,14 @@ import type { ReactElement } from 'react';
  */
 export function OutputDialog(): ReactElement {
     const { t } = useI18n();
-    const player = usePlayer();
-    const open = player.status === 'waiting-output';
+    const { status, lastOutput, acknowledgeOutput } = usePlayer(
+        useShallow((state) => ({
+            status: state.status,
+            lastOutput: state.lastOutput,
+            acknowledgeOutput: state.acknowledgeOutput,
+        })),
+    );
+    const open = status === 'waiting-output';
 
     return (
         <Dialog open={open} onOpenChange={() => undefined}>
@@ -45,11 +52,11 @@ export function OutputDialog(): ReactElement {
                         className="font-mono text-3xl font-semibold tabular-nums"
                         data-testid="output-value"
                     >
-                        {formatWord(player.lastOutput ?? 0)}
+                        {formatWord(lastOutput ?? 0)}
                     </p>
                 </div>
                 <DialogFooter>
-                    <Button onClick={player.acknowledgeOutput}>
+                    <Button onClick={acknowledgeOutput}>
                         {t('output.continue')}
                     </Button>
                 </DialogFooter>

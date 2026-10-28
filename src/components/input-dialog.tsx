@@ -32,10 +32,11 @@ import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
  */
 export function InputDialog(): ReactElement {
     const { t } = useI18n();
-    const player = usePlayer();
+    const status = usePlayer((state) => state.status);
+    const provideInput = usePlayer((state) => state.provideInput);
     const [value, setValue] = useState('');
     const [invalid, setInvalid] = useState(false);
-    const open = player.status === 'waiting-input';
+    const open = status === 'waiting-input';
 
     useEffect(() => {
         if (open) {
@@ -54,7 +55,7 @@ export function InputDialog(): ReactElement {
         }
 
         setInvalid(false);
-        player.provideInput(parsed);
+        provideInput(parsed);
     };
 
     return (

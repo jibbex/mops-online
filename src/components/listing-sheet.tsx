@@ -35,8 +35,8 @@ import type { ReactElement } from 'react';
  */
 export function ListingSheet(): ReactElement {
     const { t } = useI18n();
-    const player = usePlayer();
-    const listing = player.program?.listing ?? [];
+    const program = usePlayer((state) => state.program);
+    const listing = program?.listing ?? [];
 
     return (
         <Sheet>
@@ -44,7 +44,7 @@ export function ListingSheet(): ReactElement {
                 <Button
                     size="sm"
                     variant="outline"
-                    disabled={!player.program}
+                    disabled={!program}
                     aria-label={t('listing.trigger')}
                 >
                     <Code2 data-icon="inline-start" />

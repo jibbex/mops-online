@@ -33,6 +33,7 @@ import { usePlayer } from '@/player/player';
 import { FLOW_DURATION_MS } from '@/player/timing';
 import { visualStateFor } from '@/player/visual-map';
 import { useState, type ReactElement } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 
 /**
  * Renders the complete editor, machine, and execution interface.
@@ -41,20 +42,44 @@ import { useState, type ReactElement } from 'react';
  */
 export default function App(): ReactElement {
     const { t } = useI18n();
-    const player = usePlayer();
-    const visual = visualStateFor(player.lastEvent);
+    const {
+        source,
+        setSource,
+        diagnostics,
+        warnings,
+        cpu,
+        lastEvent,
+        program,
+        status,
+        speed,
+        historyLength,
+    } = usePlayer(
+        useShallow((state) => ({
+            source: state.source,
+            setSource: state.setSource,
+            diagnostics: state.diagnostics,
+            warnings: state.warnings,
+            cpu: state.cpu,
+            lastEvent: state.lastEvent,
+            program: state.program,
+            status: state.status,
+            speed: state.speed,
+            historyLength: state.history.length,
+        })),
+    );
+    const visual = visualStateFor(lastEvent);
     const [task] = useState<TaskInfo>(() =>
         readTaskInfo(window.location.search),
     );
     const [mobileView, setMobileView] = useState<'editor' | 'machine'>(
         'machine',
     );
-    const currentLine = player.lastEvent
-        ? player.program?.sourceMap[player.lastEvent.address]
+    const currentLine = lastEvent
+        ? program?.sourceMap[lastEvent.address]
         : undefined;
-    const animatedSpeed = player.speed === 0 ? 1 : player.speed;
+    const animatedSpeed = speed === 0 ? 1 : speed;
     const flowDurationMs =
-        player.status === 'running' && player.speed === 0
+        status === 'running' && speed === 0
             ? 0
             : Math.round(FLOW_DURATION_MS / animatedSpeed);
 
@@ -97,16 +122,16 @@ export default function App(): ReactElement {
                             <CardTitle>{t('editor.title')}</CardTitle>
                             <CardDescription>
                                 {t('editor.lines', {
-                                    count: player.source.split('\n').length,
+                                    count: source.split('\n').length,
                                 })}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="min-h-0 flex-1 p-0">
                             <MopsEditor
-                                value={player.source}
-                                onChange={player.setSource}
-                                diagnostics={player.diagnostics}
-                                warnings={player.warnings}
+                                value={source}
+                                onChange={setSource}
+                                diagnostics={diagnostics}
+                                warnings={warnings}
                                 currentLine={currentLine}
                             />
                         </CardContent>
@@ -131,9 +156,9 @@ export default function App(): ReactElement {
                         </CardHeader>
                         <CardContent className="min-h-0 flex-1 p-1">
                             <VnrDiagram
-                                cpu={player.cpu}
+                                cpu={cpu}
                                 visual={visual}
-                                pulseKey={player.history.length}
+                                pulseKey={historyLength}
                                 flowDurationMs={flowDurationMs}
                             />
                         </CardContent>

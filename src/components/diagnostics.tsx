@@ -18,8 +18,9 @@ import type { ReactElement } from 'react';
  */
 export function Diagnostics(): ReactElement | null {
     const { language, t } = useI18n();
-    const player = usePlayer();
-    const messages = [...player.diagnostics, ...player.warnings];
+    const diagnostics = usePlayer((state) => state.diagnostics);
+    const warnings = usePlayer((state) => state.warnings);
+    const messages = [...diagnostics, ...warnings];
 
     if (messages.length === 0) {
         return null;

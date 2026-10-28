@@ -18,6 +18,7 @@ import { formatAddress, formatWord } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { usePlayer, type PlayerStatus } from '@/player/player';
 import type { ReactElement } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 
 const STATUS_KEYS: Record<PlayerStatus, MessageKey> = {
     idle: 'status.idle',
@@ -45,8 +46,13 @@ export function StatusBar({
     readonly className?: string;
 }): ReactElement {
     const { language, t } = useI18n();
-    const player = usePlayer();
-    const cpu = player.cpu;
+    const { status, cpu, trap } = usePlayer(
+        useShallow((state) => ({
+            status: state.status,
+            cpu: state.cpu,
+            trap: state.trap,
+        })),
+    );
 
     return (
         <Card size="sm" className={cn('app-card shrink-0', className)}>
@@ -60,8 +66,8 @@ export function StatusBar({
                 <StatusValue
                     id="status"
                     label={t('status.status')}
-                    value={t(STATUS_KEYS[player.status])}
-                    accent={player.status === 'error'}
+                    value={t(STATUS_KEYS[status])}
+                    accent={status === 'error'}
                 />
                 <StatusValue
                     id="phase"
@@ -93,14 +99,10 @@ export function StatusBar({
                     label={t('status.decoded')}
                     value={cpu?.decoded || '—'}
                 />
-                {player.trap ? (
+                {trap ? (
                     <Badge variant="destructive">
-                        {player.trap.code}:{' '}
-                        {translateTrap(
-                            language,
-                            player.trap.code,
-                            player.trap.message,
-                        )}
+                        {trap.code}:{' '}
+                        {translateTrap(language, trap.code, trap.message)}
                     </Badge>
                 ) : null}
             </CardContent>

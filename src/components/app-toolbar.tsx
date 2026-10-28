@@ -37,6 +37,7 @@ import {
     Wand2,
 } from 'lucide-react';
 import type { ReactElement } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 
 /** Pause modes exposed by the toolbar. */
 const MODES: { readonly value: ExecutionMode; readonly key: MessageKey }[] = [
@@ -68,16 +69,49 @@ export function AppToolbar({
     readonly task: TaskInfo;
 }): ReactElement {
     const { t } = useI18n();
-    const player = usePlayer();
-    const running = player.status === 'running';
-    const waiting =
-        player.status === 'waiting-input' || player.status === 'waiting-output';
+    const {
+        status,
+        program,
+        source,
+        historyLength,
+        mode,
+        speed,
+        assemble,
+        setSource,
+        start,
+        pause,
+        step,
+        stepBack,
+        stop,
+        setMode,
+        setSpeed,
+    } = usePlayer(
+        useShallow((state) => ({
+            status: state.status,
+            program: state.program,
+            source: state.source,
+            historyLength: state.history.length,
+            mode: state.mode,
+            speed: state.speed,
+            assemble: state.assemble,
+            setSource: state.setSource,
+            start: state.start,
+            pause: state.pause,
+            step: state.step,
+            stepBack: state.stepBack,
+            stop: state.stop,
+            setMode: state.setMode,
+            setSpeed: state.setSpeed,
+        })),
+    );
+    const running = status === 'running';
+    const waiting = status === 'waiting-input' || status === 'waiting-output';
 
     return (
         <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b px-3 py-2 lg:px-4">
             <Button
                 size="sm"
-                onClick={player.assemble}
+                onClick={assemble}
                 aria-label={t('toolbar.assemble')}
             >
                 <Wand2 data-icon="inline-start" />
@@ -87,8 +121,8 @@ export function AppToolbar({
             </Button>
             <Button
                 size="sm"
-                onClick={player.start}
-                disabled={!player.program || running || waiting}
+                onClick={start}
+                disabled={!program || running || waiting}
                 aria-label={t('toolbar.start')}
             >
                 <Play data-icon="inline-start" />
@@ -97,7 +131,7 @@ export function AppToolbar({
             <Button
                 size="sm"
                 variant="outline"
-                onClick={player.pause}
+                onClick={pause}
                 disabled={!running}
                 aria-label={t('toolbar.pause')}
             >
@@ -107,13 +141,13 @@ export function AppToolbar({
             <Button
                 size="sm"
                 variant="outline"
-                onClick={player.step}
+                onClick={step}
                 disabled={
-                    !player.program ||
+                    !program ||
                     running ||
                     waiting ||
-                    player.status === 'finished' ||
-                    player.status === 'error'
+                    status === 'finished' ||
+                    status === 'error'
                 }
                 aria-label={t('toolbar.step')}
             >
@@ -123,11 +157,11 @@ export function AppToolbar({
             <Button
                 size="sm"
                 variant="outline"
-                onClick={player.stepBack}
+                onClick={stepBack}
                 disabled={
-                    player.history.length === 0 ||
+                    historyLength === 0 ||
                     running ||
-                    player.status === 'waiting-output'
+                    status === 'waiting-output'
                 }
                 aria-label={t('toolbar.back')}
             >
@@ -137,8 +171,8 @@ export function AppToolbar({
             <Button
                 size="sm"
                 variant="destructive"
-                onClick={player.stop}
-                disabled={!player.program}
+                onClick={stop}
+                disabled={!program}
                 aria-label={t('toolbar.stop')}
             >
                 <Square data-icon="inline-start" />
@@ -147,8 +181,8 @@ export function AppToolbar({
             <ListingSheet />
             <SourceFileDialog
                 task={task}
-                source={player.source}
-                onImport={player.setSource}
+                source={source}
+                onImport={setSource}
             />
 
             <Separator orientation="vertical" className="hidden h-6 lg:block" />
@@ -162,10 +196,10 @@ export function AppToolbar({
                     type="single"
                     variant="outline"
                     size="sm"
-                    value={player.mode}
+                    value={mode}
                     onValueChange={(value) => {
                         if (value) {
-                            player.setMode(value as ExecutionMode);
+                            setMode(value as ExecutionMode);
                         }
                     }}
                     aria-label={t('mode.label')}
@@ -187,10 +221,10 @@ export function AppToolbar({
                     type="single"
                     variant="outline"
                     size="sm"
-                    value={String(player.speed)}
+                    value={String(speed)}
                     onValueChange={(value) => {
                         if (value) {
-                            player.setSpeed(Number(value) as PlayerSpeed);
+                            setSpeed(Number(value) as PlayerSpeed);
                         }
                     }}
                     aria-label={t('speed.label')}
@@ -220,9 +254,9 @@ export function AppToolbar({
                 <DropdownMenuContent align="end" className="w-52">
                     <DropdownMenuLabel>{t('mode.label')}</DropdownMenuLabel>
                     <DropdownMenuRadioGroup
-                        value={player.mode}
+                        value={mode}
                         onValueChange={(value) =>
-                            player.setMode(value as ExecutionMode)
+                            setMode(value as ExecutionMode)
                         }
                     >
                         {MODES.map((mode) => (
@@ -237,9 +271,9 @@ export function AppToolbar({
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>{t('speed.label')}</DropdownMenuLabel>
                     <DropdownMenuRadioGroup
-                        value={String(player.speed)}
+                        value={String(speed)}
                         onValueChange={(value) =>
-                            player.setSpeed(Number(value) as PlayerSpeed)
+                            setSpeed(Number(value) as PlayerSpeed)
                         }
                     >
                         {SPEEDS.map((speed) => (
