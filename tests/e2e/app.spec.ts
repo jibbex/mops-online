@@ -194,6 +194,16 @@ test('opens the command reference', async ({ page }) => {
             name: 'Load a value into the accumulator.',
         }),
     ).toBeVisible();
+
+    const overflow = await dialog.evaluate((element) => {
+        const viewport = element.querySelector(
+            '[data-slot="scroll-area-viewport"]',
+        )!;
+
+        return viewport.scrollWidth - viewport.clientWidth;
+    });
+
+    expect(overflow).toBe(0);
 });
 
 test('fits the command reference on a phone', async ({ page }) => {

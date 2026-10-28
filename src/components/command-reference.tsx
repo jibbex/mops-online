@@ -89,14 +89,14 @@ export function CommandReference(): ReactElement {
                     {t('reference.trigger')}
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent className="sm:max-w-5xl">
                 <DialogHeader>
                     <DialogTitle>{t('reference.title')}</DialogTitle>
                     <DialogDescription>
                         {t('reference.description')}
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="h-[60dvh]">
+                <ScrollArea className="[&_[data-slot=scroll-area-viewport]]:max-h-[60dvh]">
                     <ul className="flex flex-col gap-3 pr-3 sm:hidden">
                         {instructions.map((instruction) => (
                             <li
@@ -148,13 +148,13 @@ export function CommandReference(): ReactElement {
                                                 {instruction.mnemonic}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="font-mono text-xs">
+                                        <TableCell className="font-mono text-xs whitespace-normal">
                                             {instruction.forms}
                                         </TableCell>
-                                        <TableCell className="font-mono text-xs text-muted-foreground">
+                                        <TableCell className="font-mono text-xs whitespace-nowrap text-muted-foreground">
                                             {instruction.opcodes.join(' · ')}
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="whitespace-normal">
                                             {t(
                                                 `instruction.${instruction.id}` as MessageKey,
                                             )}
