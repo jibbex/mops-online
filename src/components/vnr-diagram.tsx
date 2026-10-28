@@ -404,7 +404,7 @@ export function VnrDiagram({
                     className="diagram-triangle"
                     points="380.2,278.2 398.7,302.2 380.2,326.2 417.2,326.2 398.7,302.2 417.2,278.2"
                 />
-                <text className="diagram-label" x="414" y="318">
+                <text className="diagram-label" x="422" y="318">
                     {t('diagram.alu')}
                 </text>
 
