@@ -328,6 +328,22 @@ describe('execute programs', () => {
         expect(result.state.pc).toBe(1);
     });
 
+    it('updates the PC after the complete fetch of a two-word instruction', () => {
+        const result = runProgram('ld 5\nend');
+        const fetch = result.events
+            .slice(0, 6)
+            .map((event) => event.microOp.kind);
+
+        expect(fetch).toEqual([
+            'PC_READ',
+            'MEM_READ',
+            'BR_WRITE',
+            'MEM_READ',
+            'BR_WRITE_OPERAND',
+            'PC_UPDATE',
+        ]);
+    });
+
     it('increments the program counter once per instruction', () => {
         const result = runProgram('ld 5\nend');
         const updates = result.events.filter(

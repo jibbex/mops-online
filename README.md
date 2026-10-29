@@ -346,9 +346,10 @@ address through the object program, and jumps set the PC to the target
 instruction index.
 
 The counter is incremented in the fetch phase (`PC_UPDATE`), after the opcode
-word has been read. Opcode and operand are separate memory reads: a two-word
-instruction performs two `MEM_READ` transfers, while `end` reads only its opcode
-word. The PC still advances by exactly one per instruction.
+and any operand word have been read. Opcode and operand are separate memory
+reads: a two-word instruction performs two `MEM_READ` transfers, while `end`
+reads only its opcode word. The PC still advances by exactly one per
+instruction.
 
 Active diagram elements carry one of three operations: **read**, **write**, or
 **increment**. The same visual language is used everywhere: reads are soft and

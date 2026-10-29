@@ -34,6 +34,8 @@ interface ApplyResult {
     readonly needsInput?: boolean;
     readonly trap?: Trap;
     readonly skipRemaining?: boolean;
+    /** Skip this many following micro-ops (used for the optional operand read). */
+    readonly skipNext?: number;
 }
 
 /**
@@ -94,7 +96,7 @@ export function stepCpu(state: CpuState, input?: Word): VmStepResult {
     let after: CpuState = applied.state;
     const nextIndex = applied.skipRemaining
         ? after.queue.length
-        : after.queueIndex + 1;
+        : after.queueIndex + 1 + (applied.skipNext ?? 0);
 
     after = {
         ...after,
@@ -120,12 +122,12 @@ function createQueue(state: CpuState): readonly MicroOp[] {
             return [
                 { kind: 'PC_READ' },
                 { kind: 'MEM_READ' },
-                // The PC advances once per instruction, independently of the
-                // number of memory words fetched for that instruction.
-                { kind: 'PC_UPDATE' },
                 { kind: 'BR_WRITE' },
                 { kind: 'MEM_READ' },
                 { kind: 'BR_WRITE_OPERAND' },
+                // The PC advances once per instruction after the optional
+                // operand read, independently of the number of fetched words.
+                { kind: 'PC_UPDATE' },
             ];
         case 'DECODE':
             return [{ kind: 'DECODE' }];
@@ -251,7 +253,7 @@ function applyBrWrite(next: MutableCpuState): ApplyResult {
     next.br = { opcode, operand: 0 };
 
     if (getOperandModeForOpcode(opcode) === 'none') {
-        return { state: next, skipRemaining: true };
+        return { state: next, skipNext: 2 };
     }
 
     next.slAdr = next.instructionAddress + 1;
