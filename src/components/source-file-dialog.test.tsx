@@ -72,6 +72,21 @@ describe('SourceFileDialog', () => {
         );
     });
 
+    it('opens the file picker from the choose button', async () => {
+        renderDialog();
+        const user = await openDialog();
+        const input = sourceInput();
+        const click = vi.spyOn(input, 'click').mockImplementation(() => {
+            // jsdom cannot open a native picker.
+        });
+
+        await user.click(
+            screen.getByRole('button', { name: 'Choose source file' }),
+        );
+
+        expect(click).toHaveBeenCalledOnce();
+    });
+
     it('imports a valid source file and reports success', async () => {
         const { onImport } = renderDialog();
         const user = await openDialog();

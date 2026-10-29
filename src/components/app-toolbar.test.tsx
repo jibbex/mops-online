@@ -171,5 +171,10 @@ describe('AppToolbar', () => {
         await user.click(screen.getByRole('menuitemradio', { name: 'Phases' }));
 
         expect(usePlayer.getState().mode).toBe('phase');
+
+        await user.click(screen.getByRole('button', { name: 'Run settings' }));
+        await user.click(screen.getByRole('menuitemradio', { name: '2x' }));
+
+        expect(usePlayer.getState().speed).toBe(2);
     });
 });

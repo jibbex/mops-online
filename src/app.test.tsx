@@ -91,5 +91,8 @@ describe('App', () => {
 
         await user.click(machine);
         expect(machine).toHaveAttribute('aria-checked', 'true');
+
+        await user.click(machine);
+        expect(machine).toHaveAttribute('aria-checked', 'true');
     });
 });
