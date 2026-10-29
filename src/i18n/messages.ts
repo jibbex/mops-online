@@ -310,7 +310,6 @@ export const LANGUAGES: readonly Language[] = ['en', 'de'];
 const diagnosticDe: Readonly<Record<DiagnosticCode, string>> = {
     indentation: 'Befehle dürfen nicht eingerückt werden.',
     'empty-label': 'Markenname fehlt.',
-    'empty-line': 'Die Zeile enthält keinen Befehl.',
     'label-without-instruction':
         'Eine Marke muss an einen Befehl gebunden sein.',
     'invalid-label':

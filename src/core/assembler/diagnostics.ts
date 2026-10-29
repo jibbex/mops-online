@@ -11,7 +11,6 @@ export type DiagnosticSeverity = 'error' | 'warning';
 export type DiagnosticCode =
     | 'indentation'
     | 'empty-label'
-    | 'empty-line'
     | 'label-without-instruction'
     | 'invalid-label'
     | 'unknown-mnemonic'

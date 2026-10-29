@@ -133,21 +133,9 @@ function parseLine(
         }
     }
 
-    const match = /^(\S+)(?:\s+(.*))?$/.exec(code);
-
-    if (!match) {
-        diagnostics.push(
-            createLineDiagnostic(
-                scanned,
-                'empty-line',
-                'Line does not contain an instruction.',
-            ),
-        );
-        return undefined;
-    }
-
-    const mnemonic = match[1] ?? '';
-    const operand = (match[2] ?? '').trim();
+    const separator = code.search(/\s/);
+    const mnemonic = separator === -1 ? code : code.slice(0, separator);
+    const operand = separator === -1 ? '' : code.slice(separator).trim();
     const mnemonicColumn = scanned.codeOffset;
     const remainder = code.slice(mnemonic.length);
     const operandColumn =
