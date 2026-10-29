@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 async function setSource(page: Page, source: string): Promise<void> {
     const editor = page.locator('.cm-content');
