@@ -50,5 +50,8 @@ describe('messages', () => {
         expect(translateTrap('en', 'DIVISION_BY_ZERO', 'Division.')).toBe(
             'Division.',
         );
+        expect(translateTrap('de', 'UNKNOWN_TRAP', 'Fallback.')).toBe(
+            'Fallback.',
+        );
     });
 });

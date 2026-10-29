@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
     createTranslator,
@@ -7,6 +8,7 @@ import {
     languageFromTag,
     LANGUAGE_STORAGE_KEY,
     readInitialLanguage,
+    useI18n,
 } from './i18n-context';
 
 describe('i18n context', () => {
@@ -49,5 +51,11 @@ describe('i18n context', () => {
 
         expect(t('editor.lines', { count: 3 })).toBe('3 Zeilen');
         expect(t('toolbar.start')).toBe('Start');
+    });
+
+    it('rejects use outside the provider', () => {
+        expect(() => renderHook(() => useI18n())).toThrow(
+            'useI18n must be used within LanguageProvider.',
+        );
     });
 });
