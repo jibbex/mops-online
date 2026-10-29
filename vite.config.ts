@@ -71,6 +71,12 @@ export default defineConfig({
                 'src/main.tsx',
                 'src/test/**',
                 'src/vite-env.d.ts',
+                // Type-only declarations and pure re-export barrels contain
+                // no executable statements to measure.
+                'src/core/isa/execution.ts',
+                'src/core/isa/index.ts',
+                'src/core/object/index.ts',
+                'src/core/vm/index.ts',
             ],
             thresholds: {
                 statements: 95,
