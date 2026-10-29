@@ -245,9 +245,9 @@ src/
     ui/             shadcn/ui primitives used by the shell
   core/
     isa/            Instruction set definitions and opcode metadata
-    object/         Object program, listing, and serialization
+    object/         Object program, listing, and machine limits
     assembler/      Scanner, parser, encoder, resolver, diagnostics
-    vm/             CPU state, micro-ops, execution, traps, disassembler
+    vm/             CPU state, micro-ops, execution, traps
   i18n/             English and German messages and language provider
   lib/              Source file exchange, task metadata, formatting
   player/           Timing, playback, history, and visual event mapping
@@ -294,8 +294,11 @@ Tech stack:
 
 Common additions:
 
-- **New instruction:** update the ISA table, assembler encoding, VM micro-ops,
-  visual mapping, tests, and documentation.
+- **New instruction:** add its opcode to `src/core/isa/opcodes.ts` and its
+  operand modes, execution sequence, and metadata to
+  `src/core/isa/instructions.ts`. Parser, encoder, and VM derive their behavior
+  from that table; add a new ALU operation only when the instruction needs
+  semantics that do not exist yet.
 - **New diagram element:** add its layout data, SVG component, visual mapping,
   fixture, and Playwright coverage.
 
@@ -321,6 +324,19 @@ It does not include:
 - macros or compiler directives,
 - a high-level language.
 
+### Arithmetic Semantics
+
+MOPS uses the original model computer's decimal, fixed-width arithmetic:
+
+- machine words are integers from −9999 to 9999,
+- division is floor division (`div` rounds toward negative infinity),
+- modulo keeps the sign of the divisor,
+- results outside the word range trap instead of wrapping.
+
+Examples: `-7 div 2` is `-4`, `-7 mod 2` is `1`, and `7 mod -2` is `-1`.
+These rules match MOPS 1.04, which uses Python's `operator.floordiv` and
+`operator.mod`. They are covered by the VM semantics tests.
+
 ### Conventions
 
 - All repository text is written in American English.
@@ -334,8 +350,13 @@ It does not include:
 - The scope is optional.
 - Branches use prefixes such as `feat/`, `fix/`, and `docs/`.
 - Merges use squash merge with a Conventional Commit title.
+- Comments explain why, invariants, and trade-offs; they do not narrate code.
+- Behavior, limits, timings, and capacities use named constants instead of
+  magic numbers.
 - ESLint handles linting; Prettier handles formatting.
 - `eslint-config-prettier` disables conflicting ESLint formatting rules.
+- Source imports are limited to 16 KiB and report a specific reason when they
+  are empty, oversized, unreadable, or binary.
 
 ## Acknowledgments
 

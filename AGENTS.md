@@ -11,6 +11,15 @@
 - Four spaces, LF line endings, single quotes, semicolons, braces on the same line, closing brace on its own line.
 - Prettier and ESLint are authoritative. Do not add rule exceptions, `eslint-disable`, or per-file overrides.
 
+## Comments and constants
+
+- Comments explain why, invariants, trade-offs, and non-obvious constraints, not what the next line does.
+- Module headers state responsibility, boundaries, and important invariants.
+- Public APIs keep concise contract documentation; private helpers only get comments when the decision is not self-evident.
+- No magic numbers in behavior, comparisons, limits, capacities, timings, or UI text. A literal may appear only in the initializer of a named constant whose name carries the meaning.
+- Do not introduce helper constants for a single trivial unit conversion; prefer the readable named result.
+- One-off SVG coordinates are design data and stay in the diagram components or layout module; repeated or structural geometry gets named constants.
+
 ## Architecture
 
 - React, TypeScript, Vite, Zustand, CodeMirror 6. No React Router, Canvas, or WebGL.
