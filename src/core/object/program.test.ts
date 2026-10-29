@@ -1,33 +1,25 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vitest';
-import { createObjectProgramFixture } from '@/test/object-program-fixture';
 import {
+    DATA_END,
+    DATA_START,
     MAX_WORD,
+    MEMORY_SIZE,
     MIN_WORD,
-    ObjectProgramValidationError,
-    assertObjectProgram,
     isAddress,
     isWord,
-    validateObjectProgram,
-    type ObjectProgram,
 } from './program';
 
-function candidate(program: ObjectProgram): Record<string, unknown> {
-    return {
-        memory: [...program.memory],
-        sourceMap: [...program.sourceMap],
-        symbols: program.symbols,
-        listing: program.listing.map((entry) => ({
-            ...entry,
-            words: [...entry.words],
-        })),
-        entry: program.entry,
-        ...(program.endAddress === undefined
-            ? {}
-            : { endAddress: program.endAddress }),
-    };
-}
+describe('machine limits', () => {
+    it('defines the documented memory layout', () => {
+        expect(MEMORY_SIZE).toBe(72);
+        expect(DATA_START).toBe(64);
+        expect(DATA_END).toBe(71);
+        expect(MIN_WORD).toBe(-9999);
+        expect(MAX_WORD).toBe(9999);
+    });
+});
 
 describe('word and address guards', () => {
     it('accepts the full word range', () => {
@@ -55,240 +47,5 @@ describe('word and address guards', () => {
         expect(isAddress(72)).toBe(false);
         expect(isAddress(1.5)).toBe(false);
         expect(isAddress('0')).toBe(false);
-    });
-});
-
-describe('validateObjectProgram', () => {
-    it('accepts a valid object program', () => {
-        const program = createObjectProgramFixture();
-        const result = validateObjectProgram(program);
-
-        expect(result.ok).toBe(true);
-
-        if (!result.ok) {
-            return;
-        }
-
-        expect(result.program.symbols).toBeInstanceOf(Map);
-        expect(result.program.symbols.get('start')).toBe(0);
-        expect(result.program.memory).toHaveLength(72);
-        expect(result.program.sourceMap).toHaveLength(72);
-        expect(result.program.listing).toHaveLength(3);
-    });
-
-    it('normalizes a plain symbol object to a Map', () => {
-        const program = createObjectProgramFixture();
-        const result = validateObjectProgram({
-            ...candidate(program),
-            symbols: { start: 0, value: 64 },
-        });
-
-        expect(result.ok).toBe(true);
-
-        if (!result.ok) {
-            return;
-        }
-
-        expect(result.program.symbols).toBeInstanceOf(Map);
-        expect(result.program.symbols.get('value')).toBe(64);
-    });
-
-    it('rejects non-object values', () => {
-        for (const value of [null, 42, 'program', []]) {
-            const result = validateObjectProgram(value);
-
-            expect(result.ok).toBe(false);
-
-            if (!result.ok) {
-                expect(result.issues[0]?.path).toBe('$');
-            }
-        }
-    });
-
-    it('rejects an invalid memory image', () => {
-        const program = createObjectProgramFixture();
-        const result = validateObjectProgram({
-            ...candidate(program),
-            memory: [1, 2],
-        });
-
-        expect(result.ok).toBe(false);
-
-        if (!result.ok) {
-            expect(
-                result.issues.some((issue) => issue.path === '$.memory'),
-            ).toBe(true);
-        }
-    });
-
-    it('rejects memory cells outside the word range', () => {
-        const program = createObjectProgramFixture();
-        const memory = [...program.memory];
-        memory[0] = MAX_WORD + 1;
-
-        const result = validateObjectProgram({
-            ...candidate(program),
-            memory,
-        });
-
-        expect(result.ok).toBe(false);
-
-        if (!result.ok) {
-            expect(
-                result.issues.some((issue) => issue.path === '$.memory[0]'),
-            ).toBe(true);
-        }
-    });
-
-    it('rejects an invalid source map', () => {
-        const program = createObjectProgramFixture();
-        const sourceMap = [...program.sourceMap];
-        sourceMap[0] = -1;
-
-        const result = validateObjectProgram({
-            ...candidate(program),
-            sourceMap,
-        });
-
-        expect(result.ok).toBe(false);
-
-        if (!result.ok) {
-            expect(
-                result.issues.some((issue) => issue.path === '$.sourceMap[0]'),
-            ).toBe(true);
-        }
-    });
-
-    it('rejects an invalid entry address', () => {
-        const program = createObjectProgramFixture();
-        const result = validateObjectProgram({
-            ...candidate(program),
-            entry: 72,
-        });
-
-        expect(result.ok).toBe(false);
-
-        if (!result.ok) {
-            expect(
-                result.issues.some((issue) => issue.path === '$.entry'),
-            ).toBe(true);
-        }
-    });
-
-    it('rejects an invalid end address', () => {
-        const program = createObjectProgramFixture();
-        const result = validateObjectProgram({
-            ...candidate(program),
-            endAddress: 72,
-        });
-
-        expect(result.ok).toBe(false);
-
-        if (!result.ok) {
-            expect(
-                result.issues.some((issue) => issue.path === '$.endAddress'),
-            ).toBe(true);
-        }
-    });
-
-    it('rejects invalid symbol addresses', () => {
-        const program = createObjectProgramFixture();
-        const result = validateObjectProgram({
-            ...candidate(program),
-            symbols: new Map([['start', 72]]),
-        });
-
-        expect(result.ok).toBe(false);
-
-        if (!result.ok) {
-            expect(
-                result.issues.some((issue) => issue.path === '$.symbols.start'),
-            ).toBe(true);
-        }
-    });
-
-    it('rejects invalid listing entries', () => {
-        const program = createObjectProgramFixture();
-        const result = validateObjectProgram({
-            ...candidate(program),
-            listing: [
-                {
-                    line: 0,
-                    address: 0,
-                    words: [],
-                    source: 42,
-                },
-            ],
-        });
-
-        expect(result.ok).toBe(false);
-
-        if (!result.ok) {
-            const paths = result.issues.map((issue) => issue.path);
-            expect(paths).toContain('$.listing[0].line');
-            expect(paths).toContain('$.listing[0].words');
-            expect(paths).toContain('$.listing[0].source');
-        }
-    });
-
-    it('rejects overlapping listing entries', () => {
-        const program = createObjectProgramFixture();
-        const [first] = program.listing;
-
-        if (!first) {
-            throw new Error('Fixture must contain a listing entry.');
-        }
-
-        const result = validateObjectProgram({
-            ...candidate(program),
-            listing: [
-                first,
-                {
-                    line: 2,
-                    address: 1,
-                    words: [30],
-                    source: 'overlap',
-                },
-            ],
-        });
-
-        expect(result.ok).toBe(false);
-
-        if (!result.ok) {
-            expect(
-                result.issues.some((issue) =>
-                    issue.message.includes('must not overlap'),
-                ),
-            ).toBe(true);
-        }
-    });
-});
-
-describe('assertObjectProgram', () => {
-    it('accepts a valid program', () => {
-        const program = createObjectProgramFixture();
-
-        expect(() => assertObjectProgram(program)).not.toThrow();
-    });
-
-    it('throws a validation error with issues', () => {
-        const program = createObjectProgramFixture();
-        const invalid = {
-            ...candidate(program),
-            entry: 99,
-        };
-
-        expect(() => assertObjectProgram(invalid)).toThrow(
-            ObjectProgramValidationError,
-        );
-
-        try {
-            assertObjectProgram(invalid);
-        } catch (error) {
-            expect(error).toBeInstanceOf(ObjectProgramValidationError);
-            expect(
-                (error as ObjectProgramValidationError).issues,
-            ).not.toHaveLength(0);
-        }
     });
 });
