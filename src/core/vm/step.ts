@@ -35,8 +35,6 @@ interface ApplyResult {
     readonly needsInput?: boolean;
     readonly trap?: Trap;
     readonly skipRemaining?: boolean;
-    /** Skip this many following micro-ops (used for the optional operand read). */
-    readonly skipNext?: number;
 }
 
 /**
@@ -95,9 +93,17 @@ export function stepCpu(state: CpuState, input?: Word): VmStepResult {
     }
 
     let after: CpuState = applied.state;
+
+    if (microOp.kind === 'BR_WRITE' && after.phase === 'FETCH') {
+        after = {
+            ...after,
+            queue: [...after.queue, ...createFetchTail(after)],
+        };
+    }
+
     const nextIndex = applied.skipRemaining
         ? after.queue.length
-        : after.queueIndex + 1 + (applied.skipNext ?? 0);
+        : after.queueIndex + 1;
 
     after = {
         ...after,
@@ -120,15 +126,13 @@ export function stepCpu(state: CpuState, input?: Word): VmStepResult {
 function createQueue(state: CpuState): readonly MicroOp[] {
     switch (state.phase) {
         case 'FETCH':
+            // BR_WRITE appends the optional operand read and the PC update
+            // once the opcode is known. This keeps operand-less instructions
+            // from describing a read that can never happen.
             return [
                 { kind: 'PC_READ' },
                 { kind: 'MEM_READ' },
                 { kind: 'BR_WRITE' },
-                { kind: 'MEM_READ' },
-                { kind: 'BR_WRITE_OPERAND' },
-                // The PC advances once per instruction after the optional
-                // operand read, independently of the number of fetched words.
-                { kind: 'PC_UPDATE' },
             ];
         case 'DECODE':
             return [{ kind: 'DECODE' }];
@@ -137,6 +141,27 @@ function createQueue(state: CpuState): readonly MicroOp[] {
         case 'HALTED':
             return [];
     }
+}
+
+/**
+ * Appends the remaining fetch work after the opcode is in the BR.
+ *
+ * The PC advances once per instruction, after the optional operand read.
+ *
+ * @param state State immediately after BR_WRITE.
+ */
+function createFetchTail(state: CpuState): readonly MicroOp[] {
+    const opcode = state.br.opcode;
+
+    if (opcode === null || getOperandModeForOpcode(opcode) === 'none') {
+        return [{ kind: 'PC_UPDATE' }];
+    }
+
+    return [
+        { kind: 'MEM_READ' },
+        { kind: 'BR_WRITE_OPERAND' },
+        { kind: 'PC_UPDATE' },
+    ];
 }
 
 function createExecuteQueue(state: CpuState): readonly MicroOp[] {
@@ -253,11 +278,10 @@ function applyBrWrite(next: MutableCpuState): ApplyResult {
 
     next.br = { opcode, operand: 0 };
 
-    if (getOperandModeForOpcode(opcode) === 'none') {
-        return { state: next, skipNext: 2 };
+    if (getOperandModeForOpcode(opcode) !== 'none') {
+        next.slAdr = next.instructionAddress + 1;
     }
 
-    next.slAdr = next.instructionAddress + 1;
     return { state: next };
 }
 
