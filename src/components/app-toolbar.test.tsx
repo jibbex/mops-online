@@ -1,4 +1,4 @@
-import { createCpu } from '@/core/vm';
+import { createCpu, stepCpu, type VmEvent } from '@/core/vm';
 import { LanguageProvider } from '@/i18n/i18n-provider';
 import { usePlayer } from '@/player/player';
 import { createObjectProgramFixture } from '@/test/object-program-fixture';
@@ -18,12 +18,27 @@ function renderToolbar() {
     );
 }
 
-function loadProgram(status: 'ready' | 'running' | 'finished' = 'ready') {
+function firstEvent(): VmEvent {
+    const result = stepCpu(createCpu(PROGRAM));
+
+    if (result.kind !== 'step') {
+        throw new Error('Expected a VM step.');
+    }
+
+    return result.event;
+}
+
+const EVENT = firstEvent();
+
+function loadProgram(
+    status: 'ready' | 'running' | 'finished' = 'ready',
+    history: readonly VmEvent[] = [],
+) {
     usePlayer.setState({
         program: PROGRAM,
         cpu: createCpu(PROGRAM),
         status,
-        history: [],
+        history,
     });
 }
 
@@ -67,6 +82,28 @@ describe('AppToolbar', () => {
         expect(screen.getByRole('button', { name: 'Pause' })).toBeEnabled();
     });
 
+    it('enables back when history is available', () => {
+        loadProgram('ready', [EVENT]);
+        renderToolbar();
+
+        expect(screen.getByRole('button', { name: 'Back' })).toBeEnabled();
+    });
+
+    it('disables back while running even with history', () => {
+        loadProgram('running', [EVENT]);
+        renderToolbar();
+
+        expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
+    });
+
+    it('disables back while an output is pending', () => {
+        loadProgram('ready', [EVENT]);
+        usePlayer.setState({ status: 'waiting-output' });
+        renderToolbar();
+
+        expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
+    });
+
     it('disables step after the program finished', () => {
         loadProgram('finished');
         renderToolbar();
@@ -97,6 +134,28 @@ describe('AppToolbar', () => {
 
         await user.click(screen.getByRole('radio', { name: '2x' }));
         expect(usePlayer.getState().speed).toBe(2);
+    });
+
+    it('keeps the active mode and speed when they are deselected', async () => {
+        const user = userEvent.setup();
+        loadProgram('ready');
+        renderToolbar();
+
+        const commands = screen.getByRole('radio', { name: 'Commands' });
+        const normalSpeed = screen.getByRole('radio', { name: '1x' });
+
+        expect(commands).toHaveAttribute('aria-checked', 'true');
+        expect(normalSpeed).toHaveAttribute('aria-checked', 'true');
+
+        await user.click(commands);
+        expect(usePlayer.getState().mode).toBe('instruction');
+
+        await user.click(screen.getByRole('radio', { name: 'Phases' }));
+        expect(usePlayer.getState().mode).toBe('phase');
+
+        await user.click(normalSpeed);
+
+        expect(usePlayer.getState().speed).toBe(1);
     });
 
     it('offers the settings in the compact menu', async () => {
