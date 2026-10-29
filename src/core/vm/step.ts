@@ -121,9 +121,12 @@ function createQueue(state: CpuState): readonly MicroOp[] {
                 { kind: 'PC_READ' },
                 { kind: 'MEM_READ', width: 2 },
                 { kind: 'BR_WRITE' },
+                // Classic von Neumann fetch: increment the PC after the
+                // instruction has been copied into the instruction register.
+                { kind: 'PC_UPDATE' },
             ];
         case 'DECODE':
-            return [{ kind: 'DECODE' }, { kind: 'PC_UPDATE' }];
+            return [{ kind: 'DECODE' }];
         case 'EXECUTE':
             return createExecuteQueue(state);
         case 'HALTED':

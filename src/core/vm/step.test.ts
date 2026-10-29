@@ -317,6 +317,7 @@ describe('execute programs', () => {
             [0, 1],
             [1, 2],
         ]);
+        expect(updates.every((event) => event.phase === 'FETCH')).toBe(true);
     });
 
     it('sets the program counter to the target instruction on a jump', () => {
