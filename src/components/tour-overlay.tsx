@@ -3,13 +3,15 @@
  *
  * The overlay is rendered next to the application shell, not inside it. Its
  * scrim panels dim and blur everything except the current target, while the
- * card explains the diagram markers.
+ * card explains the diagram markers. Radix Presence keeps the overlay mounted
+ * through the same enter and exit animations as the import/export dialog.
  *
  * @module components/tour-overlay
  */
 
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n/i18n-context';
+import { cn } from '@/lib/utils';
 import {
     computeScrimPanels,
     computeSpotlight,
@@ -23,6 +25,7 @@ import {
     type TourStepId,
 } from '@/tour/tour-steps';
 import { useTour } from '@/tour/tour-store';
+import { Presence } from '@radix-ui/react-presence';
 import {
     useEffect,
     useLayoutEffect,
@@ -41,30 +44,62 @@ const INITIAL_LAYOUT: TourLayout = {
     point: { left: 0, top: 0 },
 };
 
+type TourVisibility = 'open' | 'closed';
+
 /**
- * Renders the tour when a step is open.
+ * Renders the tour when a step is open and keeps it mounted for the exit
+ * animation before unmounting.
  */
 export function TourOverlay(): ReactElement | null {
     const stepId = useTour((state) => state.stepId);
+    const [lastStepId, setLastStepId] = useState<TourStepId | null>(stepId);
 
-    if (stepId === null) {
+    useEffect(() => {
+        if (stepId !== null) {
+            setLastStepId(stepId);
+        }
+    }, [stepId]);
+
+    const displayStepId = stepId ?? lastStepId;
+
+    if (displayStepId === null) {
         return null;
     }
 
-    return <TourContent stepId={stepId} />;
+    const present = stepId !== null;
+
+    return (
+        <Presence present={present}>
+            <div
+                data-testid="tour"
+                data-state={present ? 'open' : 'closed'}
+                className="pointer-events-none fixed inset-0 z-[60] duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+            >
+                <TourContent
+                    stepId={displayStepId}
+                    visibility={present ? 'open' : 'closed'}
+                />
+            </div>
+        </Presence>
+    );
 }
 
 function TourContent({
     stepId,
+    visibility,
 }: {
     readonly stepId: TourStepId;
+    readonly visibility: TourVisibility;
 }): ReactElement {
     const { language, t } = useI18n();
     const next = useTour((state) => state.next);
     const back = useTour((state) => state.back);
     const close = useTour((state) => state.close);
     const cardRef = useRef<HTMLDivElement>(null);
+    const primaryRef = useRef<HTMLButtonElement>(null);
     const [layout, setLayout] = useState<TourLayout>(INITIAL_LAYOUT);
+    const [measured, setMeasured] = useState(false);
+    const [animate, setAnimate] = useState(false);
     const step = TOUR_STEPS[stepId];
     const targetSelector = step.target;
 
@@ -92,6 +127,7 @@ function TourContent({
                 hole,
                 point: placeCard(hole, cardSize, viewport),
             });
+            setMeasured(true);
         };
 
         measure();
@@ -112,6 +148,22 @@ function TourContent({
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [close]);
 
+    useEffect(() => {
+        if (!measured) {
+            return;
+        }
+
+        const frame = window.requestAnimationFrame(() => {
+            setAnimate(true);
+        });
+
+        return () => window.cancelAnimationFrame(frame);
+    }, [measured]);
+
+    useEffect(() => {
+        (primaryRef.current as HTMLButtonElement).focus();
+    }, [stepId, animate]);
+
     const viewport = {
         width: window.innerWidth,
         height: window.innerHeight,
@@ -120,10 +172,7 @@ function TourContent({
     const finish = step.next === null;
 
     return (
-        <div
-            className="pointer-events-none fixed inset-0 z-[60]"
-            data-testid="tour"
-        >
+        <>
             {panels.map((panel) => (
                 <div
                     key={`${panel.left}:${panel.top}:${panel.width}:${panel.height}`}
@@ -150,17 +199,22 @@ function TourContent({
                 />
             )}
             <div
-                key={stepId}
                 ref={cardRef}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="tour-title"
                 aria-describedby="tour-body"
                 data-testid="tour-card"
-                className="bg-popover text-popover-foreground fixed w-[min(22rem,calc(100vw-2rem))] rounded-lg border p-4 shadow-lg pointer-events-auto"
+                data-state={visibility}
+                className={cn(
+                    'bg-popover text-popover-foreground fixed w-[min(22rem,calc(100vw-2rem))] rounded-lg border p-4 shadow-lg duration-100 transition-none pointer-events-auto',
+                    animate &&
+                        'data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+                )}
                 style={{
                     left: layout.point.left,
                     top: layout.point.top,
+                    visibility: animate ? 'visible' : 'hidden',
                 }}
             >
                 <p className="text-xs text-muted-foreground">
@@ -196,6 +250,7 @@ function TourContent({
                         </Button>
                     )}
                     <Button
+                        ref={primaryRef}
                         className="ml-auto"
                         size="sm"
                         autoFocus
@@ -205,6 +260,6 @@ function TourContent({
                     </Button>
                 </div>
             </div>
-        </div>
+        </>
     );
 }

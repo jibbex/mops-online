@@ -47,12 +47,18 @@ function addTarget(name: string, rect: DOMRect): HTMLElement {
     return target;
 }
 
-function renderOverlay() {
-    return render(
+async function renderOverlay(): Promise<void> {
+    render(
         <LanguageProvider>
             <TourOverlay />
         </LanguageProvider>,
     );
+
+    await waitFor(() => {
+        expect(screen.getByTestId('tour-card')).toHaveClass(
+            'data-open:animate-in',
+        );
+    });
 }
 
 function setCardRect(rect: DOMRect): void {
@@ -87,14 +93,18 @@ describe('TourOverlay', () => {
     });
 
     it('renders nothing when the tour is closed', () => {
-        renderOverlay();
+        render(
+            <LanguageProvider>
+                <TourOverlay />
+            </LanguageProvider>,
+        );
 
         expect(screen.queryByTestId('tour')).not.toBeInTheDocument();
     });
 
-    it('shows one scrim and a centered card for the welcome step', () => {
+    it('shows one scrim and a centered card for the welcome step', async () => {
         openStep('welcome');
-        renderOverlay();
+        await renderOverlay();
         setCardRect(domRect(0, 0, CARD_WIDTH, CARD_HEIGHT));
 
         expect(screen.getAllByTestId('tour-scrim')).toHaveLength(1);
@@ -103,12 +113,25 @@ describe('TourOverlay', () => {
             left: '350px',
             top: '325px',
         });
+        expect(screen.getByTestId('tour-card')).toHaveAttribute(
+            'data-state',
+            'open',
+        );
+        expect(screen.getByTestId('tour-card')).toHaveClass(
+            'data-open:animate-in',
+            'data-open:fade-in-0',
+            'data-open:zoom-in-95',
+        );
+        expect(screen.getByTestId('tour')).toHaveClass(
+            'data-open:animate-in',
+            'data-open:fade-in-0',
+        );
     });
 
-    it('shows four scrims, a ring, and a card for a target step', () => {
+    it('shows four scrims, a ring, and a card for a target step', async () => {
         addTarget('pc', domRect(400, 300, 100, 50));
         openStep('read');
-        renderOverlay();
+        await renderOverlay();
         setCardRect(domRect(0, 0, CARD_WIDTH, CARD_HEIGHT));
 
         expect(screen.getAllByTestId('tour-scrim')).toHaveLength(4);
@@ -124,9 +147,9 @@ describe('TourOverlay', () => {
         });
     });
 
-    it('falls back to a centered card when the target is missing', () => {
+    it('falls back to a centered card when the target is missing', async () => {
         openStep('read');
-        renderOverlay();
+        await renderOverlay();
         setCardRect(domRect(0, 0, CARD_WIDTH, CARD_HEIGHT));
 
         expect(screen.getAllByTestId('tour-scrim')).toHaveLength(1);
@@ -149,7 +172,7 @@ describe('TourOverlay', () => {
         ];
 
         openStep('welcome');
-        renderOverlay();
+        await renderOverlay();
         setCardRect(domRect(0, 0, CARD_WIDTH, CARD_HEIGHT));
 
         for (const [index, title] of titles.entries()) {
@@ -167,7 +190,15 @@ describe('TourOverlay', () => {
             }
         }
 
-        expect(screen.queryByTestId('tour')).not.toBeInTheDocument();
+        const root = screen.queryByTestId('tour');
+
+        if (root) {
+            fireEvent.animationEnd(root);
+        }
+
+        await waitFor(() => {
+            expect(screen.queryByTestId('tour')).not.toBeInTheDocument();
+        });
         expect(localStorage.getItem(TOUR_STORAGE_KEY)).toBe('1');
     });
 
@@ -175,7 +206,7 @@ describe('TourOverlay', () => {
         const user = userEvent.setup();
 
         openStep('welcome');
-        renderOverlay();
+        await renderOverlay();
         setCardRect(domRect(0, 0, CARD_WIDTH, CARD_HEIGHT));
 
         expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
@@ -193,18 +224,26 @@ describe('TourOverlay', () => {
         const user = userEvent.setup();
 
         openStep('welcome');
-        renderOverlay();
+        await renderOverlay();
         setCardRect(domRect(0, 0, CARD_WIDTH, CARD_HEIGHT));
 
         await user.click(screen.getByRole('button', { name: 'Skip tour' }));
 
-        expect(screen.queryByTestId('tour')).not.toBeInTheDocument();
+        const root = screen.queryByTestId('tour');
+
+        if (root) {
+            fireEvent.animationEnd(root);
+        }
+
+        await waitFor(() => {
+            expect(screen.queryByTestId('tour')).not.toBeInTheDocument();
+        });
         expect(localStorage.getItem(TOUR_STORAGE_KEY)).toBe('1');
     });
 
-    it('hides Skip on the last step', () => {
+    it('hides Skip on the last step', async () => {
         openStep('bus');
-        renderOverlay();
+        await renderOverlay();
         setCardRect(domRect(0, 0, CARD_WIDTH, CARD_HEIGHT));
 
         expect(
@@ -215,23 +254,32 @@ describe('TourOverlay', () => {
         ).toBeInTheDocument();
     });
 
-    it('closes on Escape and ignores other keys', () => {
+    it('closes on Escape and ignores other keys', async () => {
         openStep('welcome');
-        renderOverlay();
+        await renderOverlay();
         setCardRect(domRect(0, 0, CARD_WIDTH, CARD_HEIGHT));
 
         fireEvent.keyDown(window, { key: 'a' });
         expect(screen.getByTestId('tour')).toBeInTheDocument();
 
         fireEvent.keyDown(window, { key: 'Escape' });
-        expect(screen.queryByTestId('tour')).not.toBeInTheDocument();
+
+        const root = screen.queryByTestId('tour');
+
+        if (root) {
+            fireEvent.animationEnd(root);
+        }
+
+        await waitFor(() => {
+            expect(screen.queryByTestId('tour')).not.toBeInTheDocument();
+        });
     });
 
     it('focuses the primary button on every step', async () => {
         const user = userEvent.setup();
 
         openStep('welcome');
-        renderOverlay();
+        await renderOverlay();
         setCardRect(domRect(0, 0, CARD_WIDTH, CARD_HEIGHT));
 
         const titles = [
@@ -260,11 +308,11 @@ describe('TourOverlay', () => {
         }
     });
 
-    it('recomputes the card position on resize', () => {
+    it('recomputes the card position on resize', async () => {
         const target = addTarget('pc', domRect(400, 300, 100, 50));
 
         openStep('read');
-        renderOverlay();
+        await renderOverlay();
         setCardRect(domRect(0, 0, CARD_WIDTH, CARD_HEIGHT));
 
         expect(screen.getByTestId('tour-card')).toHaveStyle({ top: '368px' });
@@ -275,10 +323,10 @@ describe('TourOverlay', () => {
         expect(screen.getByTestId('tour-card')).toHaveStyle({ top: '568px' });
     });
 
-    it('renders German text with the German language provider', () => {
+    it('renders German text with the German language provider', async () => {
         localStorage.setItem('mops-language', 'de');
         openStep('welcome');
-        renderOverlay();
+        await renderOverlay();
         setCardRect(domRect(0, 0, CARD_WIDTH, CARD_HEIGHT));
 
         expect(
