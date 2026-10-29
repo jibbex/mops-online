@@ -168,6 +168,12 @@ describe('SourceFileDialog', () => {
 
         expect(await screen.findByText('Export failed')).toBeVisible();
         expect(
+            screen
+                .getByText('Export failed')
+                .closest('[data-slot="alert"]')
+                ?.querySelector('svg'),
+        ).toBeInTheDocument();
+        expect(
             screen.getByText('The source file could not be downloaded.'),
         ).toBeVisible();
         expect(
@@ -215,6 +221,12 @@ describe('SourceFileDialog', () => {
         );
 
         expect(await screen.findByText('The file is empty.')).toBeVisible();
+        expect(
+            screen
+                .getByText('Import failed')
+                .closest('[data-slot="alert"]')
+                ?.querySelector('svg'),
+        ).toBeInTheDocument();
         expect(onImport).not.toHaveBeenCalled();
     });
 

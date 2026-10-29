@@ -27,7 +27,13 @@ import {
     type SourceImportFailureReason,
 } from '@/lib/exchange';
 import type { TaskInfo } from '@/lib/task';
-import { CheckCircle2, Download, FileCode2, Upload } from 'lucide-react';
+import {
+    CheckCircle2,
+    CircleAlert,
+    Download,
+    FileCode2,
+    Upload,
+} from 'lucide-react';
 import { useRef, useState, type ChangeEvent, type ReactElement } from 'react';
 
 interface SourceFileDialogProps {
@@ -228,6 +234,7 @@ export function SourceFileDialog({
                 ) : null}
                 {status.kind === 'export-error' ? (
                     <Alert variant="destructive">
+                        <CircleAlert />
                         <AlertTitle>{t('file.exportErrorTitle')}</AlertTitle>
                         <AlertDescription>
                             {t('file.exportError')}
@@ -236,6 +243,7 @@ export function SourceFileDialog({
                 ) : null}
                 {status.kind === 'import-error' ? (
                     <Alert variant="destructive">
+                        <CircleAlert />
                         <AlertTitle>{t('file.importErrorTitle')}</AlertTitle>
                         <AlertDescription>
                             {importErrorMessage(status.reason)}
