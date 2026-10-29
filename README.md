@@ -345,6 +345,15 @@ two-cell instruction encoding. The VM maps the PC to the instruction's memory
 address through the object program, and jumps set the PC to the target
 instruction index.
 
+The counter is incremented in the fetch phase (`PC_UPDATE`), after the
+instruction has been copied into the instruction register.
+
+Active diagram elements carry one of three operations: **read**, **write**, or
+**increment**. The same visual language is used everywhere: reads are soft and
+dashed, writes are solid and filled, and increments add a packet-colored pulse.
+This keeps `PC_READ`, `MEM_READ`, `AC_READ`, and every other read distinct from
+a write or an increment without introducing per-component styles.
+
 ### Conventions
 
 - All repository text is written in American English.
