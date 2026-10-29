@@ -8,11 +8,13 @@ import {
     getInstructionByOpcode,
     getOperandModeForOpcode,
     isOpcode,
+    type Compare,
+    type MicroOp,
     type Opcode,
     type Operation,
+    type Phase,
 } from '@/core/isa';
 import type { Address, ObjectProgram, Word } from '@/core/object';
-import type { Compare, MicroOp, Phase } from './microops';
 import type { Trap } from './traps';
 
 /** Decoded instruction register. */

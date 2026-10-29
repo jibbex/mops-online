@@ -1,10 +1,11 @@
 /**
- * Micro-ops emitted by the MOPS VM.
+ * Execution vocabulary shared by the ISA and the VM.
  *
- * A micro-op describes one transfer or calculation step. Visual cues are
- * derived from these values by the player.
+ * Instruction declarations embed execution sequences, so these types live in
+ * the ISA layer. This keeps the dependency direction one-way: the VM may import
+ * the ISA, but the ISA never imports the VM.
  *
- * @module core/vm/microops
+ * @module core/isa/execution
  */
 
 /**

@@ -11,6 +11,8 @@ import {
     getOperandModeForOpcode,
     getOperation,
     isOpcode,
+    type Compare,
+    type MicroOp,
     type Operation,
 } from '@/core/isa';
 import { MAX_WORD, MIN_WORD, isWord, type Word } from '@/core/object';
@@ -22,7 +24,6 @@ import {
     type VmEvent,
     type VmStepResult,
 } from './cpu';
-import type { Compare, MicroOp } from './microops';
 import { createTrap, type Trap } from './traps';
 
 type MutableCpuState = {

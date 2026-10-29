@@ -62,6 +62,33 @@ export default tseslint.config(
         },
     },
     {
+        files: ['src/core/isa/**/*.{ts,tsx}'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['@/core/vm', '@/core/vm/*'],
+                            message:
+                                'The ISA must not depend on the VM. Move shared execution types into the ISA.',
+                        },
+                        {
+                            group: [
+                                '../vm',
+                                '../vm/*',
+                                '../../vm',
+                                '../../vm/*',
+                            ],
+                            message:
+                                'The ISA must not depend on the VM. Move shared execution types into the ISA.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
         files: ['vite.config.ts', 'playwright.config.ts'],
         languageOptions: {
             globals: { ...globals.node },

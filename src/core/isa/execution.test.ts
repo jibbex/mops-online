@@ -1,9 +1,9 @@
 // @vitest-environment node
 
 import { describe, expectTypeOf, it } from 'vitest';
-import type { Compare, MicroOp, Phase } from './microops';
+import type { Compare, MicroOp, Phase } from './execution';
 
-describe('micro-op types', () => {
+describe('execution types', () => {
     it('lists every micro-op kind', () => {
         expectTypeOf<MicroOp['kind']>().toEqualTypeOf<
             | 'PC_READ'

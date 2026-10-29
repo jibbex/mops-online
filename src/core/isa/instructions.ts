@@ -8,7 +8,7 @@
  * @module core/isa/instructions
  */
 
-import type { MicroOp } from '@/core/vm/microops';
+import type { MicroOp } from './execution';
 import { OPCODES, isOpcode, type Opcode } from './opcodes';
 
 /** Encoding family selected by the operand syntax. */
