@@ -119,11 +119,13 @@ function createQueue(state: CpuState): readonly MicroOp[] {
         case 'FETCH':
             return [
                 { kind: 'PC_READ' },
-                { kind: 'MEM_READ', width: 2 },
-                { kind: 'BR_WRITE' },
-                // Classic von Neumann fetch: increment the PC after the
-                // instruction has been copied into the instruction register.
+                { kind: 'MEM_READ' },
+                // The PC advances once per instruction, independently of the
+                // number of memory words fetched for that instruction.
                 { kind: 'PC_UPDATE' },
+                { kind: 'BR_WRITE' },
+                { kind: 'MEM_READ' },
+                { kind: 'BR_WRITE_OPERAND' },
             ];
         case 'DECODE':
             return [{ kind: 'DECODE' }];
@@ -153,13 +155,15 @@ function applyMicroOp(
         case 'PC_READ':
             return applyPcRead(next);
         case 'MEM_READ':
-            return applyMemRead(next, microOp.width);
+            return applyMemRead(next);
         case 'BR_WRITE':
             return applyBrWrite(next);
         case 'DECODE':
             return applyDecode(next);
         case 'PC_UPDATE':
             return applyPcUpdate(next);
+        case 'BR_WRITE_OPERAND':
+            return applyBrWriteOperand(next);
         case 'BR_READ_OPERAND':
             return applyBrReadOperand(next);
         case 'INPUT_READ':
@@ -207,7 +211,7 @@ function applyPcRead(next: MutableCpuState): ApplyResult {
     return { state: next };
 }
 
-function applyMemRead(next: MutableCpuState, width: 1 | 2): ApplyResult {
+function applyMemRead(next: MutableCpuState): ApplyResult {
     const address = next.slAdr;
 
     if (address < 0 || address >= next.memory.length) {
@@ -218,15 +222,9 @@ function applyMemRead(next: MutableCpuState, width: 1 | 2): ApplyResult {
         );
     }
 
-    const value =
-        width === 1
-            ? next.memory[address]
-            : [next.memory[address], next.memory[address + 1]];
+    const value = next.memory[address];
 
-    if (
-        value === undefined ||
-        (Array.isArray(value) && value.some((cell) => cell === undefined))
-    ) {
+    if (value === undefined) {
         return trap(
             next,
             'MEMORY_OUT_OF_RANGE',
@@ -234,15 +232,15 @@ function applyMemRead(next: MutableCpuState, width: 1 | 2): ApplyResult {
         );
     }
 
-    next.mlVal = value as BusValue;
-    next.slVal = value as BusValue;
+    next.mlVal = value;
+    next.slVal = value;
     return { state: next };
 }
 
 function applyBrWrite(next: MutableCpuState): ApplyResult {
-    const value = next.slVal;
+    const opcode = asWord(next.slVal);
 
-    if (!isBusTuple(value) || !isOpcode(value[0])) {
+    if (opcode === undefined || !isOpcode(opcode)) {
         return trap(
             next,
             'INVALID_OPCODE',
@@ -250,9 +248,28 @@ function applyBrWrite(next: MutableCpuState): ApplyResult {
         );
     }
 
-    const [opcode, operand] = value;
+    next.br = { opcode, operand: 0 };
 
-    next.br = { opcode, operand };
+    if (getOperandModeForOpcode(opcode) === 'none') {
+        return { state: next, skipRemaining: true };
+    }
+
+    next.slAdr = next.instructionAddress + 1;
+    return { state: next };
+}
+
+function applyBrWriteOperand(next: MutableCpuState): ApplyResult {
+    const value = asWord(next.slVal);
+
+    if (value === undefined || next.br.opcode === null) {
+        return trap(
+            next,
+            'INVALID_OPCODE',
+            'Fetched operand is not loaded into the instruction register.',
+        );
+    }
+
+    next.br = { opcode: next.br.opcode, operand: value };
     return { state: next };
 }
 
@@ -266,10 +283,6 @@ function applyDecode(next: MutableCpuState): ApplyResult {
 }
 
 function applyPcUpdate(next: MutableCpuState): ApplyResult {
-    if (next.br.opcode === null) {
-        return trap(next, 'INVALID_OPCODE', 'No instruction is loaded.');
-    }
-
     // PC counts instructions, never memory cells. The fetch address is looked
     // up from the instruction-address table on the next PC_READ.
     next.pc += 1;
@@ -574,13 +587,15 @@ function describe(microOp: MicroOp): string {
         case 'PC_READ':
             return 'Read the program counter.';
         case 'MEM_READ':
-            return `Read ${microOp.width} memory cell${microOp.width === 1 ? '' : 's'}.`;
+            return 'Read one memory cell.';
         case 'BR_WRITE':
-            return 'Write the instruction register.';
+            return 'Write the instruction opcode.';
         case 'DECODE':
             return 'Decode the instruction.';
         case 'PC_UPDATE':
             return 'Update the program counter.';
+        case 'BR_WRITE_OPERAND':
+            return 'Write the instruction operand.';
         case 'BR_READ_OPERAND':
             return 'Read the instruction operand.';
         case 'INPUT_READ':
@@ -641,10 +656,6 @@ function compareSymbol(value: Word): Compare {
     }
 
     return '=';
-}
-
-function isBusTuple(value: BusValue): value is readonly [Word, Word] {
-    return Array.isArray(value);
 }
 
 function asWord(value: BusValue): Word | undefined {

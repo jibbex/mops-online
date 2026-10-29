@@ -80,11 +80,14 @@ export function visualStateFor(event: VmEvent | null): VisualState {
             mark(active, operations, 'read', 'pc');
             break;
         case 'MEM_READ':
-            add(active, 'control');
-            mark(active, operations, 'read', 'memory');
+            add(active, 'memory');
             addMemory(active, operations, event, 'read');
             break;
         case 'BR_WRITE':
+            add(active, 'control');
+            mark(active, operations, 'write', 'br');
+            break;
+        case 'BR_WRITE_OPERAND':
             add(active, 'control');
             mark(active, operations, 'write', 'br');
             break;
@@ -106,24 +109,23 @@ export function visualStateFor(event: VmEvent | null): VisualState {
             mark(active, operations, 'read', 'ein');
             break;
         case 'MEM_WRITE':
-            add(active, 'control');
-            mark(active, operations, 'write', 'memory');
+            add(active, 'memory');
             addMemory(active, operations, event, 'write');
             break;
         case 'AC_WRITE':
-            add(active, 'control');
+            add(active, 'alu');
             mark(active, operations, 'write', 'ac');
             break;
         case 'AC_READ':
-            add(active, 'control');
+            add(active, 'alu');
             mark(active, operations, 'read', 'ac');
             break;
         case 'OP_WRITE':
-            add(active, 'control');
+            add(active, 'alu');
             mark(active, operations, 'write', 'op');
             break;
         case 'AR_WRITE':
-            add(active, 'control');
+            add(active, 'alu');
             mark(active, operations, 'write', 'ar');
             break;
         case 'ALU_CALC':
@@ -131,12 +133,12 @@ export function visualStateFor(event: VmEvent | null): VisualState {
             mark(active, operations, 'write', 'erg');
             break;
         case 'ERG_AC_WRITE':
-            add(active, 'alu', 'control');
+            add(active, 'alu');
             mark(active, operations, 'read', 'erg');
             mark(active, operations, 'write', 'ac');
             break;
         case 'ERG_VGL_WRITE':
-            add(active, 'alu', 'control');
+            add(active, 'alu');
             mark(active, operations, 'read', 'erg');
             mark(active, operations, 'write', 'vgl');
             break;
@@ -145,7 +147,7 @@ export function visualStateFor(event: VmEvent | null): VisualState {
             mark(active, operations, 'write', 'aus');
             break;
         case 'VGL_READ':
-            add(active, 'control');
+            add(active, 'alu');
             mark(active, operations, 'read', 'vgl');
             break;
         case 'PC_WRITE':
@@ -201,6 +203,7 @@ function transferFor(event: VmEvent): TransferRoute | null {
             return route('vgl-control', 'M300 334 V158');
         case 'PC_READ':
         case 'BR_WRITE':
+        case 'BR_WRITE_OPERAND':
         case 'DECODE':
         case 'PC_UPDATE':
         case 'BR_READ_OPERAND':
@@ -263,10 +266,7 @@ function memoryCellsFor(event: VmEvent): number[] {
         return [];
     }
 
-    const address = event.after.slAdr;
-    const width = event.microOp.kind === 'MEM_READ' ? event.microOp.width : 1;
-
-    return Array.from({ length: width }, (_, offset) => address + offset);
+    return [event.after.slAdr];
 }
 
 function memoryBarsFor(event: VmEvent): number[] {

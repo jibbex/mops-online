@@ -11,6 +11,7 @@ describe('micro-op types', () => {
             | 'BR_WRITE'
             | 'DECODE'
             | 'PC_UPDATE'
+            | 'BR_WRITE_OPERAND'
             | 'BR_READ_OPERAND'
             | 'INPUT_READ'
             | 'MEM_WRITE'

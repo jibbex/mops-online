@@ -15,10 +15,11 @@
  */
 export type MicroOp =
     | { readonly kind: 'PC_READ' }
-    | { readonly kind: 'MEM_READ'; readonly width: 1 | 2 }
+    | { readonly kind: 'MEM_READ' }
     | { readonly kind: 'BR_WRITE' }
     | { readonly kind: 'DECODE' }
     | { readonly kind: 'PC_UPDATE' }
+    | { readonly kind: 'BR_WRITE_OPERAND' }
     | { readonly kind: 'BR_READ_OPERAND' }
     | { readonly kind: 'INPUT_READ' }
     | { readonly kind: 'MEM_WRITE' }

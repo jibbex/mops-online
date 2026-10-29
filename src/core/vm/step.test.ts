@@ -303,6 +303,31 @@ describe('execute programs', () => {
         expect(phases).toEqual(new Set(['FETCH', 'DECODE', 'EXECUTE']));
     });
 
+    it('reads opcode and operand as separate memory words', () => {
+        const result = runProgram('ld 5\nend');
+        const reads = result.events.filter(
+            (event) => event.microOp.kind === 'MEM_READ',
+        );
+        const operandWrites = result.events.filter(
+            (event) => event.microOp.kind === 'BR_WRITE_OPERAND',
+        );
+
+        // `ld 5` needs one opcode read and one operand read; `end` needs only
+        // its opcode read.
+        expect(reads).toHaveLength(3);
+        expect(operandWrites).toHaveLength(1);
+    });
+
+    it('does not read an operand word for end', () => {
+        const result = runProgram('end');
+        const reads = result.events.filter(
+            (event) => event.microOp.kind === 'MEM_READ',
+        );
+
+        expect(reads).toHaveLength(1);
+        expect(result.state.pc).toBe(1);
+    });
+
     it('increments the program counter once per instruction', () => {
         const result = runProgram('ld 5\nend');
         const updates = result.events.filter(

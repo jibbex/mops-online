@@ -105,7 +105,7 @@ export interface InstructionSpec {
  */
 const LOAD_ADDRESS_EXECUTION: readonly MicroOp[] = [
     { kind: 'BR_READ_OPERAND' },
-    { kind: 'MEM_READ', width: 1 },
+    { kind: 'MEM_READ' },
     { kind: 'AC_WRITE' },
 ];
 
@@ -128,7 +128,7 @@ const INPUT_EXECUTION: readonly MicroOp[] = [
 
 const OUTPUT_ADDRESS_EXECUTION: readonly MicroOp[] = [
     { kind: 'BR_READ_OPERAND' },
-    { kind: 'MEM_READ', width: 1 },
+    { kind: 'MEM_READ' },
     { kind: 'AUS_WRITE' },
 ];
 
@@ -139,7 +139,7 @@ const OUTPUT_IMMEDIATE_EXECUTION: readonly MicroOp[] = [
 
 const ARITHMETIC_ADDRESS_EXECUTION: readonly MicroOp[] = [
     { kind: 'BR_READ_OPERAND' },
-    { kind: 'MEM_READ', width: 1 },
+    { kind: 'MEM_READ' },
     { kind: 'OP_WRITE' },
     { kind: 'AR_WRITE' },
     { kind: 'ALU_CALC' },
@@ -156,7 +156,7 @@ const ARITHMETIC_IMMEDIATE_EXECUTION: readonly MicroOp[] = [
 
 const COMPARE_ADDRESS_EXECUTION: readonly MicroOp[] = [
     { kind: 'BR_READ_OPERAND' },
-    { kind: 'MEM_READ', width: 1 },
+    { kind: 'MEM_READ' },
     { kind: 'OP_WRITE' },
     { kind: 'AR_WRITE' },
     { kind: 'ALU_CALC' },

@@ -41,13 +41,14 @@ describe('visual map', () => {
 
     it('routes a memory read from the memory edge to the control edge', () => {
         const visual = visualStateFor(
-            event({ kind: 'MEM_READ', width: 2 }, { slAdr: 25 }),
+            event({ kind: 'MEM_READ' }, { slAdr: 25 }),
         );
 
-        expect(visual.memoryCells).toEqual([25, 26]);
-        expect(visual.memoryBars).toEqual([2, 2]);
+        expect(visual.memoryCells).toEqual([25]);
+        expect(visual.memoryBars).toEqual([2]);
         expect(visual.active.has('mem25')).toBe(true);
-        expect(visual.active.has('control')).toBe(true);
+        expect(visual.active.has('memory')).toBe(true);
+        expect(visual.active.has('control')).toBe(false);
         expect(visual.transfer).toEqual({
             id: 'memory-control',
             path: 'M265 59 H300 V158',
@@ -159,17 +160,41 @@ describe('visual map', () => {
     });
 
     it('uses the same read and write language for memory and registers', () => {
-        const read = visualStateFor(
-            event({ kind: 'MEM_READ', width: 1 }, { slAdr: 64 }),
-        );
+        const read = visualStateFor(event({ kind: 'MEM_READ' }, { slAdr: 64 }));
         const write = visualStateFor(
             event({ kind: 'MEM_WRITE' }, { slAdr: 64 }),
         );
 
-        expect(read.operations.get('memory')).toBe('read');
+        expect(read.active.has('memory')).toBe(true);
+        expect(read.operations.has('memory')).toBe(false);
         expect(read.operations.get('mem64')).toBe('read');
-        expect(write.operations.get('memory')).toBe('write');
+        expect(write.active.has('memory')).toBe(true);
+        expect(write.operations.has('memory')).toBe(false);
         expect(write.operations.get('mem64')).toBe('write');
+    });
+
+    it('activates exactly one unit per micro-op', () => {
+        const unitIds = ['memory', 'control', 'alu', 'io'] as const;
+        const microOps: VmEvent['microOp'][] = [
+            { kind: 'PC_READ' },
+            { kind: 'MEM_READ' },
+            { kind: 'BR_WRITE' },
+            { kind: 'PC_UPDATE' },
+            { kind: 'BR_WRITE_OPERAND' },
+            { kind: 'DECODE' },
+            ...INSTRUCTIONS.flatMap((instruction) =>
+                Object.values(instruction.execution).flat(),
+            ),
+        ];
+
+        for (const microOp of microOps) {
+            const visual = visualStateFor(event(microOp, { slAdr: 64 }));
+            const activeUnits = unitIds.filter((unit) =>
+                visual.active.has(unit),
+            );
+
+            expect(activeUnits, microOp.kind).toHaveLength(1);
+        }
     });
 
     it('does not draw a packet for internal control reads and writes', () => {
@@ -212,8 +237,7 @@ describe('visual map', () => {
 
     it('keeps every bus packet outside the component frames', () => {
         const external: VmEvent['microOp'][] = [
-            { kind: 'MEM_READ', width: 1 },
-            { kind: 'MEM_READ', width: 2 },
+            { kind: 'MEM_READ' },
             { kind: 'MEM_WRITE' },
             { kind: 'INPUT_READ' },
             { kind: 'AC_WRITE' },

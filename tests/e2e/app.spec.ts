@@ -359,6 +359,7 @@ test('moves every packet at the same bus speed', async ({ page }) => {
     await page.getByRole('button', { name: 'Assemble' }).click();
 
     const readPacket = async (): Promise<{
+        id: string;
         length: number;
         duration: number;
         speed: number;
@@ -385,15 +386,25 @@ test('moves every packet at the same bus speed', async ({ page }) => {
             const length = path.getTotalLength();
             path.remove();
 
-            return { length, duration, speed: length / duration };
+            return {
+                id: layer.getAttribute('data-transfer') ?? '',
+                length,
+                duration,
+                speed: length / duration,
+            };
         });
 
-    const stepUntilPacket = async (): Promise<void> => {
+    const stepUntilPacket = async (excludeId?: string): Promise<void> => {
         for (let step = 0; step < 12; step += 1) {
             await page.getByRole('button', { name: 'Step' }).click();
             await page.waitForTimeout(50);
 
-            if ((await page.locator('[data-transfer]').count()) > 0) {
+            const packet = page.locator('[data-transfer]');
+
+            if (
+                (await packet.count()) > 0 &&
+                (await packet.getAttribute('data-transfer')) !== excludeId
+            ) {
                 return;
             }
         }
@@ -402,7 +413,7 @@ test('moves every packet at the same bus speed', async ({ page }) => {
     await stepUntilPacket();
     const first = await readPacket();
 
-    await stepUntilPacket();
+    await stepUntilPacket(first?.id);
     const second = await readPacket();
 
     expect(first).not.toBeNull();
