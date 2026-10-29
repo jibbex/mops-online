@@ -637,7 +637,5 @@ function parseInteger(value: string): number | undefined {
         return undefined;
     }
 
-    const parsed = Number.parseInt(value, 10);
-
-    return Number.isNaN(parsed) ? undefined : parsed;
+    return Number.parseInt(value, 10);
 }
