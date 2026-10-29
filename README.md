@@ -348,31 +348,6 @@ Examples: `-7 div 2` is `-4`, `-7 mod 2` is `1`, and `7 mod -2` is `-1`.
 These rules match MOPS 1.04, which uses Python's `operator.floordiv` and
 `operator.mod`. They are covered by the VM semantics tests.
 
-### Program Counter
-
-The program counter (`PC`) is an **instruction index**, not a memory address. It
-advances by exactly one per instruction, including `end`, independent of the
-two-cell instruction encoding. The VM maps the PC to the instruction's memory
-address through the object program, and jumps set the PC to the target
-instruction index.
-
-The counter is incremented in the fetch phase (`PC_UPDATE`), after the opcode
-and any operand word have been read. Opcode and operand are separate memory
-reads: a two-word instruction performs two `MEM_READ` transfers, while `end`
-reads only its opcode word. The PC still advances by exactly one per
-instruction.
-
-Active diagram elements carry one of three operations: **read**, **write**, or
-**increment**. The same visual language is used everywhere: reads are soft and
-dashed, writes are solid and filled, and increments add a packet-colored pulse.
-This keeps `PC_READ`, `MEM_READ`, `AC_READ`, and every other read distinct from
-a write or an increment without introducing per-component styles.
-
-Exactly one unit is active per micro-op. The unit contains the register or cell
-whose operation is happening; the bus packet shows the transfer direction to the
-other unit. Unit frames themselves are always highlighted identically when
-active; only their contents use the read/write/increment distinction.
-
 ### Conventions
 
 - All repository text is written in American English.
