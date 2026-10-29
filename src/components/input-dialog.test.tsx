@@ -40,6 +40,33 @@ describe('InputDialog', () => {
         expect(provideInput).not.toHaveBeenCalled();
     });
 
+    it('rejects non-integer numeric input', () => {
+        const provideInput = vi.fn();
+
+        usePlayer.setState({ status: 'waiting-input', provideInput });
+
+        render(
+            <LanguageProvider>
+                <InputDialog />
+            </LanguageProvider>,
+        );
+
+        const input = screen.getByLabelText('Input value');
+        const form = input.closest('form');
+
+        expect(form).not.toBeNull();
+
+        for (const value of ['3.5', '1e3', '12abc', '']) {
+            fireEvent.change(input, { target: { value } });
+            fireEvent.submit(form as HTMLFormElement);
+        }
+
+        expect(
+            screen.getByText('Enter an integer from -9999 to 9999.'),
+        ).toBeInTheDocument();
+        expect(provideInput).not.toHaveBeenCalled();
+    });
+
     it('submits a valid value', () => {
         const provideInput = vi.fn();
 

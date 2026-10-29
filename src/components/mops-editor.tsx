@@ -255,6 +255,9 @@ export function MopsEditor({
     const { t } = useI18n();
     const containerRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
+    // CodeMirror owns its update listener for the lifetime of the view. Refs
+    // keep the latest React callbacks without recreating the editor on every
+    // render, which would lose cursor and selection state.
     const onChangeRef = useRef(onChange);
     const initialValueRef = useRef(value);
     const currentLineRef = useRef(currentLine);
@@ -310,6 +313,9 @@ export function MopsEditor({
             return;
         }
 
+        // The editor is mounted in a hidden mobile pane. Once the pane becomes
+        // visible, CodeMirror needs a fresh measurement and the current line
+        // can be scrolled into view for the first time.
         let visible = container.clientHeight > 0;
         const observer = new ResizeObserver(() => {
             const nextVisible = container.clientHeight > 0;

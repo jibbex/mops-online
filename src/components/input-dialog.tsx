@@ -47,9 +47,10 @@ export function InputDialog(): ReactElement {
 
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
-        const parsed = Number.parseInt(value, 10);
+        const trimmed = value.trim();
+        const parsed = Number(trimmed);
 
-        if (!isWord(parsed)) {
+        if (!/^-?\d+$/.test(trimmed) || !isWord(parsed)) {
             setInvalid(true);
             return;
         }

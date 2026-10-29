@@ -20,6 +20,14 @@ export interface TaskInfo {
 export const PRACTICE_TASK_ID = 'practice';
 
 /**
+ * Maximum display length for a task title passed through the URL.
+ *
+ * Moodle titles are unbounded; truncation keeps the header layout stable on
+ * phones without rejecting the task link.
+ */
+export const MAX_TASK_TITLE_LENGTH = 120;
+
+/**
  * Normalizes a task identifier for use in URLs and file names.
  *
  * @param value Raw task identifier.
@@ -59,7 +67,7 @@ export function readTaskInfo(search: string): TaskInfo {
 
     return {
         id: sanitizeTaskId(id),
-        title: title.trim().slice(0, 120),
+        title: title.trim().slice(0, MAX_TASK_TITLE_LENGTH),
     };
 }
 

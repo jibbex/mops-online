@@ -20,9 +20,11 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useI18n } from '@/i18n/i18n-context';
 import {
+    buildSourceExport,
     downloadTextFile,
-    SOURCE_MIME_TYPE,
-    sourceFilename,
+    MAX_SOURCE_FILE_KIB,
+    readSourceFile,
+    type SourceImportFailureReason,
 } from '@/lib/exchange';
 import type { TaskInfo } from '@/lib/task';
 import { CheckCircle2, Download, FileCode2, Upload } from 'lucide-react';
@@ -34,7 +36,10 @@ interface SourceFileDialogProps {
     readonly onImport: (source: string) => void;
 }
 
-type ImportStatus = 'idle' | 'success' | 'error';
+type ImportStatus =
+    | { readonly kind: 'idle' }
+    | { readonly kind: 'success' }
+    | { readonly kind: 'error'; readonly reason: SourceImportFailureReason };
 
 /**
  * Renders the source file export and import dialog.
@@ -49,34 +54,52 @@ export function SourceFileDialog({
 }: SourceFileDialogProps): ReactElement {
     const { t } = useI18n();
     const fileInput = useRef<HTMLInputElement>(null);
-    const [status, setStatus] = useState<ImportStatus>('idle');
+    const [status, setStatus] = useState<ImportStatus>({ kind: 'idle' });
+    // Reading is asynchronous; disabling the picker prevents a second file
+    // from racing the first one and overwriting its result.
+    const [busy, setBusy] = useState(false);
 
     const exportSource = (): void => {
-        downloadTextFile(
-            sourceFilename(task),
-            `${source.trimEnd()}\n`,
-            SOURCE_MIME_TYPE,
-        );
+        const exported = buildSourceExport(task, source);
+
+        downloadTextFile(exported.filename, exported.text, exported.mimeType);
     };
 
     const importFile = async (file: File): Promise<void> => {
-        try {
-            const text = await file.text();
+        setBusy(true);
 
-            if (text.trim().length === 0) {
-                setStatus('error');
-                return;
-            }
+        const result = await readSourceFile(file);
 
-            onImport(text.replaceAll('\r\n', '\n'));
-            setStatus('success');
-        } catch {
-            setStatus('error');
+        if (!result.ok) {
+            setStatus({ kind: 'error', reason: result.reason });
+            setBusy(false);
+            return;
+        }
+
+        onImport(result.text);
+        setStatus({ kind: 'success' });
+        setBusy(false);
+    };
+
+    const importErrorMessage = (reason: SourceImportFailureReason): string => {
+        switch (reason) {
+            case 'empty':
+                return t('file.importEmpty');
+            case 'too-large':
+                return t('file.importTooLarge', {
+                    max: MAX_SOURCE_FILE_KIB,
+                });
+            case 'unreadable':
+                return t('file.importUnreadable');
+            case 'binary':
+                return t('file.importBinary');
         }
     };
 
     const onFileChange = (event: ChangeEvent<HTMLInputElement>): void => {
         const file = event.currentTarget.files?.[0];
+        // Clearing the value lets the same file be selected again after a
+        // validation error; the File object is already captured above.
         event.currentTarget.value = '';
 
         if (!file) {
@@ -89,8 +112,11 @@ export function SourceFileDialog({
     return (
         <Dialog
             onOpenChange={(open) => {
+                // The next visit starts clean; a stale success or error alert
+                // would otherwise look like the result of the new selection.
                 if (!open) {
-                    setStatus('idle');
+                    setStatus({ kind: 'idle' });
+                    setBusy(false);
                 }
             }}
         >
@@ -134,7 +160,7 @@ export function SourceFileDialog({
                         {t('file.importSection')}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                        {t('file.importHint')}
+                        {t('file.importHint', { max: MAX_SOURCE_FILE_KIB })}
                     </p>
                     <input
                         ref={fileInput}
@@ -148,13 +174,14 @@ export function SourceFileDialog({
                         variant="outline"
                         className="justify-start"
                         onClick={() => fileInput.current?.click()}
+                        disabled={busy}
                     >
                         <Upload data-icon="inline-start" />
-                        {t('file.choose')}
+                        {busy ? t('file.reading') : t('file.choose')}
                     </Button>
                 </section>
 
-                {status === 'success' ? (
+                {status.kind === 'success' ? (
                     <Alert>
                         <CheckCircle2 />
                         <AlertTitle>{t('file.importSection')}</AlertTitle>
@@ -163,11 +190,11 @@ export function SourceFileDialog({
                         </AlertDescription>
                     </Alert>
                 ) : null}
-                {status === 'error' ? (
+                {status.kind === 'error' ? (
                     <Alert variant="destructive">
-                        <AlertTitle>{t('file.importSection')}</AlertTitle>
+                        <AlertTitle>{t('file.importErrorTitle')}</AlertTitle>
                         <AlertDescription>
-                            {t('file.importFailed')}
+                            {importErrorMessage(status.reason)}
                         </AlertDescription>
                     </Alert>
                 ) : null}

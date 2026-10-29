@@ -8,7 +8,9 @@
  * @module i18n/messages
  */
 
+import { MAX_LINE_TARGET } from '@/core/assembler/limits';
 import type { DiagnosticCode } from '@/core/assembler/diagnostics';
+import { MAX_WORD, MIN_WORD } from '@/core/object';
 
 export type Language = 'en' | 'de';
 
@@ -69,8 +71,8 @@ const en = {
     'input.title': 'Input required',
     'input.description': 'The input register is waiting for a value.',
     'input.label': 'Input value',
-    'input.validRange': 'Valid range: -9999 to 9999.',
-    'input.invalid': 'Enter an integer from -9999 to 9999.',
+    'input.validRange': `Valid range: ${MIN_WORD} to ${MAX_WORD}.`,
+    'input.invalid': `Enter an integer from ${MIN_WORD} to ${MAX_WORD}.`,
     'input.submit': 'Submit',
     'output.title': 'Program output',
     'output.description': 'The program wrote a value to the output register.',
@@ -100,10 +102,17 @@ const en = {
     'file.download': 'Download source (.asm)',
     'file.downloadHint': 'The source file is the submission artifact.',
     'file.importSection': 'Import',
-    'file.importHint': 'Load a previously downloaded .asm file.',
+    'file.importHint':
+        'Load a previously downloaded .asm file (max. {max} KB).',
     'file.choose': 'Choose source file',
+    'file.reading': 'Reading file…',
     'file.imported': 'Source loaded. Assemble it to run the program.',
-    'file.importFailed': 'The file could not be read.',
+    'file.importErrorTitle': 'Import failed',
+    'file.importEmpty': 'The file is empty.',
+    'file.importTooLarge':
+        'The file is too large. The maximum size is {max} KB.',
+    'file.importUnreadable': 'The file could not be read.',
+    'file.importBinary': 'The file is not a plain text file.',
     'theme.appearance': 'Appearance',
     'theme.light': 'Light',
     'theme.dark': 'Dark',
@@ -205,8 +214,8 @@ const de: Record<MessageKey, string> = {
     'input.title': 'Eingabe erforderlich',
     'input.description': 'Das Input-Register wartet auf einen Wert.',
     'input.label': 'Eingabe-Wert',
-    'input.validRange': 'Gültiger Bereich: -9999 bis 9999.',
-    'input.invalid': 'Bitte eine ganze Zahl von -9999 bis 9999 eingeben.',
+    'input.validRange': `Gültiger Bereich: ${MIN_WORD} bis ${MAX_WORD}.`,
+    'input.invalid': `Bitte eine ganze Zahl von ${MIN_WORD} bis ${MAX_WORD} eingeben.`,
     'input.submit': 'OK',
     'output.title': 'Programmausgabe',
     'output.description':
@@ -237,10 +246,17 @@ const de: Record<MessageKey, string> = {
     'file.download': 'Quelltext herunterladen (.asm)',
     'file.downloadHint': 'Die Quelldatei ist die Abgabe.',
     'file.importSection': 'Import',
-    'file.importHint': 'Eine zuvor heruntergeladene .asm-Datei laden.',
+    'file.importHint':
+        'Eine zuvor heruntergeladene .asm-Datei laden (max. {max} KB).',
     'file.choose': 'Quelltextdatei wählen',
+    'file.reading': 'Datei wird gelesen…',
     'file.imported': 'Quelltext geladen. Zum Ausführen assemblieren.',
-    'file.importFailed': 'Die Datei konnte nicht gelesen werden.',
+    'file.importErrorTitle': 'Import fehlgeschlagen',
+    'file.importEmpty': 'Die Datei ist leer.',
+    'file.importTooLarge':
+        'Die Datei ist zu groß. Maximal {max} KB sind erlaubt.',
+    'file.importUnreadable': 'Die Datei konnte nicht gelesen werden.',
+    'file.importBinary': 'Die Datei ist keine reine Textdatei.',
     'theme.appearance': 'Theme',
     'theme.light': 'Hell',
     'theme.dark': 'Dunkel',
@@ -306,7 +322,7 @@ const diagnosticDe: Readonly<Record<DiagnosticCode, string>> = {
     'invalid-address': 'Der Befehl benötigt eine Datenadresse.',
     'invalid-operand':
         'Der Operand muss eine Adresse oder eine ganze Zahl sein.',
-    'invalid-line-target': 'Das Zeilenziel muss zwischen 1 und 99 liegen.',
+    'invalid-line-target': `Das Zeilenziel muss zwischen 1 und ${MAX_LINE_TARGET} liegen.`,
     'invalid-jump-target':
         'Das Sprungziel muss eine Marke oder eine Zeilennummer sein.',
     'undefined-jump-target': 'Das Sprungziel ist nicht definiert.',

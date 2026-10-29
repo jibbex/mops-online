@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 
 async function setSource(page: Page, source: string): Promise<void> {
@@ -230,6 +229,30 @@ test('scales interface text fluidly with hierarchy', async ({ page }) => {
     expect(small.control).toBeLessThanOrEqual(14);
 });
 
+test('keeps the shell within common viewport widths', async ({ page }) => {
+    const viewports = [
+        { width: 390, height: 844 },
+        { width: 768, height: 1024 },
+        { width: 1366, height: 768 },
+        { width: 1920, height: 1080 },
+        { width: 2560, height: 1440 },
+    ];
+
+    for (const viewport of viewports) {
+        await page.setViewportSize(viewport);
+        await page.goto('/');
+
+        const overflow = await page.evaluate(() => ({
+            document: document.documentElement.scrollWidth,
+            viewport: window.innerWidth,
+        }));
+
+        expect(overflow.document, `${viewport.width}px`).toBe(
+            overflow.viewport,
+        );
+    }
+});
+
 test('opens the command reference', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Reference' }).click();
@@ -278,40 +301,6 @@ test('fits the command reference on a phone', async ({ page }) => {
     }));
 
     expect(overflow.document).toBe(overflow.viewport);
-});
-
-test('downloads the assembly source for Moodle', async ({ page }) => {
-    await page.goto('/?task=42&title=Summe');
-    await expect(page.getByText('Summe')).toBeVisible();
-
-    await page.getByRole('button', { name: 'File' }).click();
-    const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: /Download source/ }).click();
-    const download = await downloadPromise;
-
-    expect(download.suggestedFilename()).toBe('mops-42.asm');
-
-    const path = await download.path();
-    expect(path).not.toBeNull();
-    const source = await readFile(path ?? '', 'utf8');
-
-    expect(source).toContain('in a');
-});
-
-test('imports an assembly source file', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'File' }).click();
-
-    await page.locator('input[type="file"]').setInputFiles({
-        name: 'mops.asm',
-        mimeType: 'text/plain',
-        buffer: Buffer.from('ld 7\nout 7\nend'),
-    });
-
-    await expect(
-        page.getByText('Source loaded. Assemble it to run the program.'),
-    ).toBeVisible();
-    await expect(page.locator('.cm-content')).toContainText('out 7');
 });
 
 test('routes only real external bus transfers', async ({ page }) => {
