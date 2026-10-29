@@ -101,7 +101,7 @@ function parseLine(
                     scanned,
                     'empty-label',
                     'Label name is missing.',
-                    labelColumn ?? 0,
+                    labelColumn,
                     0,
                 ),
             );
@@ -125,7 +125,7 @@ function parseLine(
                     scanned,
                     'invalid-label',
                     'Label must start with a letter and contain only letters and digits.',
-                    labelColumn ?? 0,
+                    labelColumn,
                     label.length,
                 ),
             );
