@@ -46,10 +46,11 @@ export function StatusBar({
     readonly className?: string;
 }): ReactElement {
     const { language, t } = useI18n();
-    const { status, cpu, trap } = usePlayer(
+    const { status, cpu, pc, trap } = usePlayer(
         useShallow((state) => ({
             status: state.status,
             cpu: state.cpu,
+            pc: state.cpu?.pc ?? 0,
             trap: state.trap,
         })),
     );
@@ -77,7 +78,7 @@ export function StatusBar({
                 <StatusValue
                     id="pc"
                     label={t('status.pc')}
-                    value={formatAddress(cpu?.pc ?? 0)}
+                    value={formatAddress(pc)}
                 />
                 <StatusValue
                     id="ac"

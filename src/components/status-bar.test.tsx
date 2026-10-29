@@ -3,7 +3,7 @@ import { createTrap } from '@/core/vm/traps';
 import { LanguageProvider } from '@/i18n/i18n-provider';
 import { usePlayer } from '@/player/player';
 import { createObjectProgramFixture } from '@/test/object-program-fixture';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { StatusBar } from './status-bar';
 
@@ -43,6 +43,26 @@ describe('StatusBar', () => {
         expect(screen.getByTestId('status-pc')).toHaveTextContent('02');
         expect(screen.getByTestId('status-line')).toHaveTextContent('3');
         expect(screen.getByTestId('status-decoded')).toHaveTextContent('end');
+    });
+
+    it('updates the program counter when the CPU state changes', () => {
+        const cpu = createCpu(createObjectProgramFixture());
+
+        usePlayer.setState({ status: 'paused', cpu });
+
+        render(
+            <LanguageProvider>
+                <StatusBar />
+            </LanguageProvider>,
+        );
+
+        expect(screen.getByTestId('status-pc')).toHaveTextContent('00');
+
+        act(() => {
+            usePlayer.setState({ cpu: { ...cpu, pc: 1 } });
+        });
+
+        expect(screen.getByTestId('status-pc')).toHaveTextContent('01');
     });
 
     it('shows a runtime trap', () => {
