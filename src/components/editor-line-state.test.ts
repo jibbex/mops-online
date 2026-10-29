@@ -35,6 +35,16 @@ describe('createEditorLineState', () => {
         expect(state.currentLine).toBe(3);
     });
 
+    it('ignores warnings passed in the diagnostics list', () => {
+        const state = createEditorLineState(
+            undefined,
+            [diagnostic(1, 'warning')],
+            [],
+        );
+
+        expect(state.errorLines.size).toBe(0);
+    });
+
     it('omits an unknown current line', () => {
         const state = createEditorLineState(undefined, [], []);
 

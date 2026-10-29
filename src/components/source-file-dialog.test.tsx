@@ -1,6 +1,12 @@
 import { LanguageProvider } from '@/i18n/i18n-provider';
 import { downloadTextFile, MAX_SOURCE_FILE_BYTES } from '@/lib/exchange';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+    cleanup,
+    fireEvent,
+    render,
+    screen,
+    waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SourceFileDialog } from './source-file-dialog';
@@ -114,6 +120,33 @@ describe('SourceFileDialog', () => {
         ).toBeVisible();
         expect(read).not.toHaveBeenCalled();
         expect(onImport).not.toHaveBeenCalled();
+    });
+
+    it('reports unreadable content', async () => {
+        const { onImport } = renderDialog();
+        const user = await openDialog();
+        const file = new File(['ld 1\nend'], 'broken.asm');
+
+        vi.spyOn(file, 'text').mockRejectedValue(new Error('unreadable'));
+
+        await user.upload(sourceInput(), file);
+
+        expect(
+            await screen.findByText('The file could not be read.'),
+        ).toBeVisible();
+        expect(onImport).not.toHaveBeenCalled();
+    });
+
+    it('ignores a change event without a file', async () => {
+        const { onImport } = renderDialog();
+        await openDialog();
+
+        fireEvent.change(sourceInput(), { target: { files: [] } });
+
+        expect(onImport).not.toHaveBeenCalled();
+        expect(
+            screen.queryByText('The file could not be read.'),
+        ).not.toBeInTheDocument();
     });
 
     it('reports binary content', async () => {
