@@ -9,7 +9,11 @@
 
 import { getInstruction, hasOperand, type InstructionId } from '@/core/isa';
 import { resolveMnemonic, type MnemonicConfig } from './config';
-import { createDiagnostic, type Diagnostic } from './diagnostics';
+import {
+    createDiagnostic,
+    type Diagnostic,
+    type DiagnosticCode,
+} from './diagnostics';
 import type { ScannedLine } from './line-scanner';
 
 /** Instruction reference and raw operand text from one line. */
@@ -63,10 +67,8 @@ function parseLine(
 ): ParsedLine | undefined {
     if (scanned.indented) {
         diagnostics.push(
-            createDiagnostic(
-                scanned.number,
-                0,
-                scanned.raw.length,
+            createLineDiagnostic(
+                scanned,
                 'indentation',
                 'Instructions must not be indented.',
             ),
@@ -84,10 +86,8 @@ function parseLine(
 
         if (label === '') {
             diagnostics.push(
-                createDiagnostic(
-                    scanned.number,
-                    0,
-                    scanned.raw.length,
+                createLineDiagnostic(
+                    scanned,
                     'empty-label',
                     'Label name is missing.',
                 ),
@@ -97,10 +97,8 @@ function parseLine(
 
         if (code === '') {
             diagnostics.push(
-                createDiagnostic(
-                    scanned.number,
-                    0,
-                    scanned.raw.length,
+                createLineDiagnostic(
+                    scanned,
                     'label-without-instruction',
                     'Label must be attached to an instruction.',
                 ),
@@ -110,10 +108,8 @@ function parseLine(
 
         if (!/^[a-z][a-z0-9]*$/.test(label)) {
             diagnostics.push(
-                createDiagnostic(
-                    scanned.number,
-                    0,
-                    scanned.raw.length,
+                createLineDiagnostic(
+                    scanned,
                     'invalid-label',
                     'Label must start with a letter and contain only letters and digits.',
                 ),
@@ -126,10 +122,8 @@ function parseLine(
 
     if (!match) {
         diagnostics.push(
-            createDiagnostic(
-                scanned.number,
-                0,
-                scanned.raw.length,
+            createLineDiagnostic(
+                scanned,
                 'empty-line',
                 'Line does not contain an instruction.',
             ),
@@ -143,10 +137,8 @@ function parseLine(
 
     if (!id) {
         diagnostics.push(
-            createDiagnostic(
-                scanned.number,
-                0,
-                scanned.raw.length,
+            createLineDiagnostic(
+                scanned,
                 'unknown-mnemonic',
                 `Unknown instruction "${mnemonic}".`,
             ),
@@ -159,10 +151,8 @@ function parseLine(
     if (!hasOperand(instruction)) {
         if (operand !== '') {
             diagnostics.push(
-                createDiagnostic(
-                    scanned.number,
-                    0,
-                    scanned.raw.length,
+                createLineDiagnostic(
+                    scanned,
                     'end-with-operand',
                     'The instruction does not take an operand.',
                 ),
@@ -170,10 +160,8 @@ function parseLine(
         }
     } else if (operand === '') {
         diagnostics.push(
-            createDiagnostic(
-                scanned.number,
-                0,
-                scanned.raw.length,
+            createLineDiagnostic(
+                scanned,
                 'missing-operand',
                 'Instruction requires an operand.',
             ),
@@ -189,4 +177,18 @@ function parseLine(
             operand,
         },
     };
+}
+
+function createLineDiagnostic(
+    scanned: ScannedLine,
+    code: DiagnosticCode,
+    message: string,
+): Diagnostic {
+    return createDiagnostic(
+        scanned.number,
+        0,
+        scanned.raw.length,
+        code,
+        message,
+    );
 }
