@@ -10,17 +10,8 @@ import {
     type MicroOp,
 } from '@/core/isa';
 import type { Word } from '@/core/object';
-import {
-    cloneCpuState,
-    type CpuState,
-    type VmEvent,
-    type VmStepResult,
-} from './cpu';
-import {
-    MICRO_OPS,
-    type MicroOpResult,
-    type MutableCpuState,
-} from './micro-handlers';
+import type { CpuState, VmEvent, VmStepResult } from './cpu';
+import { MICRO_OPS, type MicroOpResult } from './micro-handlers';
 
 /**
  * Executes one micro-op.
@@ -162,9 +153,7 @@ function applyMicroOp(
     microOp: MicroOp,
     input?: Word,
 ): MicroOpResult {
-    const next = cloneCpuState(state) as MutableCpuState;
-
-    return MICRO_OPS[microOp.kind].apply(next, input);
+    return MICRO_OPS[microOp.kind].apply(state, input);
 }
 
 function advancePhase(state: CpuState): CpuState {

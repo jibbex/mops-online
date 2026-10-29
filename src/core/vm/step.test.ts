@@ -181,6 +181,42 @@ describe('CPU state', () => {
         expect(formatDecoded(50, 4)).toBe('jmp #4');
         expect(formatDecoded(60, 0)).toBe('end');
     });
+
+    it('does not mutate the state passed to stepCpu', () => {
+        const cpu = createCpu(programFromMemory([11, 5, 60]));
+        const memory = cpu.memory;
+        const instructionAddresses = cpu.instructionAddresses;
+        const result = stepCpu(cpu);
+
+        expect(cpu.pc).toBe(0);
+        expect(cpu.queue).toEqual([]);
+        expect(cpu.slAdr).toBe(0);
+        expect(result.kind).toBe('step');
+
+        if (result.kind === 'step') {
+            expect(result.state.memory).toBe(memory);
+            expect(result.state.instructionAddresses).toBe(
+                instructionAddresses,
+            );
+        }
+    });
+
+    it('copies memory only when a micro-op writes it', () => {
+        const result = runProgram('ld 5\nst a\nend');
+        const write = result.events.find(
+            (event) => event.microOp.kind === 'MEM_WRITE',
+        );
+        const read = result.events.find(
+            (event) => event.microOp.kind === 'AC_WRITE',
+        );
+
+        if (!write || !read) {
+            throw new Error('Expected memory write and accumulator events.');
+        }
+
+        expect(write.after.memory).not.toBe(write.before.memory);
+        expect(read.after.memory).toBe(read.before.memory);
+    });
 });
 
 describe('execute programs', () => {

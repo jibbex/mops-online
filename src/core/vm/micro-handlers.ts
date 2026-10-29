@@ -2,8 +2,9 @@
  * Micro-op handlers for the MOPS VM.
  *
  * Each handler owns its state transition and its UI description, so a
- * micro-op is defined in exactly one place. Queue scheduling and phase
- * advancement remain in `step.ts`; the handler only applies one step.
+ * micro-op is defined in exactly one place. Handlers never mutate the state
+ * they receive; they return a new state that shares every unchanged field.
+ * Queue scheduling and phase advancement remain in `step.ts`.
  *
  * @module core/vm/micro-handlers
  */
@@ -23,10 +24,11 @@ import { calculateAlu } from './alu';
 import { formatDecoded, type BusValue, type CpuState } from './cpu';
 import { createTrap, type Trap } from './traps';
 
-/** CPU state with readonly modifiers removed for in-place handler writes. */
-export type MutableCpuState = {
-    -readonly [Key in keyof CpuState]: CpuState[Key];
-};
+/** The program counter advances one instruction per fetch. */
+const PC_INCREMENT = 1;
+
+/** Encoded operands occupy the cell after the opcode. */
+const OPERAND_CELL_OFFSET = 1;
 
 /** Result of applying one micro-op. */
 export interface MicroOpResult {
@@ -36,11 +38,8 @@ export interface MicroOpResult {
     readonly skipRemaining?: boolean;
 }
 
-/** Applies one micro-op to a mutable state clone. */
-export type MicroHandler = (
-    state: MutableCpuState,
-    input?: Word,
-) => MicroOpResult;
+/** Applies one micro-op to an immutable state and returns the next state. */
+export type MicroHandler = (state: CpuState, input?: Word) => MicroOpResult;
 
 /** One micro-op transition and the text shown for it in the UI. */
 export interface MicroOpDefinition {
@@ -137,273 +136,283 @@ export const MICRO_OPS: Record<MicroOp['kind'], MicroOpDefinition> = {
     },
 };
 
-function applyPcRead(next: MutableCpuState): MicroOpResult {
-    const address = next.instructionAddresses[next.pc];
+function applyPcRead(state: CpuState): MicroOpResult {
+    const address = state.instructionAddresses[state.pc];
 
     if (address === undefined) {
         return trap(
-            next,
+            state,
             'PC_OUT_OF_RANGE',
             'Program counter is out of range.',
         );
     }
 
-    next.slAdr = address;
-    next.instructionAddress = address;
-    return { state: next };
+    return {
+        state: {
+            ...state,
+            slAdr: address,
+            instructionAddress: address,
+        },
+    };
 }
 
-function applyMemRead(next: MutableCpuState): MicroOpResult {
-    const address = next.slAdr;
+function applyMemRead(state: CpuState): MicroOpResult {
+    const address = state.slAdr;
 
-    if (address < 0 || address >= next.memory.length) {
+    if (address < 0 || address >= state.memory.length) {
         return trap(
-            next,
+            state,
             'MEMORY_OUT_OF_RANGE',
             'Memory address is out of range.',
         );
     }
 
-    const value = next.memory[address];
+    const value = state.memory[address];
 
     if (value === undefined) {
         return trap(
-            next,
+            state,
             'MEMORY_OUT_OF_RANGE',
             'Memory read is out of range.',
         );
     }
 
-    next.mlVal = value;
-    next.slVal = value;
-    return { state: next };
+    return { state: { ...state, mlVal: value, slVal: value } };
 }
 
-function applyBrWrite(next: MutableCpuState): MicroOpResult {
-    const opcode = asWord(next.slVal);
+function applyBrWrite(state: CpuState): MicroOpResult {
+    const opcode = asWord(state.slVal);
 
     if (opcode === undefined || !isOpcode(opcode)) {
         return trap(
-            next,
+            state,
             'INVALID_OPCODE',
             'Fetched value is not a valid opcode.',
         );
     }
 
-    next.br = { opcode, operand: 0 };
+    const br = { opcode, operand: 0 };
 
-    if (getOperandModeForOpcode(opcode) !== 'none') {
-        next.slAdr = next.instructionAddress + 1;
+    if (getOperandModeForOpcode(opcode) === 'none') {
+        return { state: { ...state, br } };
     }
 
-    return { state: next };
+    return {
+        state: {
+            ...state,
+            br,
+            slAdr: state.instructionAddress + OPERAND_CELL_OFFSET,
+        },
+    };
 }
 
-function applyBrWriteOperand(next: MutableCpuState): MicroOpResult {
-    const value = asWord(next.slVal);
+function applyBrWriteOperand(state: CpuState): MicroOpResult {
+    const value = asWord(state.slVal);
+    const opcode = state.br.opcode;
 
-    if (value === undefined || next.br.opcode === null) {
+    if (value === undefined || opcode === null) {
         return trap(
-            next,
+            state,
             'INVALID_OPCODE',
             'Fetched operand is not loaded into the instruction register.',
         );
     }
 
-    next.br = { opcode: next.br.opcode, operand: value };
-    return { state: next };
+    return { state: { ...state, br: { opcode, operand: value } } };
 }
 
-function applyDecode(next: MutableCpuState): MicroOpResult {
-    if (next.br.opcode === null || !isOpcode(next.br.opcode)) {
-        return trap(next, 'INVALID_OPCODE', 'Cannot decode an invalid opcode.');
+function applyDecode(state: CpuState): MicroOpResult {
+    const opcode = state.br.opcode;
+
+    if (opcode === null || !isOpcode(opcode)) {
+        return trap(
+            state,
+            'INVALID_OPCODE',
+            'Cannot decode an invalid opcode.',
+        );
     }
 
-    next.decoded = formatDecoded(next.br.opcode, next.br.operand);
-    return { state: next };
+    return {
+        state: {
+            ...state,
+            decoded: formatDecoded(opcode, state.br.operand),
+        },
+    };
 }
 
-function applyPcUpdate(next: MutableCpuState): MicroOpResult {
+function applyPcUpdate(state: CpuState): MicroOpResult {
     // PC counts instructions, never memory cells. The fetch address is looked
     // up from the instruction-address table on the next PC_READ.
-    next.pc += 1;
-    return { state: next };
+    return { state: { ...state, pc: state.pc + PC_INCREMENT } };
 }
 
-function applyBrReadOperand(next: MutableCpuState): MicroOpResult {
-    const opcode = next.br.opcode;
+function applyBrReadOperand(state: CpuState): MicroOpResult {
+    const opcode = state.br.opcode;
 
     if (opcode === null) {
-        return trap(next, 'INVALID_OPCODE', 'No instruction is loaded.');
+        return trap(state, 'INVALID_OPCODE', 'No instruction is loaded.');
     }
 
     const latch = getOperandLatch(getOperandModeForOpcode(opcode));
 
     if (latch === undefined) {
         return trap(
-            next,
+            state,
             'INVALID_OPCODE',
             'Instruction does not take an operand.',
         );
     }
 
-    if (latch === 'address') {
-        next.slAdr = next.br.operand;
-    } else {
-        next.slVal = next.br.operand;
-    }
-
-    return { state: next };
+    return latch === 'address'
+        ? { state: { ...state, slAdr: state.br.operand } }
+        : { state: { ...state, slVal: state.br.operand } };
 }
 
 function applyInputRead(
-    next: MutableCpuState,
+    state: CpuState,
     input: Word | undefined,
 ): MicroOpResult {
     if (input === undefined) {
-        return { state: next, needsInput: true };
+        return { state, needsInput: true };
     }
 
     if (!isWord(input)) {
         return trap(
-            next,
+            state,
             'INPUT_OUT_OF_RANGE',
             'Input value is outside the valid range.',
         );
     }
 
-    next.ein = input;
-    next.slVal = input;
-    return { state: next };
+    return { state: { ...state, ein: input, slVal: input } };
 }
 
-function applyMemWrite(next: MutableCpuState): MicroOpResult {
-    const value = asWord(next.slVal);
+function applyMemWrite(state: CpuState): MicroOpResult {
+    const value = asWord(state.slVal);
 
     if (value === undefined) {
         return trap(
-            next,
+            state,
             'MEMORY_OUT_OF_RANGE',
             'Cannot store a multi-cell value.',
         );
     }
 
-    if (next.slAdr < 0 || next.slAdr >= next.memory.length) {
+    if (state.slAdr < 0 || state.slAdr >= state.memory.length) {
         return trap(
-            next,
+            state,
             'MEMORY_OUT_OF_RANGE',
             'Memory address is out of range.',
         );
     }
 
-    const memory = [...next.memory];
-    memory[next.slAdr] = value;
-    next.memory = memory;
-    return { state: next };
+    const memory = [...state.memory];
+    memory[state.slAdr] = value;
+    return { state: { ...state, memory } };
 }
 
-function applyAcWrite(next: MutableCpuState): MicroOpResult {
-    const value = asWord(next.slVal);
+function applyAcWrite(state: CpuState): MicroOpResult {
+    const value = asWord(state.slVal);
 
     if (value === undefined) {
         return trap(
-            next,
+            state,
             'OVERFLOW',
             'Cannot load a multi-cell value into AC.',
         );
     }
 
-    next.ac = value;
-    return { state: next };
+    return { state: { ...state, ac: value } };
 }
 
-function applyAcRead(next: MutableCpuState): MicroOpResult {
-    next.slVal = next.ac;
-    return { state: next };
+function applyAcRead(state: CpuState): MicroOpResult {
+    return { state: { ...state, slVal: state.ac } };
 }
 
-function applyOpWrite(next: MutableCpuState): MicroOpResult {
-    const value = asWord(next.slVal);
+function applyOpWrite(state: CpuState): MicroOpResult {
+    const value = asWord(state.slVal);
 
     if (value === undefined) {
         return trap(
-            next,
+            state,
             'OVERFLOW',
             'Cannot load a multi-cell value into OP.',
         );
     }
 
-    next.op = value;
-    return { state: next };
+    return { state: { ...state, op: value } };
 }
 
-function applyArWrite(next: MutableCpuState): MicroOpResult {
-    const operation = next.br.opcode ? getOperation(next.br.opcode) : null;
+function applyArWrite(state: CpuState): MicroOpResult {
+    const operation = state.br.opcode ? getOperation(state.br.opcode) : null;
 
-    next.operation = operation;
-    next.ar = operationSymbol(operation);
-    return { state: next };
+    return {
+        state: {
+            ...state,
+            operation,
+            ar: operationSymbol(operation),
+        },
+    };
 }
 
-function applyAluCalc(next: MutableCpuState): MicroOpResult {
-    const result = calculateAlu(next.operation, next.ac, next.op);
+function applyAluCalc(state: CpuState): MicroOpResult {
+    const result = calculateAlu(state.operation, state.ac, state.op);
 
     if (!result.ok) {
-        return trap(next, result.code, result.message);
+        return trap(state, result.code, result.message);
     }
 
-    next.erg = result.value;
-    return { state: next };
+    return { state: { ...state, erg: result.value } };
 }
 
-function applyErgAcWrite(next: MutableCpuState): MicroOpResult {
-    next.ac = next.erg;
-    return { state: next };
+function applyErgAcWrite(state: CpuState): MicroOpResult {
+    return { state: { ...state, ac: state.erg } };
 }
 
-function applyErgVglWrite(next: MutableCpuState): MicroOpResult {
-    next.vgl = compareSymbol(next.erg);
-    return { state: next };
+function applyErgVglWrite(state: CpuState): MicroOpResult {
+    return { state: { ...state, vgl: compareSymbol(state.erg) } };
 }
 
-function applyAusWrite(next: MutableCpuState): MicroOpResult {
-    const value = asWord(next.slVal);
+function applyAusWrite(state: CpuState): MicroOpResult {
+    const value = asWord(state.slVal);
 
     if (value === undefined) {
         return trap(
-            next,
+            state,
             'OVERFLOW',
             'Cannot write a multi-cell value to AUS.',
         );
     }
 
-    next.aus = value;
-    return { state: next };
+    return { state: { ...state, aus: value } };
 }
 
-function applyPcWrite(next: MutableCpuState): MicroOpResult {
-    const target = next.slAdr;
-    const pc = next.addressToPc.get(target);
+function applyPcWrite(state: CpuState): MicroOpResult {
+    const target = state.slAdr;
+    const pc = state.addressToPc.get(target);
 
     if (pc === undefined) {
         return trap(
-            next,
+            state,
             'PC_OUT_OF_RANGE',
             'Jump target is not an instruction boundary.',
         );
     }
 
-    next.pc = pc;
-    next.instructionAddress = target;
-    return { state: next };
+    return {
+        state: {
+            ...state,
+            pc,
+            instructionAddress: target,
+        },
+    };
 }
 
-function applyHalt(next: MutableCpuState): MicroOpResult {
-    next.halted = true;
-    return { state: next };
+function applyHalt(state: CpuState): MicroOpResult {
+    return { state: { ...state, halted: true } };
 }
 
-function checkCompare(state: MutableCpuState): MicroOpResult {
+function checkCompare(state: CpuState): MicroOpResult {
     if (state.vgl === '') {
         return trap(
             state,
