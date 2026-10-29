@@ -74,6 +74,8 @@ running assembly programs on a simplified von Neumann machine.
 - An instruction reference generated from the canonical ISA.
 - Plain `.asm` source file export and import for Moodle submissions (16 KiB
   import limit), with a native save picker where the browser supports it.
+- A guided first-run tour that explains read, write, and increment markers in the
+  diagram, restartable from the header.
 
 ### Usage
 
@@ -159,6 +161,10 @@ The application accepts optional URL parameters:
 - `title` or `taskTitle`: Task title shown in the header.
 - `lang`: Interface language, `en` or `de`.
 
+The guided tour stores its state in `localStorage`:
+
+- `mops-tour-seen`: set to `1` after the tour is completed or skipped.
+
 The interface starts in the browser language and uses English for unsupported
 languages. A stored language or theme preference takes effect on the next visit.
 The `lang` parameter overrides the stored language for Moodle deep links.
@@ -200,6 +206,7 @@ npx playwright install chromium
 - **Port already in use:** stop the conflicting process or change the Vite
   development port.
 - **Stale dependencies:** remove `node_modules` and run `npm ci`.
+- **The tour does not appear:** remove `mops-tour-seen` from local storage.
 
 ## Deployment
 
@@ -267,6 +274,7 @@ src/
   lib/                  Source exchange, task metadata, formatting
   player/               Store, timing, history, and visual event mapping
   styles/               Diagram tokens and SVG animation styles
+  tour/                 Guided first-run steps, geometry, storage, and store
   test/                 Shared fixtures and Vitest DOM setup
 tests/
   e2e/                  Playwright user-visible flows
