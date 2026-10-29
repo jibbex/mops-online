@@ -20,6 +20,10 @@ import type { ScannedLine } from './line-scanner';
 export interface ParsedInstruction {
     readonly id: InstructionId;
     readonly operand: string;
+    /** Raw column of the mnemonic. */
+    readonly mnemonicColumn: number;
+    /** Raw column of the first operand character. */
+    readonly operandColumn: number;
 }
 
 /** One structurally parsed source line. */
@@ -75,14 +79,21 @@ function parseLine(
         );
     }
 
-    let code = scanned.code.trim();
+    const sourceCode = scanned.code.trim();
+    let code = sourceCode;
     let label: string | undefined;
+    let labelColumn: number | undefined;
 
-    const colon = code.indexOf(':');
+    const colon = sourceCode.indexOf(':');
 
     if (colon !== -1) {
-        label = code.slice(colon + 1).trim();
-        code = code.slice(0, colon).trim();
+        const afterColon = sourceCode.slice(colon + 1);
+        const labelStart =
+            colon + 1 + afterColon.length - afterColon.trimStart().length;
+
+        label = afterColon.trim();
+        labelColumn = scanned.codeOffset + labelStart;
+        code = sourceCode.slice(0, colon).trim();
 
         if (label === '') {
             diagnostics.push(
@@ -90,6 +101,8 @@ function parseLine(
                     scanned,
                     'empty-label',
                     'Label name is missing.',
+                    labelColumn ?? 0,
+                    0,
                 ),
             );
             return undefined;
@@ -112,6 +125,8 @@ function parseLine(
                     scanned,
                     'invalid-label',
                     'Label must start with a letter and contain only letters and digits.',
+                    labelColumn ?? 0,
+                    label.length,
                 ),
             );
             return undefined;
@@ -133,6 +148,13 @@ function parseLine(
 
     const mnemonic = match[1] ?? '';
     const operand = (match[2] ?? '').trim();
+    const mnemonicColumn = scanned.codeOffset;
+    const remainder = code.slice(mnemonic.length);
+    const operandColumn =
+        mnemonicColumn +
+        mnemonic.length +
+        remainder.length -
+        remainder.trimStart().length;
     const id = resolveMnemonic(mnemonic, config);
 
     if (!id) {
@@ -141,6 +163,8 @@ function parseLine(
                 scanned,
                 'unknown-mnemonic',
                 `Unknown instruction "${mnemonic}".`,
+                mnemonicColumn,
+                mnemonic.length,
             ),
         );
         return undefined;
@@ -155,6 +179,8 @@ function parseLine(
                     scanned,
                     'end-with-operand',
                     'The instruction does not take an operand.',
+                    operandColumn,
+                    operand.length,
                 ),
             );
         }
@@ -164,6 +190,8 @@ function parseLine(
                 scanned,
                 'missing-operand',
                 'Instruction requires an operand.',
+                scanned.raw.length,
+                0,
             ),
         );
     }
@@ -175,6 +203,8 @@ function parseLine(
         instruction: {
             id,
             operand,
+            mnemonicColumn,
+            operandColumn,
         },
     };
 }
@@ -183,12 +213,8 @@ function createLineDiagnostic(
     scanned: ScannedLine,
     code: DiagnosticCode,
     message: string,
+    column = 0,
+    length = scanned.raw.length,
 ): Diagnostic {
-    return createDiagnostic(
-        scanned.number,
-        0,
-        scanned.raw.length,
-        code,
-        message,
-    );
+    return createDiagnostic(scanned.number, column, length, code, message);
 }

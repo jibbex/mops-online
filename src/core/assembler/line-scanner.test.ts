@@ -35,11 +35,13 @@ describe('line scanner', () => {
         expect(lines[0]?.raw).toBe('LD   5');
     });
 
-    it('detects indented instructions', () => {
+    it('detects indented instructions and records their raw offset', () => {
         const lines = scanSource('  ld 5\nld 6');
 
         expect(lines[0]?.indented).toBe(true);
+        expect(lines[0]?.codeOffset).toBe(2);
         expect(lines[1]?.indented).toBe(false);
+        expect(lines[1]?.codeOffset).toBe(0);
     });
 
     it('allows indented comments', () => {

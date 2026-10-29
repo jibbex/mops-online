@@ -18,6 +18,8 @@ describe('line parser', () => {
         expect(result.lines[0]?.instruction).toEqual({
             id: 'ld',
             operand: '5',
+            mnemonicColumn: 0,
+            operandColumn: 3,
         });
     });
 
@@ -29,6 +31,8 @@ describe('line parser', () => {
         expect(result.lines[0]?.instruction).toEqual({
             id: 'st',
             operand: 'a',
+            mnemonicColumn: 0,
+            operandColumn: 3,
         });
     });
 
@@ -78,6 +82,24 @@ describe('line parser', () => {
 
         expect(result.lines).toHaveLength(1);
         expect(result.diagnostics[0]?.code).toBe('indentation');
+        expect(result.lines[0]?.instruction.mnemonicColumn).toBe(2);
+        expect(result.lines[0]?.instruction.operandColumn).toBe(5);
+    });
+
+    it('reports token ranges for parser diagnostics', () => {
+        const cases = [
+            ['zz 5 :loop', 'unknown-mnemonic', 0, 2],
+            ['ld :loop', 'missing-operand', 8, 0],
+            ['end 1 :loop', 'end-with-operand', 4, 1],
+            ['ld 5 :1loop', 'invalid-label', 6, 5],
+            ['ld 5 :', 'empty-label', 6, 0],
+        ] as const;
+
+        for (const [source, code, column, length] of cases) {
+            const diagnostic = parse(source).diagnostics[0];
+
+            expect(diagnostic).toMatchObject({ code, column, length });
+        }
     });
 
     it('uses a custom mnemonic configuration', () => {

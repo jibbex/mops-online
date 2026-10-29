@@ -17,6 +17,8 @@ export interface ScannedLine {
     readonly raw: string;
     /** Lowercased, comment-free, tab-normalized code. */
     readonly code: string;
+    /** Number of raw characters before the first non-whitespace code character. */
+    readonly codeOffset: number;
     /** Whether the code starts with whitespace. */
     readonly indented: boolean;
 }
@@ -38,10 +40,14 @@ export function scanSource(source: string): ScannedLine[] {
             continue;
         }
 
+        const codeOffset =
+            normalizedCode.length - normalizedCode.trimStart().length;
+
         lines.push({
             number: index + 1,
             raw,
             code: normalizedCode.toLowerCase(),
+            codeOffset,
             indented: /^[ \t]/.test(normalizedCode),
         });
     }

@@ -133,4 +133,22 @@ describe('encodeProgram', () => {
         expect(codes('st 5\nend')).toContain('invalid-address');
         expect(codes('ld nope\nend')).toContain('invalid-operand');
     });
+
+    it('reports operand ranges for encoder diagnostics', () => {
+        const cases = [
+            ['st 5\nend', 'invalid-address', 3, 1],
+            ['ld nope\nend', 'invalid-operand', 3, 4],
+            ['jmp #100\nend', 'invalid-line-target', 4, 4],
+            ['jmp 1\nend', 'invalid-jump-target', 4, 1],
+            ['jmp #2\n\nend', 'invalid-jump-target', 4, 2],
+        ] as const;
+
+        for (const [source, code, column, length] of cases) {
+            const diagnostic = encode(source).diagnostics.find(
+                (candidate) => candidate.code === code,
+            );
+
+            expect(diagnostic).toMatchObject({ code, column, length });
+        }
+    });
 });

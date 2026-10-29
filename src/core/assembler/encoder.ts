@@ -73,6 +73,8 @@ interface EncoderContext {
 interface JumpFixup {
     readonly address: Address;
     readonly line: number;
+    readonly operandColumn: number;
+    readonly operandLength: number;
     readonly label?: string;
     readonly targetLine?: number;
 }
@@ -80,7 +82,10 @@ interface JumpFixup {
 interface ResolvedOperand {
     readonly mode: OperandMode;
     readonly value?: Word;
-    readonly fixup?: Omit<JumpFixup, 'address' | 'line'>;
+    readonly fixup?: Omit<
+        JumpFixup,
+        'address' | 'line' | 'operandColumn' | 'operandLength'
+    >;
 }
 
 type OperandResolution =
@@ -273,6 +278,8 @@ function encodeInstruction(context: EncoderContext, line: ParsedLine): void {
         context.fixups.push({
             address: context.pointer - 1,
             line: line.number,
+            operandColumn: line.instruction.operandColumn,
+            operandLength: line.instruction.operand.length,
             ...fixup,
         });
     }
@@ -360,8 +367,10 @@ function resolveJumpFixups(
 
         if (targetAddress === undefined) {
             context.diagnostics.push(
-                createPointDiagnostic(
+                createDiagnostic(
                     fixup.line,
+                    fixup.operandColumn,
+                    fixup.operandLength,
                     'invalid-jump-target',
                     'Jump target does not refer to an instruction.',
                 ),
@@ -438,8 +447,10 @@ function createLineDiagnostic(
     line: ParsedLine,
     code: DiagnosticCode,
     message: string,
+    column = 0,
+    length = line.raw.length,
 ): Diagnostic {
-    return createDiagnostic(line.number, 0, line.raw.length, code, message);
+    return createDiagnostic(line.number, column, length, code, message);
 }
 
 function createLineWarning(
@@ -585,7 +596,13 @@ function fail(
 ): OperandResolution {
     return {
         ok: false,
-        diagnostic: createLineDiagnostic(line, code, message),
+        diagnostic: createLineDiagnostic(
+            line,
+            code,
+            message,
+            line.instruction.operandColumn,
+            line.instruction.operand.length,
+        ),
     };
 }
 
