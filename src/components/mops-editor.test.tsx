@@ -132,6 +132,55 @@ describe('MopsEditor', () => {
         expect(disconnect).toHaveBeenCalled();
     });
 
+    it('ignores diagnostics and scroll targets outside the document', async () => {
+        renderEditor('ld 1\nend', vi.fn(), {
+            diagnostics: [{ ...ERROR, line: 99 }],
+            currentLine: 99,
+        });
+
+        await waitFor(() => {
+            expect(document.querySelector('.cm-error-line')).toBeNull();
+        });
+    });
+
+    it('handles a hidden pane without a current line', () => {
+        let resize: (() => void) | undefined;
+
+        vi.stubGlobal(
+            'ResizeObserver',
+            class {
+                constructor(callback: () => void) {
+                    resize = callback;
+                }
+
+                observe(): void {
+                    // Visibility is driven by the test below.
+                }
+
+                disconnect(): void {
+                    // No cleanup assertion is needed here.
+                }
+            },
+        );
+
+        const { container, unmount } = renderEditor('ld 1\nend');
+        const editorContainer = container.firstElementChild as HTMLElement;
+
+        Object.defineProperty(editorContainer, 'clientHeight', {
+            configurable: true,
+            value: 0,
+        });
+        resize?.();
+
+        Object.defineProperty(editorContainer, 'clientHeight', {
+            configurable: true,
+            value: 20,
+        });
+        resize?.();
+
+        unmount();
+    });
+
     it('marks error, warning, and current lines', async () => {
         renderEditor('ld 1\nend', vi.fn(), {
             diagnostics: [ERROR],
