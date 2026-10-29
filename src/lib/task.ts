@@ -2,13 +2,13 @@
  * Moodle task metadata read from the page URL.
  *
  * Moodle links can pass a stable task identifier and an optional display
- * title, for example `?task=42&title=Summe`. The identifier is written into
- * exported solution files so submissions remain attributable.
+ * title, for example `?task=42&title=Summe`. The identifier is used in the
+ * exported source file name so submissions remain attributable.
  *
  * @module lib/task
  */
 
-/** Task context shown in the application and stored in solution files. */
+/** Task context shown in the application and used in exported file names. */
 export interface TaskInfo {
     /** Stable task identifier, safe for file names. */
     readonly id: string;
