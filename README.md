@@ -335,19 +335,6 @@ It does not include:
 - macros or compiler directives,
 - a high-level language.
 
-### Arithmetic Semantics
-
-MOPS uses the original model computer's decimal, fixed-width arithmetic:
-
-- machine words are integers from −9999 to 9999,
-- division is floor division (`div` rounds toward negative infinity),
-- modulo keeps the sign of the divisor,
-- results outside the word range trap instead of wrapping.
-
-Examples: `-7 div 2` is `-4`, `-7 mod 2` is `1`, and `7 mod -2` is `-1`.
-These rules match MOPS 1.04, which uses Python's `operator.floordiv` and
-`operator.mod`. They are covered by the VM semantics tests.
-
 ### Conventions
 
 - All repository text is written in American English.
