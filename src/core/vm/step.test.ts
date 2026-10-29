@@ -410,6 +410,19 @@ describe('execute programs', () => {
 });
 
 describe('micro-op error paths', () => {
+    it('halts when execute starts without a decoded opcode', () => {
+        const state = {
+            ...createCpu(programFromMemory([60])),
+            phase: 'EXECUTE' as const,
+            br: { opcode: null, operand: 0 },
+            queue: [],
+            queueIndex: 0,
+        };
+        const result = stepCpu(state);
+
+        expect(result.kind).toBe('halted');
+    });
+
     it('traps on an out-of-range memory address', () => {
         const state = {
             ...createCpu(programFromMemory([60])),
