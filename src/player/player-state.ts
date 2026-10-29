@@ -40,16 +40,6 @@ export type ExecutionMode =
 /** Playback multiplier; zero disables the delay between microcycles. */
 export type PlayerSpeed = 0 | 0.5 | 1 | 2 | 4;
 
-/** One completed microcycle captured for backward stepping. */
-export interface HistoryEntry {
-    /** Event emitted by the VM. */
-    readonly event: VmEvent;
-    /** State before the event was applied. */
-    readonly before: CpuState;
-    /** State after the event was applied. */
-    readonly after: CpuState;
-}
-
 /** State owned by the player before actions are attached. */
 export interface PlayerSnapshot {
     readonly source: string;
@@ -69,7 +59,8 @@ export interface PlayerSnapshot {
      * One flag is enough because the two wait states are mutually exclusive.
      */
     readonly autoResume: boolean;
-    readonly history: readonly HistoryEntry[];
+    /** Completed microcycles in execution order; each event owns its snapshots. */
+    readonly history: readonly VmEvent[];
 }
 
 /** State transition plus the only side effect the store must schedule. */
@@ -112,7 +103,7 @@ const RESET_OUTPUT = {
 const RESET_EXECUTION = {
     trap: null,
     lastEvent: null,
-    history: [] as readonly HistoryEntry[],
+    history: [] as readonly VmEvent[],
     ...RESET_OUTPUT,
 } as const;
 
@@ -258,11 +249,7 @@ export function reduceVmStep(
                     ...RESET_OUTPUT,
                     trap: result.trap,
                     lastEvent: result.event,
-                    history: appendHistory(state.history, {
-                        event: result.event,
-                        before: result.event.before,
-                        after: result.state,
-                    }),
+                    history: appendHistory(state.history, result.event),
                 },
                 run: false,
             };
@@ -278,11 +265,7 @@ export function reduceVmStep(
                     ...RESET_EXECUTION,
                     lastEvent: event ?? state.lastEvent,
                     history: event
-                        ? appendHistory(state.history, {
-                              event,
-                              before: event.before,
-                              after: result.state,
-                          })
+                        ? appendHistory(state.history, event)
                         : state.history,
                 },
                 run: false,
@@ -300,11 +283,7 @@ export function reduceVmStep(
                         lastEvent: result.event,
                         lastOutput: result.event.after.aus,
                         autoResume: state.status === 'running',
-                        history: appendHistory(state.history, {
-                            event: result.event,
-                            before: result.event.before,
-                            after: result.state,
-                        }),
+                        history: appendHistory(state.history, result.event),
                     },
                     run: false,
                 };
@@ -321,11 +300,7 @@ export function reduceVmStep(
                         status: pause ? 'paused' : 'running',
                         ...RESET_EXECUTION,
                         lastEvent: result.event,
-                        history: appendHistory(state.history, {
-                            event: result.event,
-                            before: result.event.before,
-                            after: result.state,
-                        }),
+                        history: appendHistory(state.history, result.event),
                     },
                     run: !pause,
                 };
@@ -373,7 +348,7 @@ export function stepBack(state: PlayerSnapshot): PlayerSnapshot {
         cpu: entry.before,
         status: 'paused',
         ...RESET_EXECUTION,
-        lastEvent: entry.event,
+        lastEvent: entry,
         history: state.history.slice(0, -1),
     };
 }
@@ -428,10 +403,10 @@ export function shouldPause(event: VmEvent, mode: ExecutionMode): boolean {
 }
 
 function appendHistory(
-    history: readonly HistoryEntry[],
-    entry: HistoryEntry,
-): readonly HistoryEntry[] {
-    const next = [...history, entry];
+    history: readonly VmEvent[],
+    event: VmEvent,
+): readonly VmEvent[] {
+    const next = [...history, event];
 
     return next.length > MAX_HISTORY_ENTRIES
         ? next.slice(next.length - MAX_HISTORY_ENTRIES)

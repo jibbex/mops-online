@@ -24,13 +24,12 @@ import {
     stepBack as rewindOneStep,
     stopPlayback,
     type ExecutionMode,
-    type HistoryEntry,
     type PlayerSnapshot,
     type PlayerSpeed,
     type PlayerStatus,
 } from './player-state';
 
-export type { ExecutionMode, HistoryEntry, PlayerSpeed, PlayerStatus };
+export type { ExecutionMode, PlayerSpeed, PlayerStatus };
 export { INITIAL_SOURCE, NORMAL_SPEED } from './player-state';
 
 /**
