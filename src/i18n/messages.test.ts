@@ -29,6 +29,15 @@ describe('messages', () => {
         ).toBe('Line 4: Unknown instruction.');
     });
 
+    it('interpolates the guided tour counter in both languages', () => {
+        expect(
+            interpolate(messages.en['tour.step'], { current: 2, total: 6 }),
+        ).toBe('Step 2 of 6');
+        expect(
+            interpolate(messages.de['tour.step'], { current: 2, total: 6 }),
+        ).toBe('Schritt 2 von 6');
+    });
+
     it('leaves unknown placeholders untouched', () => {
         expect(interpolate('Hello {name}')).toBe('Hello {name}');
     });
