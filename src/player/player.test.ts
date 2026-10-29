@@ -296,6 +296,127 @@ describe('player', () => {
         expect(vi.getTimerCount()).toBe(0);
     });
 
+    it('ignores actions that do not apply in the current state', () => {
+        const store = createStore();
+
+        store.getState().pause();
+        store.getState().provideInput(1);
+        store.getState().acknowledgeOutput();
+        store.getState().step();
+        store.getState().stop();
+
+        expect(store.getState().status).toBe('idle');
+        expect(store.getState().history).toHaveLength(0);
+    });
+
+    it('ignores step after the program has finished', () => {
+        const store = createStore(['ld 5', 'end'].join('\n'));
+        store.getState().assemble();
+
+        for (let step = 0; step < 20; step += 1) {
+            store.getState().step();
+
+            if (store.getState().status === 'finished') {
+                break;
+            }
+        }
+
+        const historyLength = store.getState().history.length;
+
+        store.getState().step();
+
+        expect(store.getState().status).toBe('finished');
+        expect(store.getState().history).toHaveLength(historyLength);
+    });
+
+    it('ignores step while waiting for output', () => {
+        const store = createStore(['out 5', 'end'].join('\n'));
+        store.getState().assemble();
+
+        for (let step = 0; step < 10; step += 1) {
+            store.getState().step();
+
+            if (store.getState().status === 'waiting-output') {
+                break;
+            }
+        }
+
+        const historyLength = store.getState().history.length;
+
+        store.getState().step();
+
+        expect(store.getState().status).toBe('waiting-output');
+        expect(store.getState().history).toHaveLength(historyLength);
+    });
+
+    it('reschedules when the speed changes while running', () => {
+        const store = createStore();
+        store.getState().assemble();
+        store.getState().setMode('run');
+        store.getState().setSpeed(4);
+        store.getState().start();
+
+        expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+        store.getState().setSpeed(2);
+
+        expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+        store.getState().pause();
+    });
+
+    it('returns to idle when starting an empty error state', () => {
+        const store = createStore('ld');
+        store.getState().assemble();
+
+        expect(store.getState().status).toBe('error');
+
+        store.getState().start();
+
+        expect(store.getState().status).toBe('idle');
+    });
+
+    it('drops a queued run when a subscriber pauses first', () => {
+        const store = createStore(['ld 5', 'end'].join('\n'));
+        store.getState().assemble();
+        store.getState().setMode('run');
+
+        const unsubscribe = store.subscribe((state, previous) => {
+            if (state.status === 'running' && previous.status !== 'running') {
+                store.getState().pause();
+            }
+        });
+
+        store.getState().start();
+        unsubscribe();
+
+        expect(store.getState().status).toBe('paused');
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('does not schedule after a subscriber pauses during input', () => {
+        const store = createStore(INPUT_SOURCE);
+        store.getState().assemble();
+        store.getState().setMode('run');
+        store.getState().setSpeed(0);
+        store.getState().start();
+        vi.runAllTimers();
+
+        expect(store.getState().status).toBe('waiting-input');
+
+        const unsubscribe = store.subscribe((state, previous) => {
+            if (state.status === 'running' && previous.status !== 'running') {
+                store.getState().pause();
+            }
+        });
+
+        store.getState().provideInput(42);
+        unsubscribe();
+
+        expect(store.getState().status).toBe('paused');
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
     it('cancels a pending timer when the source changes', () => {
         const store = createStore();
         store.getState().assemble();
