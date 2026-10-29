@@ -423,6 +423,15 @@ describe('micro-op error paths', () => {
         expect(result.kind).toBe('halted');
     });
 
+    it('treats a HALTED phase as a completed machine', () => {
+        const state = {
+            ...createCpu(programFromMemory([60])),
+            phase: 'HALTED' as const,
+        };
+
+        expect(stepCpu(state)).toEqual({ kind: 'halted', state });
+    });
+
     it('traps on an out-of-range memory address', () => {
         const state = {
             ...createCpu(programFromMemory([60])),
