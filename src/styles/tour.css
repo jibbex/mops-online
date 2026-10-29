@@ -1,0 +1,48 @@
+/**
+ * Guided tour overlay styles.
+ *
+ * The scrim uses backdrop blur around a rectangular hole. The ring sits above
+ * the hole and never blocks pointer events, so the highlighted element remains
+ * visible and interactive inside the tour.
+ */
+
+:root {
+    --tour-scrim: oklch(0.12 0 0 / 0.55);
+    --tour-blur: 6px;
+    --tour-ring-transition: 150ms;
+}
+
+.dark {
+    --tour-scrim: oklch(0.12 0 0 / 0.55);
+    --tour-blur: 6px;
+}
+
+.tour-scrim {
+    background: var(--tour-scrim);
+    -webkit-backdrop-filter: blur(var(--tour-blur));
+    backdrop-filter: blur(var(--tour-blur));
+    pointer-events: auto;
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+    .tour-scrim {
+        background: oklch(0.12 0 0 / 0.8);
+    }
+}
+
+.tour-ring {
+    outline: 2px solid var(--primary);
+    border-radius: var(--radius-md);
+    box-shadow: 0 0 0 4px color-mix(in oklch, var(--primary) 40%, transparent);
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .tour-ring {
+        transition:
+            left var(--tour-ring-transition) ease,
+            top var(--tour-ring-transition) ease,
+            width var(--tour-ring-transition) ease,
+            height var(--tour-ring-transition) ease;
+    }
+}

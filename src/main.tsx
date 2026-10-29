@@ -14,6 +14,7 @@ import { ThemeProvider } from './components/theme-provider';
 import { LanguageProvider } from './i18n/i18n-provider';
 import './index.css';
 import './styles/diagram.css';
+import './styles/tour.css';
 
 const rootElement = document.getElementById('root');
 
