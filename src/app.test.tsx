@@ -130,7 +130,7 @@ describe('App', () => {
         }
 
         expect(shell).toHaveAttribute('inert');
-
+        await screen.findByRole('button', { name: 'Skip tour' });
         await user.click(screen.getByRole('button', { name: 'Skip tour' }));
 
         expect(shell).not.toHaveAttribute('inert');
@@ -143,6 +143,7 @@ describe('App', () => {
 
         await user.click(screen.getByRole('button', { name: 'Assemble' }));
         await user.click(screen.getByRole('button', { name: 'Step' }));
+        await screen.findByRole('button', { name: 'Next' });
         await user.click(screen.getByRole('button', { name: 'Next' }));
         await user.click(screen.getByRole('button', { name: 'Next' }));
 
@@ -163,6 +164,7 @@ describe('App', () => {
 
         await user.click(screen.getByRole('button', { name: 'Assemble' }));
         await user.click(screen.getByRole('button', { name: 'Step' }));
+        await screen.findByRole('button', { name: 'Next' });
 
         for (let index = 0; index < 4; index += 1) {
             await user.click(screen.getByRole('button', { name: 'Next' }));
