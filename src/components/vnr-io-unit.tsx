@@ -8,6 +8,7 @@ import type { CpuState } from '@/core/vm';
 import { useI18n } from '@/i18n/i18n-context';
 import { formatWord } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import type { VisualOperation } from '@/player/visual-map';
 import type { ReactElement } from 'react';
 
 /**
@@ -15,14 +16,17 @@ import type { ReactElement } from 'react';
  *
  * @param cpu Current CPU state, or null before assembly.
  * @param active Returns whether a diagram element is active.
+ * @param operation Returns the read/write/increment operation for an element.
  * @returns The input/output unit element.
  */
 export function VnrIoUnit({
     cpu,
     active,
+    operation,
 }: {
     readonly cpu: CpuState | null;
     readonly active: (id: string) => boolean;
+    readonly operation: (id: string) => VisualOperation | undefined;
 }): ReactElement {
     const { t } = useI18n();
 
@@ -51,6 +55,7 @@ export function VnrIoUnit({
             <g
                 id="aus"
                 className={cn('diagram-register', active('aus') && 'is-active')}
+                data-operation={operation('aus')}
             >
                 <rect x="325" y="429" width="37" height="16" rx="1" />
                 <text
@@ -78,6 +83,7 @@ export function VnrIoUnit({
             <g
                 id="ein"
                 className={cn('diagram-register', active('ein') && 'is-active')}
+                data-operation={operation('ein')}
             >
                 <rect x="325" y="467" width="37" height="16" rx="1" />
                 <text

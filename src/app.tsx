@@ -48,6 +48,7 @@ export default function App(): ReactElement {
         diagnostics,
         warnings,
         cpu,
+        pc,
         lastEvent,
         program,
         status,
@@ -60,6 +61,7 @@ export default function App(): ReactElement {
             diagnostics: state.diagnostics,
             warnings: state.warnings,
             cpu: state.cpu,
+            pc: state.cpu?.pc ?? 0,
             lastEvent: state.lastEvent,
             program: state.program,
             status: state.status,
@@ -159,6 +161,7 @@ export default function App(): ReactElement {
                         <CardContent className="min-h-0 flex-1 p-1">
                             <VnrDiagram
                                 cpu={cpu}
+                                pc={pc}
                                 visual={visual}
                                 pulseKey={historyLength}
                                 flowDurationMs={flowDurationMs}

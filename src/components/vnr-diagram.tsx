@@ -11,7 +11,7 @@
 import { MEMORY_SIZE } from '@/core/object';
 import type { CpuState } from '@/core/vm';
 import { useI18n } from '@/i18n/i18n-context';
-import type { VisualState } from '@/player/visual-map';
+import type { VisualOperation, VisualState } from '@/player/visual-map';
 import type { ReactElement } from 'react';
 import { VnrAluUnit } from './vnr-alu-unit';
 import { VnrBusLayer } from './vnr-bus-layer';
@@ -23,6 +23,8 @@ import { VnrPacketLayer } from './vnr-packet-layer';
 
 interface VnrDiagramProps {
     readonly cpu: CpuState | null;
+    /** Program counter, selected directly so it cannot be trapped in a stale CPU object. */
+    readonly pc: number;
     readonly visual: VisualState;
     /** Monotonic event key used to restart packet movement. */
     readonly pulseKey: number;
@@ -34,6 +36,7 @@ interface VnrDiagramProps {
  * Renders the machine diagram from the current CPU and visual state.
  *
  * @param cpu Current CPU state, or null before assembly.
+ * @param pc Current program counter.
  * @param visual Active diagram elements derived from the last event.
  * @param pulseKey Monotonic event key used to restart packet movement.
  * @param flowDurationMs Time for one packet to traverse its route.
@@ -41,6 +44,7 @@ interface VnrDiagramProps {
  */
 export function VnrDiagram({
     cpu,
+    pc,
     visual,
     pulseKey,
     flowDurationMs,
@@ -48,6 +52,8 @@ export function VnrDiagram({
     const { t } = useI18n();
     const memory = cpu?.memory ?? Array<number>(MEMORY_SIZE).fill(0);
     const active = (id: string) => visual.active.has(id);
+    const operation = (id: string): VisualOperation | undefined =>
+        visual.operations.get(id);
 
     return (
         <svg
@@ -102,10 +108,19 @@ export function VnrDiagram({
             </defs>
 
             <VnrBusLayer />
-            <VnrMemoryUnit memory={memory} active={active} />
-            <VnrControlUnit cpu={cpu} active={active} />
-            <VnrAluUnit cpu={cpu} active={active} />
-            <VnrIoUnit cpu={cpu} active={active} />
+            <VnrMemoryUnit
+                memory={memory}
+                active={active}
+                operation={operation}
+            />
+            <VnrControlUnit
+                cpu={cpu}
+                pc={pc}
+                active={active}
+                operation={operation}
+            />
+            <VnrAluUnit cpu={cpu} active={active} operation={operation} />
+            <VnrIoUnit cpu={cpu} active={active} operation={operation} />
             <VnrPacketLayer
                 key={`${visual.transfer?.id ?? 'none'}-${pulseKey}`}
                 transfer={visual.transfer}

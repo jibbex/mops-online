@@ -8,6 +8,7 @@ import type { CpuState } from '@/core/vm';
 import { useI18n } from '@/i18n/i18n-context';
 import { formatWord } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import type { VisualOperation } from '@/player/visual-map';
 import type { ReactElement } from 'react';
 
 /**
@@ -15,14 +16,17 @@ import type { ReactElement } from 'react';
  *
  * @param cpu Current CPU state, or null before assembly.
  * @param active Returns whether a diagram element is active.
+ * @param operation Returns the read/write/increment operation for an element.
  * @returns The ALU unit element.
  */
 export function VnrAluUnit({
     cpu,
     active,
+    operation,
 }: {
     readonly cpu: CpuState | null;
     readonly active: (id: string) => boolean;
+    readonly operation: (id: string) => VisualOperation | undefined;
 }): ReactElement {
     const { t } = useI18n();
 
@@ -52,6 +56,7 @@ export function VnrAluUnit({
             <g
                 id="op"
                 className={cn('diagram-register', active('op') && 'is-active')}
+                data-operation={operation('op')}
             >
                 <rect x="343" y="262" width="37" height="16" rx="1" />
                 <text
@@ -71,6 +76,7 @@ export function VnrAluUnit({
             <g
                 id="ac"
                 className={cn('diagram-register', active('ac') && 'is-active')}
+                data-operation={operation('ac')}
             >
                 <rect x="417" y="262" width="37" height="16" rx="1" />
                 <text
@@ -91,6 +97,7 @@ export function VnrAluUnit({
             <g
                 id="ar"
                 className={cn('diagram-register', active('ar') && 'is-active')}
+                data-operation={operation('ar')}
             >
                 <rect x="392" y="294" width="13" height="16" rx="1" />
                 <text
@@ -110,6 +117,7 @@ export function VnrAluUnit({
             <g
                 id="vgl"
                 className={cn('diagram-register', active('vgl') && 'is-active')}
+                data-operation={operation('vgl')}
             >
                 <rect x="343" y="326" width="13" height="16" rx="1" />
                 <text
@@ -129,6 +137,7 @@ export function VnrAluUnit({
             <g
                 id="erg"
                 className={cn('diagram-register', active('erg') && 'is-active')}
+                data-operation={operation('erg')}
             >
                 <rect x="380" y="326" width="37" height="16" rx="1" />
                 <text

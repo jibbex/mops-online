@@ -3,8 +3,8 @@
  *
  * The VM uses internal latches (SL_ADR, SL_VAL, ML_VAL) inside the control
  * unit. Only micro-ops that cross a unit boundary are drawn as bus packets.
- * All other micro-ops are internal control or ALU operations and receive only
- * the active register/unit highlight.
+ * Active elements carry a read, write, or increment operation so the same
+ * visual language applies to every register and memory cell.
  *
  * @module player/visual-map
  */
@@ -28,12 +28,22 @@ export interface TransferRoute {
     readonly size: 'bus' | 'signal';
 }
 
+/** Operation represented by an active diagram element. */
+export type VisualOperation = 'read' | 'write' | 'increment';
+
 /**
  * Active diagram elements for one VM event.
  */
 export interface VisualState {
     /** Element IDs that should receive the active treatment. */
     readonly active: ReadonlySet<string>;
+    /**
+     * Operation per active register, cell, or bar.
+     *
+     * Read, write, and increment share one visual language across the whole
+     * diagram instead of inventing component-specific highlights.
+     */
+    readonly operations: ReadonlyMap<string, VisualOperation>;
     /** Memory addresses touched by the event. */
     readonly memoryCells: readonly number[];
     /** Memory bar indices (1-based) touched by the event. */
@@ -45,6 +55,7 @@ export interface VisualState {
 /** Neutral visual state used before the first event. */
 export const EMPTY_VISUAL: VisualState = {
     active: new Set(),
+    operations: new Map(),
     memoryCells: [],
     memoryBars: [],
     transfer: null,
@@ -61,61 +72,85 @@ export function visualStateFor(event: VmEvent | null): VisualState {
     }
 
     const active = new Set<string>();
+    const operations = new Map<string, VisualOperation>();
 
     switch (event.microOp.kind) {
         case 'PC_READ':
-            add(active, 'control', 'pc');
+            add(active, 'control');
+            mark(active, operations, 'read', 'pc');
             break;
         case 'MEM_READ':
-            add(active, 'control', 'memory');
-            addMemory(active, event);
+            add(active, 'control');
+            mark(active, operations, 'read', 'memory');
+            addMemory(active, operations, event, 'read');
             break;
         case 'BR_WRITE':
-            add(active, 'control', 'br');
+            add(active, 'control');
+            mark(active, operations, 'write', 'br');
             break;
         case 'DECODE':
-            add(active, 'control', 'dek', 'br');
+            add(active, 'control');
+            mark(active, operations, 'read', 'br');
+            mark(active, operations, 'write', 'dek');
             break;
         case 'PC_UPDATE':
-            add(active, 'control', 'pc');
+            add(active, 'control');
+            mark(active, operations, 'increment', 'pc');
             break;
         case 'BR_READ_OPERAND':
-            add(active, 'control', 'br', 'br-op');
+            add(active, 'control', 'br-op');
+            mark(active, operations, 'read', 'br');
             break;
         case 'INPUT_READ':
-            add(active, 'io', 'ein');
+            add(active, 'io');
+            mark(active, operations, 'read', 'ein');
             break;
         case 'MEM_WRITE':
-            add(active, 'control', 'memory');
-            addMemory(active, event);
+            add(active, 'control');
+            mark(active, operations, 'write', 'memory');
+            addMemory(active, operations, event, 'write');
             break;
         case 'AC_WRITE':
+            add(active, 'control');
+            mark(active, operations, 'write', 'ac');
+            break;
         case 'AC_READ':
-            add(active, 'control', 'ac');
+            add(active, 'control');
+            mark(active, operations, 'read', 'ac');
             break;
         case 'OP_WRITE':
-            add(active, 'control', 'op');
+            add(active, 'control');
+            mark(active, operations, 'write', 'op');
             break;
         case 'AR_WRITE':
-            add(active, 'control', 'ar');
+            add(active, 'control');
+            mark(active, operations, 'write', 'ar');
             break;
         case 'ALU_CALC':
-            add(active, 'alu', 'erg');
+            add(active, 'alu');
+            mark(active, operations, 'write', 'erg');
             break;
         case 'ERG_AC_WRITE':
-            add(active, 'alu', 'erg', 'ac');
+            add(active, 'alu', 'control');
+            mark(active, operations, 'read', 'erg');
+            mark(active, operations, 'write', 'ac');
             break;
         case 'ERG_VGL_WRITE':
-            add(active, 'alu', 'erg', 'vgl');
+            add(active, 'alu', 'control');
+            mark(active, operations, 'read', 'erg');
+            mark(active, operations, 'write', 'vgl');
             break;
         case 'AUS_WRITE':
-            add(active, 'io', 'aus');
+            add(active, 'io');
+            mark(active, operations, 'write', 'aus');
             break;
         case 'VGL_READ':
-            add(active, 'control', 'vgl');
+            add(active, 'control');
+            mark(active, operations, 'read', 'vgl');
             break;
         case 'PC_WRITE':
-            add(active, 'control', 'pc');
+            add(active, 'control');
+            mark(active, operations, 'write', 'pc');
             break;
         case 'HALT':
             add(active, 'control');
@@ -124,6 +159,7 @@ export function visualStateFor(event: VmEvent | null): VisualState {
 
     return {
         active,
+        operations,
         memoryCells: memoryCellsFor(event),
         memoryBars: memoryBarsFor(event),
         transfer: transferFor(event),
@@ -187,13 +223,35 @@ function add(active: Set<string>, ...ids: string[]): void {
     }
 }
 
-function addMemory(active: Set<string>, event: VmEvent): void {
+function mark(
+    active: Set<string>,
+    operations: Map<string, VisualOperation>,
+    operation: VisualOperation,
+    ...ids: string[]
+): void {
+    for (const id of ids) {
+        active.add(id);
+        operations.set(id, operation);
+    }
+}
+
+function addMemory(
+    active: Set<string>,
+    operations: Map<string, VisualOperation>,
+    event: VmEvent,
+    operation: 'read' | 'write',
+): void {
     for (const address of memoryCellsFor(event)) {
-        active.add(`mem${address.toString().padStart(2, '0')}`);
+        mark(
+            active,
+            operations,
+            operation,
+            `mem${address.toString().padStart(2, '0')}`,
+        );
     }
 
     for (const bar of memoryBarsFor(event)) {
-        active.add(`mem-bar${bar}`);
+        mark(active, operations, operation, `mem-bar${bar}`);
     }
 }
 

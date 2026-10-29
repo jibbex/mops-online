@@ -8,6 +8,7 @@ import { DATA_START } from '@/core/object';
 import { useI18n } from '@/i18n/i18n-context';
 import { formatAddress, formatWord } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import type { VisualOperation } from '@/player/visual-map';
 import type { ReactElement } from 'react';
 import { MEMORY_COLUMNS } from './vnr-layout';
 
@@ -16,14 +17,17 @@ import { MEMORY_COLUMNS } from './vnr-layout';
  *
  * @param memory Complete memory image.
  * @param active Returns whether a diagram element is active.
+ * @param operation Returns the read/write/increment operation for an element.
  * @returns The memory unit element.
  */
 export function VnrMemoryUnit({
     memory,
     active,
+    operation,
 }: {
     readonly memory: readonly number[];
     readonly active: (id: string) => boolean;
+    readonly operation: (id: string) => VisualOperation | undefined;
 }): ReactElement {
     const { t } = useI18n();
 
@@ -34,6 +38,7 @@ export function VnrMemoryUnit({
                 'unit-memory',
                 active('memory') && 'is-active',
             )}
+            data-operation={operation('memory')}
         >
             <rect
                 className="unit-frame"
@@ -71,6 +76,7 @@ export function VnrMemoryUnit({
                             'diagram-signal',
                             active(`mem-bar${column + 1}`) && 'is-active',
                         )}
+                        data-operation={operation(`mem-bar${column + 1}`)}
                         x1={67 + column * 74}
                         y1="75"
                         x2={67 + column * 74}
@@ -84,16 +90,17 @@ export function VnrMemoryUnit({
                             address >= DATA_START
                                 ? String.fromCharCode(97 + address - DATA_START)
                                 : '';
+                        const cellId = `mem${formatAddress(address)}`;
 
                         return (
                             <g
                                 key={address}
-                                id={`mem${formatAddress(address)}`}
+                                id={cellId}
                                 className={cn(
                                     'memory-cell',
-                                    active(`mem${formatAddress(address)}`) &&
-                                        'is-active',
+                                    active(cellId) && 'is-active',
                                 )}
+                                data-operation={operation(cellId)}
                             >
                                 <rect
                                     x={x}

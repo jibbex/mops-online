@@ -92,6 +92,22 @@
     );
 }
 
+/*
+ * One operation language for the whole diagram:
+ * read is soft and dashed, write is solid and filled, increment adds the
+ * packet-colored pulse. Components only expose `data-operation`; they never
+ * invent their own read or write styling.
+ */
+.diagram-unit.is-active[data-operation='read'] .unit-frame {
+    stroke-width: 2.5;
+    stroke-dasharray: 5 3;
+}
+
+.diagram-unit.is-active[data-operation='read'] .unit-head {
+    fill: var(--diagram-active-soft);
+    stroke: var(--diagram-active);
+}
+
 .diagram-register rect {
     fill: var(--diagram-register);
     stroke: var(--diagram-border);
@@ -113,6 +129,31 @@
     font-weight: 700;
 }
 
+.diagram-register.is-active[data-operation='read'] rect {
+    fill: var(--diagram-active-soft);
+    stroke: var(--diagram-active);
+    stroke-width: 2;
+    stroke-dasharray: 3 2;
+}
+
+.diagram-register.is-active[data-operation='read'] text {
+    fill: var(--diagram-text);
+}
+
+.diagram-register.is-active[data-operation='write'] rect {
+    fill: var(--diagram-active);
+    stroke: var(--diagram-active);
+}
+
+.diagram-register.is-active[data-operation='increment'] rect {
+    fill: var(--diagram-active);
+    stroke: var(--diagram-packet);
+    stroke-width: 2.5;
+    filter: drop-shadow(
+        0 0 4px color-mix(in oklch, var(--diagram-packet) 55%, transparent)
+    );
+}
+
 .memory-cell rect {
     fill: var(--diagram-register);
     stroke: var(--diagram-border);
@@ -131,6 +172,27 @@
 
 .memory-cell.is-active .diagram-value {
     fill: var(--diagram-active-text);
+}
+
+.memory-cell.is-active[data-operation='read'] rect {
+    fill: var(--diagram-active-soft);
+    stroke: var(--diagram-active);
+    stroke-width: 1.6;
+    stroke-dasharray: 3 2;
+}
+
+.memory-cell.is-active[data-operation='read'] .diagram-value {
+    fill: var(--diagram-text);
+}
+
+.diagram-signal.is-active[data-operation='read'] {
+    stroke: var(--diagram-active);
+    stroke-dasharray: 4 3;
+}
+
+.diagram-signal.is-active[data-operation='write'] {
+    stroke: var(--diagram-active);
+    stroke-width: 4;
 }
 
 .diagram-bus {

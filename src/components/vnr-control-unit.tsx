@@ -8,21 +8,28 @@ import type { CpuState } from '@/core/vm';
 import { useI18n } from '@/i18n/i18n-context';
 import { formatAddress, formatWord } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import type { VisualOperation } from '@/player/visual-map';
 import type { ReactElement } from 'react';
 
 /**
  * Renders the control unit and its registers.
  *
  * @param cpu Current CPU state, or null before assembly.
+ * @param pc Current program counter.
  * @param active Returns whether a diagram element is active.
+ * @param operation Returns the read/write/increment operation for an element.
  * @returns The control unit element.
  */
 export function VnrControlUnit({
     cpu,
+    pc,
     active,
+    operation,
 }: {
     readonly cpu: CpuState | null;
+    readonly pc: number;
     readonly active: (id: string) => boolean;
+    readonly operation: (id: string) => VisualOperation | undefined;
 }): ReactElement {
     const { t } = useI18n();
 
@@ -33,6 +40,7 @@ export function VnrControlUnit({
                 'unit-control',
                 active('control') && 'is-active',
             )}
+            data-operation={operation('control')}
         >
             <rect
                 className="unit-frame"
@@ -63,6 +71,7 @@ export function VnrControlUnit({
             <g
                 id="pc"
                 className={cn('diagram-register', active('pc') && 'is-active')}
+                data-operation={operation('pc')}
             >
                 <rect x="421" y="91" width="19" height="16" rx="1" />
                 <text
@@ -72,7 +81,7 @@ export function VnrControlUnit({
                     textAnchor="middle"
                     fontSize="8"
                 >
-                    {formatAddress(cpu?.pc ?? 0)}
+                    {formatAddress(pc)}
                 </text>
             </g>
 
@@ -82,6 +91,7 @@ export function VnrControlUnit({
             <g
                 id="br"
                 className={cn('diagram-register', active('br') && 'is-active')}
+                data-operation={operation('br')}
             >
                 <rect x="421" y="118" width="19" height="16" rx="1" />
                 <rect x="440" y="118" width="37" height="16" rx="1" />
@@ -114,6 +124,7 @@ export function VnrControlUnit({
             <g
                 id="dek"
                 className={cn('diagram-register', active('dek') && 'is-active')}
+                data-operation={operation('dek')}
             >
                 <rect x="325" y="147" width="148" height="23" rx="1" />
                 <text

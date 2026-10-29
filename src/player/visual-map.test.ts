@@ -146,6 +146,32 @@ describe('visual map', () => {
         });
     });
 
+    it('uses distinct read, write, and increment operations for the PC', () => {
+        expect(
+            visualStateFor(event({ kind: 'PC_READ' })).operations.get('pc'),
+        ).toBe('read');
+        expect(
+            visualStateFor(event({ kind: 'PC_UPDATE' })).operations.get('pc'),
+        ).toBe('increment');
+        expect(
+            visualStateFor(event({ kind: 'PC_WRITE' })).operations.get('pc'),
+        ).toBe('write');
+    });
+
+    it('uses the same read and write language for memory and registers', () => {
+        const read = visualStateFor(
+            event({ kind: 'MEM_READ', width: 1 }, { slAdr: 64 }),
+        );
+        const write = visualStateFor(
+            event({ kind: 'MEM_WRITE' }, { slAdr: 64 }),
+        );
+
+        expect(read.operations.get('memory')).toBe('read');
+        expect(read.operations.get('mem64')).toBe('read');
+        expect(write.operations.get('memory')).toBe('write');
+        expect(write.operations.get('mem64')).toBe('write');
+    });
+
     it('does not draw a packet for internal control reads and writes', () => {
         const internal: VmEvent['microOp'][] = [
             { kind: 'PC_READ' },
