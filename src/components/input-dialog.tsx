@@ -60,7 +60,7 @@ export function InputDialog(): ReactElement {
     };
 
     return (
-        <Dialog open={open} onOpenChange={() => undefined}>
+        <Dialog open={open}>
             <DialogContent showCloseButton={false}>
                 <DialogHeader>
                     <DialogTitle>{t('input.title')}</DialogTitle>

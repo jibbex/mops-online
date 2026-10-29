@@ -36,7 +36,7 @@ export function OutputDialog(): ReactElement {
     const open = status === 'waiting-output';
 
     return (
-        <Dialog open={open} onOpenChange={() => undefined}>
+        <Dialog open={open}>
             <DialogContent showCloseButton={false}>
                 <DialogHeader>
                     <DialogTitle>{t('output.title')}</DialogTitle>
