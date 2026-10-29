@@ -162,6 +162,26 @@ test('keeps the dialog open when the picker is cancelled', async ({ page }) => {
     await expect(page.getByText('Export failed')).toBeHidden();
 });
 
+test('keeps the dialog open when the picker fails', async ({ page }) => {
+    await page.addInitScript(() => {
+        Object.defineProperty(window, 'showSaveFilePicker', {
+            configurable: true,
+            value: () =>
+                Promise.reject(new DOMException('Blocked', 'SecurityError')),
+        });
+    });
+
+    await page.goto('/');
+    await openFileDialog(page);
+
+    await page.getByRole('button', { name: /Download source/ }).click();
+
+    await expect(page.getByText('Export failed')).toBeVisible();
+    await expect(
+        page.getByRole('heading', { name: 'Source file' }),
+    ).toBeVisible();
+});
+
 test('keeps the dialog open when the export fails', async ({ page }) => {
     await disableFilePicker(page);
     await page.addInitScript(() => {

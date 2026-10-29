@@ -274,33 +274,27 @@ describe('saveTextFile', () => {
         await expect(save).resolves.toEqual({ kind: 'started' });
     });
 
-    it('falls back when the picker is denied', async () => {
-        vi.useFakeTimers();
+    it('reports a picker denial instead of falling back', async () => {
         vi.stubGlobal(
             'showSaveFilePicker',
             vi.fn(() =>
                 Promise.reject(new DOMException('Denied', 'NotAllowedError')),
             ),
         );
-        stubDownload();
 
-        const save = saveTextFile('mops.asm', 'end', 'text/plain');
-        await vi.runAllTimersAsync();
-
-        await expect(save).resolves.toEqual({ kind: 'started' });
+        await expect(
+            saveTextFile('mops.asm', 'end', 'text/plain'),
+        ).rejects.toThrow('Denied');
     });
 
-    it('falls back when the picker throws a non-DOM error', async () => {
-        vi.useFakeTimers();
+    it('reports a non-DOM picker error instead of falling back', async () => {
         vi.stubGlobal(
             'showSaveFilePicker',
             vi.fn(() => Promise.reject(new Error('Missing'))),
         );
-        stubDownload();
 
-        const save = saveTextFile('mops.asm', 'end', 'text/plain');
-        await vi.runAllTimersAsync();
-
-        await expect(save).resolves.toEqual({ kind: 'started' });
+        await expect(
+            saveTextFile('mops.asm', 'end', 'text/plain'),
+        ).rejects.toThrow('Missing');
     });
 });

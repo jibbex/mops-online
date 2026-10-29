@@ -210,6 +210,10 @@ export async function saveTextFile(
             if (isAbortError(error)) {
                 return { kind: 'cancelled' };
             }
+
+            // The API exists but the browser refused or the write failed.
+            // Falling back would hide that failure behind a normal download.
+            throw error;
         }
     }
 
