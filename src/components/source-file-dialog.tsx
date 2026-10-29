@@ -27,7 +27,7 @@ import {
     type SourceImportFailureReason,
 } from '@/lib/exchange';
 import type { TaskInfo } from '@/lib/task';
-import { CheckCircle2, Download, FileCode2, Upload } from 'lucide-react';
+import { Download, FileCode2, Upload } from 'lucide-react';
 import { useRef, useState, type ChangeEvent, type ReactElement } from 'react';
 
 interface SourceFileDialogProps {
@@ -38,7 +38,6 @@ interface SourceFileDialogProps {
 
 type ImportStatus =
     | { readonly kind: 'idle' }
-    | { readonly kind: 'success' }
     | { readonly kind: 'error'; readonly reason: SourceImportFailureReason };
 
 /**
@@ -54,15 +53,25 @@ export function SourceFileDialog({
 }: SourceFileDialogProps): ReactElement {
     const { t } = useI18n();
     const fileInput = useRef<HTMLInputElement>(null);
+    const [open, setOpen] = useState(false);
     const [status, setStatus] = useState<ImportStatus>({ kind: 'idle' });
     // Reading is asynchronous; disabling the picker prevents a second file
     // from racing the first one and overwriting its result.
     const [busy, setBusy] = useState(false);
 
+    const closeDialog = (): void => {
+        // The next visit starts clean; a stale error alert would otherwise
+        // look like the result of the new selection.
+        setStatus({ kind: 'idle' });
+        setBusy(false);
+        setOpen(false);
+    };
+
     const exportSource = (): void => {
         const exported = buildSourceExport(task, source);
 
         downloadTextFile(exported.filename, exported.text, exported.mimeType);
+        closeDialog();
     };
 
     const importFile = async (file: File): Promise<void> => {
@@ -77,8 +86,7 @@ export function SourceFileDialog({
         }
 
         onImport(result.text);
-        setStatus({ kind: 'success' });
-        setBusy(false);
+        closeDialog();
     };
 
     const importErrorMessage = (reason: SourceImportFailureReason): string => {
@@ -111,12 +119,12 @@ export function SourceFileDialog({
 
     return (
         <Dialog
-            onOpenChange={(open) => {
-                // The next visit starts clean; a stale success or error alert
-                // would otherwise look like the result of the new selection.
-                if (!open) {
-                    setStatus({ kind: 'idle' });
-                    setBusy(false);
+            open={open}
+            onOpenChange={(nextOpen) => {
+                if (nextOpen) {
+                    setOpen(true);
+                } else {
+                    closeDialog();
                 }
             }}
         >
@@ -181,15 +189,6 @@ export function SourceFileDialog({
                     </Button>
                 </section>
 
-                {status.kind === 'success' ? (
-                    <Alert>
-                        <CheckCircle2 />
-                        <AlertTitle>{t('file.importSection')}</AlertTitle>
-                        <AlertDescription>
-                            {t('file.imported')}
-                        </AlertDescription>
-                    </Alert>
-                ) : null}
                 {status.kind === 'error' ? (
                     <Alert variant="destructive">
                         <AlertTitle>{t('file.importErrorTitle')}</AlertTitle>

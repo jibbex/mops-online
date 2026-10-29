@@ -57,9 +57,7 @@ test('rejects binary source files', async ({ page }) => {
     ).toBeVisible();
 });
 
-test('normalizes CRLF source and resets the import status', async ({
-    page,
-}) => {
+test('normalizes CRLF source and closes the dialog', async ({ page }) => {
     await page.goto('/');
     await openFileDialog(page);
 
@@ -70,21 +68,14 @@ test('normalizes CRLF source and resets the import status', async ({
     });
 
     await expect(
-        page.getByText('Source loaded. Assemble it to run the program.'),
-    ).toBeVisible();
+        page.getByRole('heading', { name: 'Source file' }),
+    ).toBeHidden();
     await expect(page.locator('.cm-content')).toContainText('out 7');
     expect(
         await page
             .locator('.cm-content')
             .evaluate((element) => element.textContent?.includes('\r')),
     ).toBe(false);
-
-    await page.getByRole('button', { name: 'Close' }).click();
-    await openFileDialog(page);
-
-    await expect(
-        page.getByText('Source loaded. Assemble it to run the program.'),
-    ).toBeHidden();
 });
 
 test('fits the file dialog on a phone', async ({ page }) => {
@@ -112,6 +103,9 @@ test('downloads source with the task file name and final newline', async ({
 
     const download = await downloadPromise;
 
+    await expect(
+        page.getByRole('heading', { name: 'Source file' }),
+    ).toBeHidden();
     expect(download.suggestedFilename()).toBe('mops-42.asm');
 
     const path = await download.path();

@@ -106,7 +106,6 @@ const en = {
         'Load a previously downloaded .asm file (max. {max} KB).',
     'file.choose': 'Choose source file',
     'file.reading': 'Reading file…',
-    'file.imported': 'Source loaded. Assemble it to run the program.',
     'file.importErrorTitle': 'Import failed',
     'file.importEmpty': 'The file is empty.',
     'file.importTooLarge':
@@ -250,7 +249,6 @@ const de: Record<MessageKey, string> = {
         'Eine zuvor heruntergeladene .asm-Datei laden (max. {max} KB).',
     'file.choose': 'Quelltextdatei wählen',
     'file.reading': 'Datei wird gelesen…',
-    'file.imported': 'Quelltext geladen. Zum Ausführen assemblieren.',
     'file.importErrorTitle': 'Import fehlgeschlagen',
     'file.importEmpty': 'Die Datei ist leer.',
     'file.importTooLarge':

@@ -47,6 +47,14 @@ function sourceInput(): HTMLInputElement {
     return document.querySelector('input[type="file"]') as HTMLInputElement;
 }
 
+async function waitForClosedDialog(): Promise<void> {
+    await waitFor(() => {
+        expect(
+            screen.queryByRole('heading', { name: 'Source file' }),
+        ).not.toBeInTheDocument();
+    });
+}
+
 describe('SourceFileDialog', () => {
     beforeEach(() => {
         localStorage.clear();
@@ -70,6 +78,7 @@ describe('SourceFileDialog', () => {
             'ld 1\nend\n',
             'text/plain',
         );
+        await waitForClosedDialog();
     });
 
     it('opens the file picker from the choose button', async () => {
@@ -87,7 +96,7 @@ describe('SourceFileDialog', () => {
         expect(click).toHaveBeenCalledOnce();
     });
 
-    it('imports a valid source file and reports success', async () => {
+    it('imports a valid source file and closes the dialog', async () => {
         const { onImport } = renderDialog();
         const user = await openDialog();
 
@@ -99,9 +108,7 @@ describe('SourceFileDialog', () => {
         await waitFor(() => {
             expect(onImport).toHaveBeenCalledWith('ld 2\nend');
         });
-        expect(
-            screen.getByText('Source loaded. Assemble it to run the program.'),
-        ).toBeInTheDocument();
+        await waitForClosedDialog();
     });
 
     it('reports an empty file without changing the source', async () => {
@@ -179,27 +186,21 @@ describe('SourceFileDialog', () => {
         expect(onImport).not.toHaveBeenCalled();
     });
 
-    it('resets the import status when the dialog closes', async () => {
+    it('resets an import error when the dialog closes', async () => {
         renderDialog();
         const user = await openDialog();
 
         await user.upload(
             sourceInput(),
-            new File(['ld 2\nend'], 'mops.asm', { type: 'text/plain' }),
+            new File(['   \n\t'], 'empty.asm', { type: 'text/plain' }),
         );
-        expect(
-            await screen.findByText(
-                'Source loaded. Assemble it to run the program.',
-            ),
-        ).toBeVisible();
+        expect(await screen.findByText('The file is empty.')).toBeVisible();
 
         await user.click(screen.getByRole('button', { name: 'Close' }));
         await user.click(screen.getByRole('button', { name: 'File' }));
 
         expect(
-            screen.queryByText(
-                'Source loaded. Assemble it to run the program.',
-            ),
+            screen.queryByText('The file is empty.'),
         ).not.toBeInTheDocument();
     });
 });
