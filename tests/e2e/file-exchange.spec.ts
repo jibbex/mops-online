@@ -5,6 +5,15 @@ import { expect, test, type Page } from '@playwright/test';
 // deriving it from the documented 16 KiB limit.
 const MAX_SOURCE_FILE_BYTES = 16 * 1024;
 
+async function disableFilePicker(page: Page): Promise<void> {
+    await page.addInitScript(() => {
+        Object.defineProperty(window, 'showSaveFilePicker', {
+            configurable: true,
+            value: undefined,
+        });
+    });
+}
+
 async function openFileDialog(page: Page): Promise<void> {
     await page.getByRole('button', { name: 'File', exact: true }).click();
     await expect(
@@ -91,9 +100,97 @@ test('fits the file dialog on a phone', async ({ page }) => {
     expect(overflow.document).toBe(overflow.viewport);
 });
 
+test('keeps the dialog open after starting the download', async ({ page }) => {
+    await disableFilePicker(page);
+    await page.goto('/?task=42&title=Summe');
+    await openFileDialog(page);
+
+    const downloadPromise = page.waitForEvent('download');
+
+    await page.getByRole('button', { name: /Download source/ }).click();
+    await downloadPromise;
+
+    await expect(page.getByText('Download started')).toBeVisible();
+    await expect(
+        page.getByRole('heading', { name: 'Source file' }),
+    ).toBeVisible();
+});
+
+test('closes the dialog after the picker saved the file', async ({ page }) => {
+    await page.addInitScript(() => {
+        Object.defineProperty(window, 'showSaveFilePicker', {
+            configurable: true,
+            value: () =>
+                Promise.resolve({
+                    createWritable: () =>
+                        Promise.resolve({
+                            write: () => Promise.resolve(),
+                            close: () => Promise.resolve(),
+                        }),
+                }),
+        });
+    });
+
+    await page.goto('/');
+    await openFileDialog(page);
+
+    await page.getByRole('button', { name: /Download source/ }).click();
+
+    await expect(
+        page.getByRole('heading', { name: 'Source file' }),
+    ).toBeHidden();
+});
+
+test('keeps the dialog open when the picker is cancelled', async ({ page }) => {
+    await page.addInitScript(() => {
+        Object.defineProperty(window, 'showSaveFilePicker', {
+            configurable: true,
+            value: () =>
+                Promise.reject(new DOMException('Cancelled', 'AbortError')),
+        });
+    });
+
+    await page.goto('/');
+    await openFileDialog(page);
+
+    await page.getByRole('button', { name: /Download source/ }).click();
+
+    await expect(
+        page.getByRole('heading', { name: 'Source file' }),
+    ).toBeVisible();
+    await expect(page.getByText('Download started')).toBeHidden();
+    await expect(page.getByText('Export failed')).toBeHidden();
+});
+
+test('keeps the dialog open when the export fails', async ({ page }) => {
+    await disableFilePicker(page);
+    await page.addInitScript(() => {
+        Object.defineProperty(URL, 'createObjectURL', {
+            configurable: true,
+            value: () => {
+                throw new Error('Download blocked.');
+            },
+        });
+    });
+
+    await page.goto('/');
+    await openFileDialog(page);
+
+    await page.getByRole('button', { name: /Download source/ }).click();
+
+    await expect(page.getByText('Export failed')).toBeVisible();
+    await expect(
+        page.getByText('The source file could not be downloaded.'),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('heading', { name: 'Source file' }),
+    ).toBeVisible();
+});
+
 test('downloads source with the task file name and final newline', async ({
     page,
 }) => {
+    await disableFilePicker(page);
     await page.goto('/?task=42&title=Summe');
     await openFileDialog(page);
 
@@ -103,9 +200,6 @@ test('downloads source with the task file name and final newline', async ({
 
     const download = await downloadPromise;
 
-    await expect(
-        page.getByRole('heading', { name: 'Source file' }),
-    ).toBeHidden();
     expect(download.suggestedFilename()).toBe('mops-42.asm');
 
     const path = await download.path();

@@ -9,6 +9,7 @@ import {
     downloadTextFile,
     normalizeSourceText,
     readSourceFile,
+    saveTextFile,
     sourceFilename,
     type SourceFileLike,
 } from './exchange';
@@ -189,5 +190,117 @@ describe('downloadTextFile', () => {
 
         expect(revokeObjectURL).toHaveBeenCalledWith('blob:mops');
         expect(anchor.isConnected).toBe(false);
+    });
+});
+
+describe('saveTextFile', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+        vi.useRealTimers();
+    });
+
+    function stubDownload(): void {
+        vi.stubGlobal('URL', {
+            ...URL,
+            createObjectURL: vi.fn(() => 'blob:mops'),
+            revokeObjectURL: vi.fn(),
+        });
+
+        vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(
+            () => undefined,
+        );
+    }
+
+    it('writes through the file picker and reports a completed save', async () => {
+        const write = vi.fn((data: Blob) => {
+            expect(data.type).toBe('text/plain');
+            return Promise.resolve();
+        });
+        const close = vi.fn(() => Promise.resolve());
+        const createWritable = vi.fn(() => Promise.resolve({ write, close }));
+        const showSaveFilePicker = vi.fn(() =>
+            Promise.resolve({ createWritable }),
+        );
+
+        vi.stubGlobal('showSaveFilePicker', showSaveFilePicker);
+
+        const result = await saveTextFile(
+            'mops.asm',
+            'ld 1\nend\n',
+            'text/plain',
+        );
+
+        expect(result).toEqual({ kind: 'saved' });
+        expect(showSaveFilePicker).toHaveBeenCalledWith({
+            suggestedName: 'mops.asm',
+            types: [
+                {
+                    description: 'MOPS source',
+                    accept: { 'text/plain': ['.asm', '.txt'] },
+                },
+            ],
+        });
+        expect(createWritable).toHaveBeenCalledOnce();
+        expect(close).toHaveBeenCalledOnce();
+
+        const blob = write.mock.calls[0]?.[0];
+
+        expect(blob).toBeInstanceOf(Blob);
+        await expect(blob?.text()).resolves.toBe('ld 1\nend\n');
+    });
+
+    it('reports a cancelled picker', async () => {
+        vi.stubGlobal(
+            'showSaveFilePicker',
+            vi.fn(() =>
+                Promise.reject(new DOMException('Cancelled', 'AbortError')),
+            ),
+        );
+
+        await expect(
+            saveTextFile('mops.asm', 'end', 'text/plain'),
+        ).resolves.toEqual({ kind: 'cancelled' });
+    });
+
+    it('falls back when the picker is unavailable', async () => {
+        vi.useFakeTimers();
+        vi.stubGlobal('showSaveFilePicker', undefined);
+        stubDownload();
+
+        const save = saveTextFile('mops.asm', 'end', 'text/plain');
+        await vi.runAllTimersAsync();
+
+        await expect(save).resolves.toEqual({ kind: 'started' });
+    });
+
+    it('falls back when the picker is denied', async () => {
+        vi.useFakeTimers();
+        vi.stubGlobal(
+            'showSaveFilePicker',
+            vi.fn(() =>
+                Promise.reject(new DOMException('Denied', 'NotAllowedError')),
+            ),
+        );
+        stubDownload();
+
+        const save = saveTextFile('mops.asm', 'end', 'text/plain');
+        await vi.runAllTimersAsync();
+
+        await expect(save).resolves.toEqual({ kind: 'started' });
+    });
+
+    it('falls back when the picker throws a non-DOM error', async () => {
+        vi.useFakeTimers();
+        vi.stubGlobal(
+            'showSaveFilePicker',
+            vi.fn(() => Promise.reject(new Error('Missing'))),
+        );
+        stubDownload();
+
+        const save = saveTextFile('mops.asm', 'end', 'text/plain');
+        await vi.runAllTimersAsync();
+
+        await expect(save).resolves.toEqual({ kind: 'started' });
     });
 });

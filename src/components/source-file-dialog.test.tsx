@@ -1,5 +1,9 @@
 import { LanguageProvider } from '@/i18n/i18n-provider';
-import { downloadTextFile, MAX_SOURCE_FILE_BYTES } from '@/lib/exchange';
+import {
+    MAX_SOURCE_FILE_BYTES,
+    saveTextFile,
+    type SourceSaveResult,
+} from '@/lib/exchange';
 import {
     act,
     cleanup,
@@ -17,7 +21,7 @@ vi.mock('@/lib/exchange', async (importOriginal) => {
 
     return {
         ...actual,
-        downloadTextFile: vi.fn(),
+        saveTextFile: vi.fn(),
     };
 });
 
@@ -60,13 +64,14 @@ describe('SourceFileDialog', () => {
     beforeEach(() => {
         localStorage.clear();
         vi.clearAllMocks();
+        vi.mocked(saveTextFile).mockResolvedValue({ kind: 'started' });
     });
 
     afterEach(() => {
         cleanup();
     });
 
-    it('downloads the normalized source with the task file name', async () => {
+    it('starts the fallback download with the task file name', async () => {
         renderDialog();
         const user = await openDialog();
 
@@ -74,20 +79,56 @@ describe('SourceFileDialog', () => {
             screen.getByRole('button', { name: /Download source/ }),
         );
 
-        expect(downloadTextFile).toHaveBeenCalledWith(
+        expect(saveTextFile).toHaveBeenCalledWith(
             'mops-42.asm',
             'ld 1\nend\n',
             'text/plain',
         );
+        expect(await screen.findByText('Download started')).toBeVisible();
+        expect(
+            screen.getByRole('heading', { name: 'Source file' }),
+        ).toBeVisible();
+    });
+
+    it('closes the dialog after the picker saved the file', async () => {
+        vi.mocked(saveTextFile).mockResolvedValueOnce({ kind: 'saved' });
+
+        renderDialog();
+        const user = await openDialog();
+
+        await user.click(
+            screen.getByRole('button', { name: /Download source/ }),
+        );
+
         await waitForClosedDialog();
     });
 
-    it('closes the dialog only after the download handoff', async () => {
+    it('keeps the dialog open when the picker is cancelled', async () => {
+        vi.mocked(saveTextFile).mockResolvedValueOnce({ kind: 'cancelled' });
+
+        renderDialog();
+        const user = await openDialog();
+
+        await user.click(
+            screen.getByRole('button', { name: /Download source/ }),
+        );
+
+        await waitFor(() => {
+            expect(saveTextFile).toHaveBeenCalledTimes(1);
+        });
+        expect(
+            screen.getByRole('heading', { name: 'Source file' }),
+        ).toBeVisible();
+        expect(screen.queryByText('Download started')).not.toBeInTheDocument();
+        expect(screen.queryByText('Export failed')).not.toBeInTheDocument();
+    });
+
+    it('reports the download only after the handoff', async () => {
         let finish: (() => void) | undefined;
 
-        vi.mocked(downloadTextFile).mockReturnValueOnce(
-            new Promise<void>((resolve) => {
-                finish = resolve;
+        vi.mocked(saveTextFile).mockReturnValueOnce(
+            new Promise<SourceSaveResult>((resolve) => {
+                finish = () => resolve({ kind: 'started' });
             }),
         );
 
@@ -98,6 +139,7 @@ describe('SourceFileDialog', () => {
             screen.getByRole('button', { name: /Download source/ }),
         );
 
+        expect(screen.queryByText('Download started')).not.toBeInTheDocument();
         expect(
             screen.getByRole('heading', { name: 'Source file' }),
         ).toBeVisible();
@@ -106,11 +148,14 @@ describe('SourceFileDialog', () => {
             finish?.();
         });
 
-        await waitForClosedDialog();
+        expect(await screen.findByText('Download started')).toBeVisible();
+        expect(
+            screen.getByRole('heading', { name: 'Source file' }),
+        ).toBeVisible();
     });
 
     it('reports an export failure and keeps the dialog open', async () => {
-        vi.mocked(downloadTextFile).mockRejectedValueOnce(
+        vi.mocked(saveTextFile).mockRejectedValueOnce(
             new Error('Download blocked.'),
         );
 

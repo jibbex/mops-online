@@ -21,13 +21,13 @@ import { Separator } from '@/components/ui/separator';
 import { useI18n } from '@/i18n/i18n-context';
 import {
     buildSourceExport,
-    downloadTextFile,
     MAX_SOURCE_FILE_KIB,
     readSourceFile,
+    saveTextFile,
     type SourceImportFailureReason,
 } from '@/lib/exchange';
 import type { TaskInfo } from '@/lib/task';
-import { Download, FileCode2, Upload } from 'lucide-react';
+import { CheckCircle2, Download, FileCode2, Upload } from 'lucide-react';
 import { useRef, useState, type ChangeEvent, type ReactElement } from 'react';
 
 interface SourceFileDialogProps {
@@ -38,6 +38,7 @@ interface SourceFileDialogProps {
 
 type DialogStatus =
     | { readonly kind: 'idle' }
+    | { readonly kind: 'export-success' }
     | { readonly kind: 'export-error' }
     | {
           readonly kind: 'import-error';
@@ -76,12 +77,23 @@ export function SourceFileDialog({
         setStatus({ kind: 'idle' });
 
         try {
-            await downloadTextFile(
+            const result = await saveTextFile(
                 exported.filename,
                 exported.text,
                 exported.mimeType,
             );
-            closeDialog();
+
+            if (result.kind === 'saved') {
+                closeDialog();
+                return;
+            }
+
+            // Without the File System Access API the browser owns the native
+            // save dialog and exposes no completion event. Keep the dialog
+            // open with confirmation instead of closing while the user saves.
+            if (result.kind === 'started') {
+                setStatus({ kind: 'export-success' });
+            }
         } catch {
             setStatus({ kind: 'export-error' });
         }
@@ -205,6 +217,15 @@ export function SourceFileDialog({
                     </Button>
                 </section>
 
+                {status.kind === 'export-success' ? (
+                    <Alert>
+                        <CheckCircle2 />
+                        <AlertTitle>{t('file.exportSuccessTitle')}</AlertTitle>
+                        <AlertDescription>
+                            {t('file.exportSuccess')}
+                        </AlertDescription>
+                    </Alert>
+                ) : null}
                 {status.kind === 'export-error' ? (
                     <Alert variant="destructive">
                         <AlertTitle>{t('file.exportErrorTitle')}</AlertTitle>

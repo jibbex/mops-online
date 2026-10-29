@@ -106,6 +106,9 @@ const en = {
         'Load a previously downloaded .asm file (max. {max} KiB).',
     'file.choose': 'Choose source file',
     'file.reading': 'Reading file…',
+    'file.exportSuccessTitle': 'Download started',
+    'file.exportSuccess':
+        'The source file was handed to the browser. Close the dialog when you are done.',
     'file.exportErrorTitle': 'Export failed',
     'file.exportError': 'The source file could not be downloaded.',
     'file.importErrorTitle': 'Import failed',
@@ -251,6 +254,9 @@ const de: Record<MessageKey, string> = {
         'Eine zuvor heruntergeladene .asm-Datei laden (max. {max} KiB).',
     'file.choose': 'Quelltextdatei wählen',
     'file.reading': 'Datei wird gelesen…',
+    'file.exportSuccessTitle': 'Download gestartet',
+    'file.exportSuccess':
+        'Die Quelldatei wurde an den Browser übergeben. Schließe den Dialog, wenn du fertig bist.',
     'file.exportErrorTitle': 'Export fehlgeschlagen',
     'file.exportError': 'Die Quelldatei konnte nicht heruntergeladen werden.',
     'file.importErrorTitle': 'Import fehlgeschlagen',

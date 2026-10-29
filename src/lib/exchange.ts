@@ -135,6 +135,89 @@ export function sourceFilename(task: TaskInfo): string {
     return 'mops.asm';
 }
 
+/** Outcome of handing a source file to the browser. */
+export type SourceSaveResult =
+    | { readonly kind: 'saved' }
+    | { readonly kind: 'started' }
+    | { readonly kind: 'cancelled' };
+
+interface SaveFilePickerType {
+    readonly description?: string;
+    readonly accept: Readonly<Record<string, readonly string[]>>;
+}
+
+interface SaveFilePickerOptions {
+    readonly suggestedName?: string;
+    readonly types?: readonly SaveFilePickerType[];
+}
+
+interface WritableFileStream {
+    write(data: Blob): Promise<void>;
+    close(): Promise<void>;
+}
+
+interface SaveFileHandle {
+    createWritable(): Promise<WritableFileStream>;
+}
+
+type SaveFilePicker = (
+    options?: SaveFilePickerOptions,
+) => Promise<SaveFileHandle>;
+
+function isAbortError(error: unknown): boolean {
+    return error instanceof DOMException && error.name === 'AbortError';
+}
+
+/**
+ * Saves generated text through the File System Access API when the browser
+ * supports it, and falls back to a normal download otherwise.
+ *
+ * The picker reports when the user has written the file, which lets the UI
+ * close only after the save is complete. Browsers without the picker keep the
+ * download behavior where the native save dialog is outside page control.
+ *
+ * @param filename Suggested file name.
+ * @param text File contents.
+ * @param mimeType MIME type of the generated file.
+ */
+export async function saveTextFile(
+    filename: string,
+    text: string,
+    mimeType: string,
+): Promise<SourceSaveResult> {
+    const pickerWindow = window as Window & {
+        showSaveFilePicker?: SaveFilePicker;
+    };
+
+    if (typeof pickerWindow.showSaveFilePicker === 'function') {
+        try {
+            const handle = await pickerWindow.showSaveFilePicker({
+                suggestedName: filename,
+                types: [
+                    {
+                        description: 'MOPS source',
+                        accept: { [mimeType]: ['.asm', '.txt'] },
+                    },
+                ],
+            });
+            const writable = await handle.createWritable();
+
+            await writable.write(new Blob([text], { type: mimeType }));
+            await writable.close();
+
+            return { kind: 'saved' };
+        } catch (error) {
+            if (isAbortError(error)) {
+                return { kind: 'cancelled' };
+            }
+        }
+    }
+
+    await downloadTextFile(filename, text, mimeType);
+
+    return { kind: 'started' };
+}
+
 /**
  * Starts a browser download for generated text.
  *
