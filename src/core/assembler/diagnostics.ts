@@ -26,8 +26,7 @@ export type DiagnosticCode =
     | 'missing-end'
     | 'program-overflow'
     | 'code-after-end'
-    | 'unused-label'
-    | 'invalid-operand-mode';
+    | 'unused-label';
 
 /**
  * One source-anchored assembler message.

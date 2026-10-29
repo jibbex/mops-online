@@ -66,6 +66,28 @@ describe('encodeProgram', () => {
         );
     });
 
+    it('reports a missing end for empty source', () => {
+        const result = encode('');
+
+        expect(result.endAddress).toBeUndefined();
+        expect(result.diagnostics).toContainEqual(
+            expect.objectContaining({
+                code: 'missing-end',
+                line: 1,
+                length: 0,
+            }),
+        );
+    });
+
+    it('ignores labels after the terminating instruction', () => {
+        const result = encode('end\nld 5 :late');
+
+        expect(result.symbols.has('late')).toBe(false);
+        expect(result.warnings).toContainEqual(
+            expect.objectContaining({ code: 'code-after-end', line: 2 }),
+        );
+    });
+
     it('warns about instructions after end', () => {
         const result = encode('end\nld 5');
 
@@ -131,6 +153,8 @@ describe('encodeProgram', () => {
 
     it('reports invalid addresses and operands', () => {
         expect(codes('st 5\nend')).toContain('invalid-address');
+        expect(codes('st $00\nend')).toContain('invalid-address');
+        expect(codes('st $99\nend')).toContain('invalid-address');
         expect(codes('ld nope\nend')).toContain('invalid-operand');
     });
 

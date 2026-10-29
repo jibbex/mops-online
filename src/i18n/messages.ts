@@ -332,7 +332,6 @@ const diagnosticDe: Readonly<Record<DiagnosticCode, string>> = {
         'Das Programm ist zu groß für den verfügbaren Speicher.',
     'code-after-end': 'Befehle nach end werden nicht ausgeführt.',
     'unused-label': 'Die Marke wird nicht angesprungen.',
-    'invalid-operand-mode': 'Der Befehl unterstützt diesen Operanden nicht.',
 };
 
 const trapDe: Readonly<Record<string, string>> = {

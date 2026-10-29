@@ -13,6 +13,7 @@ import {
     getOperandFamily,
     type InstructionSpec,
     type OperandMode,
+    type Opcode,
 } from '@/core/isa';
 import {
     DATA_END,
@@ -46,7 +47,7 @@ export interface EncoderResult {
     readonly symbols: ReadonlyMap<string, Address>;
     readonly listing: readonly ListingEntry[];
     readonly entry: Address;
-    readonly endAddress?: Address;
+    readonly endAddress: Address | undefined;
     readonly diagnostics: readonly Diagnostic[];
     readonly warnings: readonly AssembleWarning[];
 }
@@ -70,22 +71,21 @@ interface EncoderContext {
  * Numeric targets stay attached to their source line, while labels are looked
  * up after encoding. This is what makes forward references work.
  */
-interface JumpFixup {
+type OperandFixup =
+    | { readonly kind: 'line'; readonly targetLine: number }
+    | { readonly kind: 'label'; readonly label: string };
+
+type JumpFixup = OperandFixup & {
     readonly address: Address;
     readonly line: number;
     readonly operandColumn: number;
     readonly operandLength: number;
-    readonly label?: string;
-    readonly targetLine?: number;
-}
+};
 
 interface ResolvedOperand {
     readonly mode: OperandMode;
     readonly value?: Word;
-    readonly fixup?: Omit<
-        JumpFixup,
-        'address' | 'line' | 'operandColumn' | 'operandLength'
-    >;
+    readonly fixup?: OperandFixup;
 }
 
 type OperandResolution =
@@ -108,12 +108,28 @@ export function encodeProgram(
     // still parsed so they can be reported as warnings instead of silently
     // disappearing from the source model.
     for (const [index, line] of lines.entries()) {
-        if (getInstruction(line.instruction.id).terminates) {
-            encodeEndInstruction(context, line, lines.slice(index + 1));
-            break;
+        const instruction = getInstruction(line.instruction.id);
+        const address = encodeInstruction(context, line);
+
+        if (!instruction.terminates) {
+            continue;
         }
 
-        encodeInstruction(context, line);
+        if (address !== undefined) {
+            context.endAddress = address;
+
+            for (const remaining of lines.slice(index + 1)) {
+                context.warnings.push(
+                    createLineWarning(
+                        remaining,
+                        'code-after-end',
+                        'Instructions after "end" are not executed.',
+                    ),
+                );
+            }
+        }
+
+        break;
     }
 
     if (context.endAddress === undefined) {
@@ -129,9 +145,7 @@ export function encodeProgram(
         symbols,
         listing: resolveListing(context.listing, context.memory),
         entry: 0,
-        ...(context.endAddress === undefined
-            ? {}
-            : { endAddress: context.endAddress }),
+        endAddress: context.endAddress,
         diagnostics: context.diagnostics,
         warnings: context.warnings,
     };
@@ -153,86 +167,33 @@ function createEncoderContext(): EncoderContext {
 }
 
 /**
- * Encodes the terminating `end` instruction and warns about trailing lines.
- *
- * @param context Mutable encoder state.
- * @param line Parsed `end` line.
- * @param remainingLines Lines after `end` in source order.
- */
-function encodeEndInstruction(
-    context: EncoderContext,
-    line: ParsedLine,
-    remainingLines: readonly ParsedLine[],
-): void {
-    if (!reserveCells(context, line, 1)) {
-        return;
-    }
-
-    const address = context.pointer;
-    const opcode = getOpcode(line.instruction.id, 'none');
-
-    if (opcode === undefined) {
-        throw new Error(
-            `The terminating instruction "${line.instruction.id}" has no opcode.`,
-        );
-    }
-
-    context.memory[address] = opcode;
-    context.sourceMap[address] = line.number;
-    context.lineToAddress.set(line.number, address);
-    context.listing.push({
-        line: line.number,
-        address,
-        words: [opcode],
-        source: line.raw,
-    });
-    context.endAddress = address;
-
-    for (const remaining of remainingLines) {
-        context.warnings.push(
-            createLineWarning(
-                remaining,
-                'code-after-end',
-                'Instructions after "end" are not executed.',
-            ),
-        );
-    }
-}
-
-/**
  * Encodes one instruction line and records fixups for jump targets.
  *
  * @param context Mutable encoder state.
  * @param line Parsed instruction line.
+ * @returns The instruction address, or undefined when nothing was encoded.
  */
-function encodeInstruction(context: EncoderContext, line: ParsedLine): void {
+function encodeInstruction(
+    context: EncoderContext,
+    line: ParsedLine,
+): Address | undefined {
     const instruction = getInstruction(line.instruction.id);
     const resolution = resolveOperand(line, instruction);
 
     if (!resolution.ok) {
         context.diagnostics.push(resolution.diagnostic);
-        return;
+        return undefined;
     }
 
     const { mode, value, fixup } = resolution.operand;
-    const opcode = getOpcode(line.instruction.id, mode);
-
-    if (opcode === undefined) {
-        context.diagnostics.push(
-            createLineDiagnostic(
-                line,
-                'invalid-operand-mode',
-                `Instruction "${line.instruction.id}" does not support this operand.`,
-            ),
-        );
-        return;
-    }
-
+    // The operand family is derived from the same opcode table, so a resolved
+    // mode always has an opcode.
+    const opcode = getOpcode(line.instruction.id, mode) as Opcode;
     const hasOperand = mode !== 'none';
     const wordCount = hasOperand ? 2 : 1;
 
     if (!reserveCells(context, line, wordCount)) {
-        return;
+        return undefined;
     }
 
     const address = context.pointer;
@@ -283,6 +244,8 @@ function encodeInstruction(context: EncoderContext, line: ParsedLine): void {
             ...fixup,
         });
     }
+
+    return address;
 }
 
 /**
@@ -350,14 +313,16 @@ function resolveJumpFixups(
     const usedLabels = new Set<string>();
 
     for (const fixup of context.fixups) {
-        const targetLine = fixup.targetLine ?? labels.get(fixup.label ?? '');
+        const label = fixup.kind === 'label' ? fixup.label : undefined;
+        const targetLine =
+            fixup.kind === 'line' ? fixup.targetLine : labels.get(fixup.label);
 
         if (targetLine === undefined) {
             context.diagnostics.push(
                 createPointDiagnostic(
                     fixup.line,
                     'undefined-jump-target',
-                    `Jump target "${fixup.label ?? ''}" is not defined.`,
+                    `Jump target "${label}" is not defined.`,
                 ),
             );
             continue;
@@ -380,8 +345,8 @@ function resolveJumpFixups(
 
         context.memory[fixup.address] = targetAddress;
 
-        if (fixup.label !== undefined) {
-            usedLabels.add(fixup.label);
+        if (label !== undefined) {
+            usedLabels.add(label);
         }
     }
 
@@ -437,8 +402,10 @@ function resolveListing(
 ): readonly ListingEntry[] {
     return listing.map((item) => ({
         ...item,
+        // Listings are only recorded after their cells were reserved, so every
+        // listed address is inside the memory image.
         words: item.words.map(
-            (_, offset) => memory[item.address + offset] ?? 0,
+            (_, offset) => memory[item.address + offset] as Word,
         ),
     }));
 }
@@ -522,7 +489,10 @@ function resolveTargetOperand(
 
         return {
             ok: true,
-            operand: { mode: 'target', fixup: { targetLine } },
+            operand: {
+                mode: 'target',
+                fixup: { kind: 'line', targetLine },
+            },
         };
     }
 
@@ -536,7 +506,7 @@ function resolveTargetOperand(
 
     return {
         ok: true,
-        operand: { mode: 'target', fixup: { label: operand } },
+        operand: { mode: 'target', fixup: { kind: 'label', label: operand } },
     };
 }
 
@@ -617,7 +587,7 @@ function parseAddress(value: string): Address | undefined {
         return undefined;
     }
 
-    const address = Number.parseInt(match[1] ?? '', 10);
+    const address = Number(match[1]);
 
     return address >= DATA_START && address <= DATA_END ? address : undefined;
 }

@@ -53,9 +53,7 @@ export function assemble(
         symbols: encoded.symbols,
         listing: encoded.listing,
         entry: encoded.entry,
-        ...(encoded.endAddress === undefined
-            ? {}
-            : { endAddress: encoded.endAddress }),
+        endAddress: encoded.endAddress,
     };
 
     return {
