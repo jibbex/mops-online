@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { assemble } from '@/core/assembler';
+import { OPCODES } from '@/core/isa';
 import { MEMORY_SIZE, type ObjectProgram, type Word } from '@/core/object';
 import {
     cloneCpuState,
@@ -405,6 +406,59 @@ describe('execute programs', () => {
 
         expect(write?.after.pc).toBe(1);
         expect(write?.after.instructionAddress).toBe(2);
+    });
+});
+
+describe('micro-op error paths', () => {
+    it('traps on an out-of-range memory address', () => {
+        const state = {
+            ...createCpu(programFromMemory([60])),
+            slAdr: MEMORY_SIZE,
+            queue: [{ kind: 'MEM_READ' }] as const,
+            queueIndex: 0,
+        };
+        const result = stepCpu(state);
+
+        expect(result.kind).toBe('trap');
+
+        if (result.kind === 'trap') {
+            expect(result.trap.code).toBe('MEMORY_OUT_OF_RANGE');
+        }
+    });
+
+    it('traps when no opcode is loaded before reading an operand', () => {
+        const state = {
+            ...createCpu(programFromMemory([60])),
+            br: { opcode: null, operand: 0 },
+            queue: [{ kind: 'BR_READ_OPERAND' }] as const,
+            queueIndex: 0,
+        };
+        const result = stepCpu(state);
+
+        expect(result.kind).toBe('trap');
+
+        if (result.kind === 'trap') {
+            expect(result.trap.code).toBe('INVALID_OPCODE');
+        }
+    });
+
+    it('traps when the opcode does not take an operand', () => {
+        const state = {
+            ...createCpu(programFromMemory([60])),
+            br: { opcode: OPCODES.HALT, operand: 0 },
+            queue: [{ kind: 'BR_READ_OPERAND' }] as const,
+            queueIndex: 0,
+        };
+        const result = stepCpu(state);
+
+        expect(result.kind).toBe('trap');
+
+        if (result.kind === 'trap') {
+            expect(result.trap.code).toBe('INVALID_OPCODE');
+            expect(result.trap.message).toBe(
+                'Instruction does not take an operand.',
+            );
+        }
     });
 });
 
