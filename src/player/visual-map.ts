@@ -9,7 +9,14 @@
  * @module player/visual-map
  */
 
+import { MEMORY_SIZE } from '@/core/object';
 import type { VmEvent } from '@/core/vm';
+
+/** Number of memory bars in the diagram. */
+const MEMORY_BAR_COUNT = 3;
+
+/** Cells per memory bar; the memory view is split into three equal columns. */
+const MEMORY_CELLS_PER_BAR = MEMORY_SIZE / MEMORY_BAR_COUNT;
 
 /** One real bus transfer between two machine units. */
 export interface TransferRoute {
@@ -126,6 +133,10 @@ export function visualStateFor(event: VmEvent | null): VisualState {
 /**
  * Returns the real external bus transfer for a micro-op.
  *
+ * Only transfers that cross a unit boundary draw a packet. Highlighting an
+ * internal latch would suggest a bus transfer that never happened and would
+ * violate the one-packet-per-transfer invariant.
+ *
  * Internal micro-ops return null. The routes start and end at unit boundaries:
  * memory (x = 265), control/ALU/IO (x = 301), outside the component frames.
  *
@@ -201,5 +212,7 @@ function memoryCellsFor(event: VmEvent): number[] {
 }
 
 function memoryBarsFor(event: VmEvent): number[] {
-    return memoryCellsFor(event).map((address) => Math.floor(address / 24) + 1);
+    return memoryCellsFor(event).map(
+        (address) => Math.floor(address / MEMORY_CELLS_PER_BAR) + 1,
+    );
 }

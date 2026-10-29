@@ -13,6 +13,12 @@ export const FLOW_DURATION_MS = 1000;
 /** Extra time between packet arrival and the next microcycle. */
 export const FLOW_SETTLE_MS = 100;
 
+/** Lower bound that keeps rapid microcycles perceptible. */
+export const MIN_MICROCYCLE_DELAY_MS = 40;
+
+/** Lower bound that keeps very short routes visible as a packet. */
+export const MIN_PACKET_DURATION_MS = 80;
+
 /**
  * Packet speed in SVG user units per millisecond at normal playback speed.
  *
@@ -33,7 +39,7 @@ export function microcycleDelay(speed: number): number {
     }
 
     return Math.max(
-        40,
+        MIN_MICROCYCLE_DELAY_MS,
         Math.round((FLOW_DURATION_MS + FLOW_SETTLE_MS) / speed),
     );
 }
@@ -48,5 +54,5 @@ export function microcycleDelay(speed: number): number {
 export function packetDuration(pathLength: number, durationScale = 1): number {
     const base = pathLength / PACKET_SPEED;
 
-    return Math.max(80, Math.round(base * durationScale));
+    return Math.max(MIN_PACKET_DURATION_MS, Math.round(base * durationScale));
 }

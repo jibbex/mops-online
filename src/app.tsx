@@ -29,7 +29,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useI18n } from '@/i18n/i18n-context';
 import { readTaskInfo, type TaskInfo } from '@/lib/task';
 import { cn } from '@/lib/utils';
-import { usePlayer } from '@/player/player';
+import { NORMAL_SPEED, usePlayer } from '@/player/player';
 import { FLOW_DURATION_MS } from '@/player/timing';
 import { visualStateFor } from '@/player/visual-map';
 import { useState, type ReactElement } from 'react';
@@ -71,13 +71,15 @@ export default function App(): ReactElement {
     const [task] = useState<TaskInfo>(() =>
         readTaskInfo(window.location.search),
     );
+    // Phones start on the machine: the animation is the primary teaching
+    // surface, and the editor is one explicit switch away.
     const [mobileView, setMobileView] = useState<'editor' | 'machine'>(
         'machine',
     );
     const currentLine = lastEvent
         ? program?.sourceMap[lastEvent.address]
         : undefined;
-    const animatedSpeed = speed === 0 ? 1 : speed;
+    const animatedSpeed = speed === 0 ? NORMAL_SPEED : speed;
     const flowDurationMs =
         status === 'running' && speed === 0
             ? 0

@@ -1,56 +1,37 @@
 /**
- * Execution player for the MOPS web application.
+ * Execution player store.
  *
- * The player owns timing, pause modes, input flow, and history. The VM remains
- * pure and knows nothing about these concerns.
+ * The player owns timing, pause modes, input flow, and history. Machine
+ * semantics stay in the pure VM; deterministic player transitions live in
+ * `player-state.ts`.
  *
  * @module player/player
  */
 
-import {
-    assemble,
-    type AssembleWarning,
-    type Diagnostic,
-} from '@/core/assembler';
-import type { ObjectProgram, Word } from '@/core/object';
-import {
-    createCpu,
-    stepCpu,
-    type CpuState,
-    type Trap,
-    type VmEvent,
-    type VmStepResult,
-} from '@/core/vm';
-import { create } from 'zustand';
+import { assemble as assembleSource } from '@/core/assembler';
+import type { Word } from '@/core/object';
+import { stepCpu } from '@/core/vm';
+import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { microcycleDelay } from './timing';
+import {
+    acknowledgeOutput as acknowledgeOutputState,
+    applyAssembly,
+    beginRun,
+    changeSource,
+    createInitialSnapshot,
+    pausePlayback,
+    reduceVmStep,
+    stepBack as rewindOneStep,
+    stopPlayback,
+    type ExecutionMode,
+    type HistoryEntry,
+    type PlayerSnapshot,
+    type PlayerSpeed,
+    type PlayerStatus,
+} from './player-state';
 
-/** Lifecycle states of the execution player. */
-export type PlayerStatus =
-    | 'idle'
-    | 'ready'
-    | 'running'
-    | 'paused'
-    | 'waiting-input'
-    | 'waiting-output'
-    | 'finished'
-    | 'error';
-
-/** Pause boundary used while running the machine. */
-export type ExecutionMode =
-    'micro' | 'phase' | 'instruction' | 'output' | 'run';
-
-/** Playback multiplier; zero disables the delay between microcycles. */
-export type PlayerSpeed = 0 | 0.5 | 1 | 2 | 4;
-
-/** One completed microcycle captured for backward stepping. */
-export interface HistoryEntry {
-    /** Event emitted by the VM. */
-    readonly event: VmEvent;
-    /** State before the event was applied. */
-    readonly before: CpuState;
-    /** State after the event was applied. */
-    readonly after: CpuState;
-}
+export type { ExecutionMode, HistoryEntry, PlayerSpeed, PlayerStatus };
+export { INITIAL_SOURCE, NORMAL_SPEED } from './player-state';
 
 /**
  * Public player store.
@@ -58,21 +39,7 @@ export interface HistoryEntry {
  * The store owns timers and orchestration state; CPU and assembler modules stay
  * pure and do not import it.
  */
-export interface PlayerState {
-    readonly source: string;
-    readonly program: ObjectProgram | null;
-    readonly cpu: CpuState | null;
-    readonly status: PlayerStatus;
-    readonly mode: ExecutionMode;
-    readonly speed: PlayerSpeed;
-    readonly diagnostics: readonly Diagnostic[];
-    readonly warnings: readonly AssembleWarning[];
-    readonly trap: Trap | null;
-    readonly lastEvent: VmEvent | null;
-    readonly lastOutput: Word | null;
-    readonly resumeAfterOutput: boolean;
-    readonly resumeAfterInput: boolean;
-    readonly history: readonly HistoryEntry[];
+export interface PlayerState extends PlayerSnapshot {
     readonly setSource: (source: string) => void;
     readonly assemble: () => void;
     readonly start: () => void;
@@ -86,393 +53,171 @@ export interface PlayerState {
     readonly acknowledgeOutput: () => void;
 }
 
-/** Source shown when the application starts. */
-export const INITIAL_SOURCE = [
-    '; Double a number',
-    'in a',
-    'ld a',
-    'mul 2',
-    'st a',
-    'out a',
-    'end',
-].join('\n');
-
-let timer: ReturnType<typeof setTimeout> | null = null;
-
-function clearTimer(): void {
-    if (timer !== null) {
-        clearTimeout(timer);
-        timer = null;
-    }
-}
-
-function shouldPause(event: VmEvent, mode: ExecutionMode): boolean {
-    switch (mode) {
-        case 'micro':
-            return true;
-        case 'phase':
-            return event.after.phase !== event.phase;
-        case 'instruction':
-            return event.phase === 'EXECUTE' && event.after.phase !== 'EXECUTE';
-        case 'output':
-            return event.microOp.kind === 'AUS_WRITE';
-        case 'run':
-            return false;
-    }
-}
-
-function withHistory(
-    history: readonly HistoryEntry[],
-    entry: HistoryEntry,
-): readonly HistoryEntry[] {
-    return [...history.slice(-4999), entry];
-}
-
-const RESET_OUTPUT = {
-    lastOutput: null,
-    resumeAfterOutput: false,
-    resumeAfterInput: false,
-} as const;
-
-const RESET_EXECUTION = {
-    trap: null,
-    lastEvent: null,
-    history: [] as readonly HistoryEntry[],
-    ...RESET_OUTPUT,
-} as const;
-
 /**
- * Player store and command surface used by the UI.
+ * Creates an isolated player store.
+ *
+ * The timer lives in this closure instead of module scope. Tests and future
+ * embedders can therefore create independent players without a test-only reset
+ * hook or cross-store timer interference.
  */
-export const usePlayer = create<PlayerState>((set, get) => {
-    function scheduleNext(): void {
-        clearTimer();
+export function createPlayerStore(): UseBoundStore<StoreApi<PlayerState>> {
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
-        const { status, speed } = get();
-
-        if (status !== 'running') {
-            return;
-        }
-
-        const delay = microcycleDelay(speed);
-        timer = setTimeout(() => {
+    function clearTimer(): void {
+        if (timer !== null) {
+            clearTimeout(timer);
             timer = null;
-            runNext();
-        }, delay);
-    }
-
-    function runNext(): void {
-        const state = get();
-
-        if (state.status !== 'running' || !state.cpu) {
-            return;
-        }
-
-        const result = stepCpu(state.cpu, undefined);
-        const pause =
-            result.kind === 'step'
-                ? shouldPause(result.event, state.mode)
-                : false;
-        record(result, pause, true);
-    }
-
-    function record(
-        result: VmStepResult,
-        pause: boolean,
-        resumeAfterInput = false,
-    ): void {
-        if (result.kind === 'input-required') {
-            set({
-                cpu: result.state,
-                status: 'waiting-input',
-                ...RESET_OUTPUT,
-                lastEvent: result.event,
-                resumeAfterInput,
-            });
-            clearTimer();
-            return;
-        }
-
-        if (result.kind === 'trap') {
-            set({
-                cpu: result.state,
-                status: 'error',
-                ...RESET_OUTPUT,
-                trap: result.trap,
-                lastEvent: result.event,
-                history: withHistory(get().history, {
-                    event: result.event,
-                    before: result.event.before,
-                    after: result.state,
-                }),
-            });
-            clearTimer();
-            return;
-        }
-
-        if (result.kind === 'halted') {
-            const event = result.event;
-
-            set({
-                cpu: result.state,
-                status: 'finished',
-                ...RESET_EXECUTION,
-                lastEvent: event ?? get().lastEvent,
-                history: event
-                    ? withHistory(get().history, {
-                          event,
-                          before: event.before,
-                          after: result.state,
-                      })
-                    : get().history,
-            });
-            clearTimer();
-            return;
-        }
-
-        if (
-            result.kind === 'step' &&
-            result.event.microOp.kind === 'AUS_WRITE'
-        ) {
-            set({
-                cpu: result.state,
-                status: 'waiting-output',
-                ...RESET_OUTPUT,
-                lastEvent: result.event,
-                lastOutput: result.event.after.aus,
-                resumeAfterOutput: get().status === 'running',
-                history: withHistory(get().history, {
-                    event: result.event,
-                    before: result.event.before,
-                    after: result.state,
-                }),
-                trap: null,
-            });
-            clearTimer();
-            return;
-        }
-
-        set({
-            cpu: result.state,
-            status: pause ? 'paused' : 'running',
-            ...RESET_EXECUTION,
-            lastEvent: result.event,
-            history: withHistory(get().history, {
-                event: result.event,
-                before: result.event.before,
-                after: result.state,
-            }),
-        });
-
-        if (pause) {
-            clearTimer();
-        } else {
-            scheduleNext();
         }
     }
 
-    return {
-        source: INITIAL_SOURCE,
-        program: null,
-        cpu: null,
-        status: 'idle',
-        mode: 'instruction',
-        speed: 1,
-        diagnostics: [],
-        warnings: [],
-        ...RESET_EXECUTION,
-
-        setSource: (source) => {
-            clearTimer();
-            set({
-                source,
-                program: null,
-                cpu: null,
-                status: 'idle',
-                diagnostics: [],
-                warnings: [],
-                ...RESET_EXECUTION,
-            });
-        },
-
-        assemble: () => {
+    return create<PlayerState>((set, get) => {
+        function scheduleNext(): void {
             clearTimer();
 
-            const result = assemble(get().source);
+            const { status, speed } = get();
 
-            if (!result.program) {
-                set({
-                    program: null,
-                    cpu: null,
-                    status: 'error',
-                    diagnostics: result.diagnostics,
-                    warnings: result.warnings,
-                    ...RESET_EXECUTION,
-                });
+            if (status !== 'running') {
                 return;
             }
 
-            set({
-                program: result.program,
-                cpu: createCpu(result.program),
-                status: 'ready',
-                diagnostics: result.diagnostics,
-                warnings: result.warnings,
-                ...RESET_EXECUTION,
-            });
-        },
+            timer = setTimeout(() => {
+                timer = null;
+                runNext();
+            }, microcycleDelay(speed));
+        }
 
-        start: () => {
-            const initial = get();
-
-            if (
-                initial.status === 'running' ||
-                initial.status === 'waiting-input' ||
-                initial.status === 'waiting-output'
-            ) {
-                return;
-            }
-
-            if (initial.status === 'finished' || initial.status === 'error') {
-                set({
-                    cpu: initial.program ? createCpu(initial.program) : null,
-                    status: initial.program ? 'ready' : 'idle',
-                    ...RESET_EXECUTION,
-                });
-            }
-
+        function runNext(): void {
             const state = get();
 
-            if (!state.program || !state.cpu) {
-                return;
-            }
-
-            set({ status: 'running', trap: null });
-            runNext();
-        },
-
-        pause: () => {
-            clearTimer();
-
-            if (get().status === 'running') {
-                set({ status: 'paused' });
-            }
-        },
-
-        step: () => {
-            clearTimer();
-
-            const state = get();
-
-            if (
-                state.status === 'finished' ||
-                state.status === 'error' ||
-                state.status === 'waiting-input' ||
-                state.status === 'waiting-output'
-            ) {
-                return;
-            }
-
-            if (!state.program || !state.cpu) {
+            if (state.status !== 'running' || !state.cpu) {
                 return;
             }
 
             const result = stepCpu(state.cpu, undefined);
-            record(result, true, false);
-        },
+            const transition = reduceVmStep(state, result);
 
-        stop: () => {
-            clearTimer();
+            set(transition.state);
 
-            const { program } = get();
-
-            set({
-                cpu: program ? createCpu(program) : null,
-                status: program ? 'ready' : 'idle',
-                ...RESET_EXECUTION,
-            });
-        },
-
-        stepBack: () => {
-            if (get().status === 'waiting-output') {
-                return;
-            }
-
-            const history = get().history;
-            const entry = history.at(-1);
-
-            if (!entry) {
-                return;
-            }
-
-            clearTimer();
-            set({
-                cpu: entry.before,
-                status: 'paused',
-                ...RESET_EXECUTION,
-                lastEvent: entry.event,
-                history: history.slice(0, -1),
-            });
-        },
-
-        setMode: (mode) => set({ mode }),
-
-        setSpeed: (speed) => {
-            set({ speed });
-
-            if (get().status === 'running') {
+            if (transition.run) {
                 scheduleNext();
+            } else {
+                clearTimer();
             }
-        },
+        }
 
-        provideInput: (value) => {
-            const state = get();
+        return {
+            ...createInitialSnapshot(),
 
-            if (state.status !== 'waiting-input' || !state.cpu) {
-                return;
-            }
+            setSource: (source) => {
+                clearTimer();
+                set(changeSource(get(), source));
+            },
 
-            const result = stepCpu(state.cpu, value);
-            const pause =
-                !state.resumeAfterInput ||
-                (result.kind === 'step'
-                    ? shouldPause(result.event, state.mode)
-                    : false);
-            record(result, pause, state.resumeAfterInput);
-        },
+            assemble: () => {
+                clearTimer();
+                set(applyAssembly(get(), assembleSource(get().source)));
+            },
 
-        acknowledgeOutput: () => {
-            const state = get();
+            start: () => {
+                clearTimer();
 
-            if (state.status !== 'waiting-output') {
-                return;
-            }
+                const transition = beginRun(get());
 
-            if (state.resumeAfterOutput) {
-                set({
-                    status: 'running',
-                    lastOutput: null,
-                    resumeAfterOutput: false,
-                });
-                scheduleNext();
-                return;
-            }
+                set(transition.state);
 
-            set({
-                status: 'paused',
-                lastOutput: null,
-                resumeAfterOutput: false,
-            });
-        },
-    };
-});
+                if (transition.run) {
+                    runNext();
+                }
+            },
+
+            pause: () => {
+                clearTimer();
+                set(pausePlayback(get()));
+            },
+
+            step: () => {
+                clearTimer();
+
+                const state = get();
+
+                if (
+                    state.status === 'finished' ||
+                    state.status === 'error' ||
+                    state.status === 'waiting-input' ||
+                    state.status === 'waiting-output'
+                ) {
+                    return;
+                }
+
+                if (!state.program || !state.cpu) {
+                    return;
+                }
+
+                const result = stepCpu(state.cpu, undefined);
+                const transition = reduceVmStep(state, result, true);
+
+                set(transition.state);
+            },
+
+            stop: () => {
+                clearTimer();
+                set(stopPlayback(get()));
+            },
+
+            stepBack: () => {
+                clearTimer();
+                set(rewindOneStep(get()));
+            },
+
+            setMode: (mode) => set({ mode }),
+
+            setSpeed: (speed) => {
+                set({ speed });
+
+                if (get().status === 'running') {
+                    scheduleNext();
+                }
+            },
+
+            provideInput: (value) => {
+                const state = get();
+
+                if (state.status !== 'waiting-input' || !state.cpu) {
+                    return;
+                }
+
+                const result = stepCpu(state.cpu, value);
+                const transition = reduceVmStep(
+                    state,
+                    result,
+                    !state.autoResume,
+                );
+
+                set(transition.state);
+
+                if (transition.run) {
+                    scheduleNext();
+                } else {
+                    clearTimer();
+                }
+            },
+
+            acknowledgeOutput: () => {
+                const transition = acknowledgeOutputState(get());
+
+                set(transition.state);
+
+                if (transition.run) {
+                    scheduleNext();
+                } else {
+                    clearTimer();
+                }
+            },
+        };
+    });
+}
 
 /**
- * Stops the module-level playback timer.
- *
- * Intended for test cleanup and for callers that must guarantee no pending
- * timer survives a test boundary.
+ * Default player instance used by the application shell.
  */
-export function resetPlayerTimerForTests(): void {
-    clearTimer();
-}
+export const usePlayer = createPlayerStore();

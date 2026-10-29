@@ -2,95 +2,86 @@
 
 import { DATA_START } from '@/core/object';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { INITIAL_SOURCE, resetPlayerTimerForTests, usePlayer } from './player';
+import { createPlayerStore, INITIAL_SOURCE } from './player';
 
 const SIMPLE_SOURCE = ['ld 5', 'add 3', 'st a', 'out a', 'end'].join('\n');
 const INPUT_SOURCE = ['in a', 'out a', 'end'].join('\n');
 
-function resetPlayer(source = SIMPLE_SOURCE): void {
-    resetPlayerTimerForTests();
-    usePlayer.setState({
-        source,
-        program: null,
-        cpu: null,
-        status: 'idle',
-        mode: 'instruction',
-        speed: 1,
-        diagnostics: [],
-        warnings: [],
-        trap: null,
-        lastEvent: null,
-        lastOutput: null,
-        resumeAfterOutput: false,
-        resumeAfterInput: false,
-        history: [],
-    });
+function createStore(source = SIMPLE_SOURCE) {
+    const store = createPlayerStore();
+
+    store.getState().setSource(source);
+    return store;
 }
 
 describe('player', () => {
     beforeEach(() => {
+        // Scheduling is part of the player contract; fake timers make pauses
+        // and cancellations observable without real delays.
         vi.useFakeTimers();
-        resetPlayer();
     });
 
     afterEach(() => {
-        resetPlayerTimerForTests();
+        vi.clearAllTimers();
         vi.useRealTimers();
     });
 
     it('assembles a valid source', () => {
-        usePlayer.getState().assemble();
+        const store = createStore();
+        store.getState().assemble();
 
-        expect(usePlayer.getState().status).toBe('ready');
-        expect(usePlayer.getState().program).not.toBeNull();
-        expect(usePlayer.getState().diagnostics).toHaveLength(0);
+        expect(store.getState().status).toBe('ready');
+        expect(store.getState().program).not.toBeNull();
+        expect(store.getState().diagnostics).toHaveLength(0);
     });
 
     it('requires manual assembly after editing the source', () => {
-        usePlayer.getState().assemble();
-        usePlayer.getState().setSource(SIMPLE_SOURCE);
+        const store = createStore();
+        store.getState().assemble();
+        store.getState().setSource(SIMPLE_SOURCE);
 
         vi.advanceTimersByTime(1000);
 
-        expect(usePlayer.getState().program).toBeNull();
-        expect(usePlayer.getState().cpu).toBeNull();
-        expect(usePlayer.getState().status).toBe('idle');
+        expect(store.getState().program).toBeNull();
+        expect(store.getState().cpu).toBeNull();
+        expect(store.getState().status).toBe('idle');
     });
 
     it('does not assemble implicitly when starting or stepping', () => {
-        usePlayer.getState().setSource(SIMPLE_SOURCE);
-        usePlayer.getState().start();
-        usePlayer.getState().step();
+        const store = createStore();
+        store.getState().start();
+        store.getState().step();
 
-        expect(usePlayer.getState().program).toBeNull();
-        expect(usePlayer.getState().cpu).toBeNull();
-        expect(usePlayer.getState().status).toBe('idle');
+        expect(store.getState().program).toBeNull();
+        expect(store.getState().cpu).toBeNull();
+        expect(store.getState().status).toBe('idle');
     });
 
     it('reports assembly errors', () => {
-        resetPlayer('ld');
-        usePlayer.getState().assemble();
+        const store = createStore('ld');
+        store.getState().assemble();
 
-        expect(usePlayer.getState().status).toBe('error');
-        expect(usePlayer.getState().program).toBeNull();
-        expect(usePlayer.getState().diagnostics.length).toBeGreaterThan(0);
+        expect(store.getState().status).toBe('error');
+        expect(store.getState().program).toBeNull();
+        expect(store.getState().diagnostics.length).toBeGreaterThan(0);
     });
 
     it('finishes with the final machine state after the program ends', () => {
-        usePlayer.getState().assemble();
-        usePlayer.getState().setMode('run');
-        usePlayer.getState().setSpeed(0);
-        usePlayer.getState().start();
+        const store = createStore();
+        store.getState().assemble();
+        store.getState().setMode('run');
+        store.getState().setSpeed(0);
+        store.getState().start();
         vi.runAllTimers();
 
-        expect(usePlayer.getState().status).toBe('waiting-output');
-        expect(usePlayer.getState().lastOutput).toBe(8);
-        expect(usePlayer.getState().resumeAfterOutput).toBe(true);
+        expect(store.getState().status).toBe('waiting-output');
+        expect(store.getState().lastOutput).toBe(8);
+        expect(store.getState().autoResume).toBe(true);
 
-        usePlayer.getState().acknowledgeOutput();
+        store.getState().acknowledgeOutput();
         vi.runAllTimers();
 
-        const state = usePlayer.getState();
+        const state = store.getState();
 
         expect(state.status).toBe('finished');
         expect(state.cpu?.ac).toBe(8);
@@ -102,133 +93,135 @@ describe('player', () => {
     });
 
     it('pauses after an instruction in instruction mode', () => {
-        usePlayer.getState().assemble();
-        usePlayer.getState().setMode('instruction');
-        usePlayer.getState().setSpeed(0);
-        usePlayer.getState().start();
+        const store = createStore();
+        store.getState().assemble();
+        store.getState().setMode('instruction');
+        store.getState().setSpeed(0);
+        store.getState().start();
         vi.runAllTimers();
 
-        expect(usePlayer.getState().status).toBe('paused');
-        expect(usePlayer.getState().cpu?.ac).toBe(5);
+        expect(store.getState().status).toBe('paused');
+        expect(store.getState().cpu?.ac).toBe(5);
 
-        usePlayer.getState().start();
+        store.getState().start();
         vi.runAllTimers();
 
-        expect(usePlayer.getState().cpu?.ac).toBe(8);
+        expect(store.getState().cpu?.ac).toBe(8);
     });
 
     it('pauses after every microcycle in micro mode', () => {
-        usePlayer.getState().assemble();
-        usePlayer.getState().setMode('micro');
-        usePlayer.getState().setSpeed(0);
-        usePlayer.getState().start();
+        const store = createStore();
+        store.getState().assemble();
+        store.getState().setMode('micro');
+        store.getState().setSpeed(0);
+        store.getState().start();
         vi.runAllTimers();
 
-        expect(usePlayer.getState().status).toBe('paused');
-        expect(usePlayer.getState().history).toHaveLength(1);
+        expect(store.getState().status).toBe('paused');
+        expect(store.getState().history).toHaveLength(1);
     });
 
     it('waits for input and finishes with the final machine state', () => {
-        resetPlayer(INPUT_SOURCE);
-        usePlayer.getState().assemble();
-        usePlayer.getState().setMode('run');
-        usePlayer.getState().setSpeed(0);
-        usePlayer.getState().start();
+        const store = createStore(INPUT_SOURCE);
+        store.getState().assemble();
+        store.getState().setMode('run');
+        store.getState().setSpeed(0);
+        store.getState().start();
         vi.runAllTimers();
 
-        expect(usePlayer.getState().status).toBe('waiting-input');
-        expect(usePlayer.getState().resumeAfterInput).toBe(true);
+        expect(store.getState().status).toBe('waiting-input');
+        expect(store.getState().autoResume).toBe(true);
 
-        usePlayer.getState().provideInput(42);
+        store.getState().provideInput(42);
         vi.runAllTimers();
 
-        expect(usePlayer.getState().status).toBe('waiting-output');
-        expect(usePlayer.getState().lastOutput).toBe(42);
+        expect(store.getState().status).toBe('waiting-output');
+        expect(store.getState().lastOutput).toBe(42);
 
-        usePlayer.getState().acknowledgeOutput();
+        store.getState().acknowledgeOutput();
         vi.runAllTimers();
 
-        expect(usePlayer.getState().status).toBe('finished');
-        expect(usePlayer.getState().cpu?.memory[DATA_START]).toBe(42);
-        expect(usePlayer.getState().cpu?.aus).toBe(42);
-        expect(usePlayer.getState().history.length).toBeGreaterThan(0);
+        expect(store.getState().status).toBe('finished');
+        expect(store.getState().cpu?.memory[DATA_START]).toBe(42);
+        expect(store.getState().cpu?.aus).toBe(42);
+        expect(store.getState().history.length).toBeGreaterThan(0);
     });
 
     it('pauses after input during manual stepping', () => {
-        resetPlayer(INPUT_SOURCE);
-        usePlayer.getState().assemble();
+        const store = createStore(INPUT_SOURCE);
+        store.getState().assemble();
 
         for (let step = 0; step < 10; step += 1) {
-            usePlayer.getState().step();
+            store.getState().step();
 
-            if (usePlayer.getState().status === 'waiting-input') {
+            if (store.getState().status === 'waiting-input') {
                 break;
             }
         }
 
-        expect(usePlayer.getState().status).toBe('waiting-input');
-        expect(usePlayer.getState().resumeAfterInput).toBe(false);
+        expect(store.getState().status).toBe('waiting-input');
+        expect(store.getState().autoResume).toBe(false);
 
-        usePlayer.getState().provideInput(42);
+        store.getState().provideInput(42);
 
-        expect(usePlayer.getState().status).toBe('paused');
-        expect(usePlayer.getState().resumeAfterInput).toBe(false);
+        expect(store.getState().status).toBe('paused');
+        expect(store.getState().autoResume).toBe(false);
     });
 
     it('pauses on output in manual stepping and finishes after end', () => {
-        resetPlayer(['out 5', 'end'].join('\n'));
-        usePlayer.getState().assemble();
+        const store = createStore(['out 5', 'end'].join('\n'));
+        store.getState().assemble();
 
         for (let step = 0; step < 10; step += 1) {
-            usePlayer.getState().step();
+            store.getState().step();
 
-            if (usePlayer.getState().status === 'waiting-output') {
+            if (store.getState().status === 'waiting-output') {
                 break;
             }
         }
 
-        expect(usePlayer.getState().status).toBe('waiting-output');
-        expect(usePlayer.getState().lastOutput).toBe(5);
-        expect(usePlayer.getState().resumeAfterOutput).toBe(false);
+        expect(store.getState().status).toBe('waiting-output');
+        expect(store.getState().lastOutput).toBe(5);
+        expect(store.getState().autoResume).toBe(false);
 
-        usePlayer.getState().acknowledgeOutput();
+        store.getState().acknowledgeOutput();
 
-        expect(usePlayer.getState().status).toBe('paused');
-        expect(usePlayer.getState().lastOutput).toBeNull();
+        expect(store.getState().status).toBe('paused');
+        expect(store.getState().lastOutput).toBeNull();
 
         for (let step = 0; step < 10; step += 1) {
-            usePlayer.getState().step();
+            store.getState().step();
 
-            if (usePlayer.getState().status === 'finished') {
+            if (store.getState().status === 'finished') {
                 break;
             }
         }
 
-        expect(usePlayer.getState().status).toBe('finished');
-        expect(usePlayer.getState().cpu?.aus).toBe(5);
-        expect(usePlayer.getState().history.length).toBeGreaterThan(0);
+        expect(store.getState().status).toBe('finished');
+        expect(store.getState().cpu?.aus).toBe(5);
+        expect(store.getState().history.length).toBeGreaterThan(0);
     });
 
     it('steps back from the finished state', () => {
-        resetPlayer(['ld 5', 'end'].join('\n'));
-        usePlayer.getState().assemble();
+        const store = createStore(['ld 5', 'end'].join('\n'));
+        store.getState().assemble();
 
         for (let step = 0; step < 20; step += 1) {
-            usePlayer.getState().step();
+            store.getState().step();
 
-            if (usePlayer.getState().status === 'finished') {
+            if (store.getState().status === 'finished') {
                 break;
             }
         }
 
-        const finished = usePlayer.getState();
+        const finished = store.getState();
 
         expect(finished.status).toBe('finished');
         expect(finished.lastEvent?.microOp.kind).toBe('HALT');
 
-        usePlayer.getState().stepBack();
+        store.getState().stepBack();
 
-        const rewound = usePlayer.getState();
+        const rewound = store.getState();
 
         expect(rewound.status).toBe('paused');
         expect(rewound.cpu).not.toBe(finished.cpu);
@@ -236,69 +229,123 @@ describe('player', () => {
     });
 
     it('restarts from the finished state', () => {
-        resetPlayer(['ld 5', 'end'].join('\n'));
-        usePlayer.getState().assemble();
-        usePlayer.getState().setMode('run');
-        usePlayer.getState().setSpeed(0);
-        usePlayer.getState().start();
+        const store = createStore(['ld 5', 'end'].join('\n'));
+        store.getState().assemble();
+        store.getState().setMode('run');
+        store.getState().setSpeed(0);
+        store.getState().start();
         vi.runAllTimers();
 
-        expect(usePlayer.getState().status).toBe('finished');
+        expect(store.getState().status).toBe('finished');
 
-        usePlayer.getState().start();
+        store.getState().start();
         vi.runAllTimers();
 
-        expect(usePlayer.getState().status).toBe('finished');
-        expect(usePlayer.getState().history.length).toBeGreaterThan(0);
+        expect(store.getState().status).toBe('finished');
+        expect(store.getState().history.length).toBeGreaterThan(0);
     });
 
     it('steps one microcycle at a time', () => {
-        usePlayer.getState().assemble();
-        usePlayer.getState().step();
+        const store = createStore();
+        store.getState().assemble();
+        store.getState().step();
 
-        expect(usePlayer.getState().status).toBe('paused');
-        expect(usePlayer.getState().history).toHaveLength(1);
+        expect(store.getState().status).toBe('paused');
+        expect(store.getState().history).toHaveLength(1);
 
-        usePlayer.getState().step();
+        store.getState().step();
 
-        expect(usePlayer.getState().history).toHaveLength(2);
+        expect(store.getState().history).toHaveLength(2);
     });
 
     it('steps backward through history', () => {
-        usePlayer.getState().assemble();
-        usePlayer.getState().step();
-        usePlayer.getState().step();
+        const store = createStore();
+        store.getState().assemble();
+        store.getState().step();
+        store.getState().step();
 
-        const beforeBack = usePlayer.getState().cpu;
+        const beforeBack = store.getState().cpu;
 
-        usePlayer.getState().stepBack();
+        store.getState().stepBack();
 
-        expect(usePlayer.getState().history).toHaveLength(1);
-        expect(usePlayer.getState().cpu).not.toBe(beforeBack);
-        expect(usePlayer.getState().status).toBe('paused');
+        expect(store.getState().history).toHaveLength(1);
+        expect(store.getState().cpu).not.toBe(beforeBack);
+        expect(store.getState().status).toBe('paused');
     });
 
     it('pauses and stops a running program', () => {
-        usePlayer.getState().assemble();
-        usePlayer.getState().setMode('run');
-        usePlayer.getState().setSpeed(4);
-        usePlayer.getState().start();
+        const store = createStore();
+        store.getState().assemble();
+        store.getState().setMode('run');
+        store.getState().setSpeed(4);
+        store.getState().start();
 
-        expect(usePlayer.getState().status).toBe('running');
+        expect(store.getState().status).toBe('running');
+        expect(vi.getTimerCount()).toBeGreaterThan(0);
 
-        usePlayer.getState().pause();
+        store.getState().pause();
 
-        expect(usePlayer.getState().status).toBe('paused');
+        expect(store.getState().status).toBe('paused');
+        expect(vi.getTimerCount()).toBe(0);
 
-        usePlayer.getState().stop();
+        store.getState().start();
+        store.getState().stop();
 
-        expect(usePlayer.getState().status).toBe('ready');
-        expect(usePlayer.getState().history).toHaveLength(0);
+        expect(store.getState().status).toBe('ready');
+        expect(store.getState().history).toHaveLength(0);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('cancels a pending timer when the source changes', () => {
+        const store = createStore();
+        store.getState().assemble();
+        store.getState().setMode('run');
+        store.getState().setSpeed(4);
+        store.getState().start();
+
+        expect(vi.getTimerCount()).toBe(1);
+
+        store.getState().setSource(SIMPLE_SOURCE);
+
+        expect(vi.getTimerCount()).toBe(0);
+        expect(store.getState().status).toBe('idle');
+    });
+
+    it('keeps two player stores independent', () => {
+        const first = createStore();
+        const second = createPlayerStore();
+
+        first.getState().assemble();
+
+        expect(first.getState().status).toBe('ready');
+        expect(second.getState().status).toBe('idle');
+        expect(second.getState().source).toBe(INITIAL_SOURCE);
+
+        second.getState().setSource('end');
+        second.getState().assemble();
+
+        expect(second.getState().status).toBe('ready');
+        expect(first.getState().source).toBe(SIMPLE_SOURCE);
+    });
+
+    it('reports a runtime trap and stops scheduling', () => {
+        const store = createStore(['ld 1', 'div 0', 'end'].join('\n'));
+        store.getState().assemble();
+        store.getState().setMode('run');
+        store.getState().setSpeed(0);
+        store.getState().start();
+        vi.runAllTimers();
+
+        expect(store.getState().status).toBe('error');
+        expect(store.getState().trap?.code).toBe('DIVISION_BY_ZERO');
+        expect(store.getState().autoResume).toBe(false);
+        expect(vi.getTimerCount()).toBe(0);
     });
 
     it('starts with the documented example source', () => {
-        resetPlayer(INITIAL_SOURCE);
+        const store = createPlayerStore();
 
-        expect(usePlayer.getState().source).toContain('in a');
+        expect(store.getState().source).toBe(INITIAL_SOURCE);
+        expect(store.getState().source).toContain('in a');
     });
 });
