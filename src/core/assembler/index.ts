@@ -68,6 +68,7 @@ export function assemble(
 export * from './config';
 export * from './diagnostics';
 export * from './encoder';
+export * from './limits';
 export * from './line-parser';
 export * from './line-scanner';
 export * from './symbols';

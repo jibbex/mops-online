@@ -7,7 +7,7 @@
  * @module core/assembler/line-parser
  */
 
-import type { InstructionId } from '@/core/isa';
+import { getInstruction, hasOperand, type InstructionId } from '@/core/isa';
 import { resolveMnemonic, type MnemonicConfig } from './config';
 import { createDiagnostic, type Diagnostic } from './diagnostics';
 import type { ScannedLine } from './line-scanner';
@@ -154,7 +154,9 @@ function parseLine(
         return undefined;
     }
 
-    if (id === 'end') {
+    const instruction = getInstruction(id);
+
+    if (!hasOperand(instruction)) {
         if (operand !== '') {
             diagnostics.push(
                 createDiagnostic(
@@ -162,7 +164,7 @@ function parseLine(
                     0,
                     scanned.raw.length,
                     'end-with-operand',
-                    'The end instruction does not take an operand.',
+                    'The instruction does not take an operand.',
                 ),
             );
         }

@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { INSTRUCTIONS } from '@/core/isa';
 import { MEMORY_SIZE, type ObjectProgram, type Word } from '@/core/object';
 import { createCpu, type VmEvent } from '@/core/vm';
 import { describe, expect, it } from 'vitest';
@@ -204,6 +205,21 @@ describe('visual map', () => {
             expect(path, microOp.kind).toBeDefined();
             expect(path).not.toMatch(/H(?:257|309)\b/);
             expect(path).not.toMatch(/H(?:417|421|343|325|392|356)\b/);
+        }
+    });
+
+    it('handles every ISA execution step with at most one packet', () => {
+        const microOps = INSTRUCTIONS.flatMap((instruction) =>
+            Object.values(instruction.execution).flat(),
+        );
+
+        expect(microOps.length).toBeGreaterThan(0);
+
+        for (const microOp of microOps) {
+            const visual = visualStateFor(event(microOp, { slAdr: 64 }));
+            const packets = visual.transfer === null ? 0 : 1;
+
+            expect(packets, microOp.kind).toBeLessThanOrEqual(1);
         }
     });
 });

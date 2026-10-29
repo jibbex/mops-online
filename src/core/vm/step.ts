@@ -5,7 +5,8 @@
  */
 
 import {
-    OPCODES,
+    getExecutionSequence,
+    getInstructionByOpcode,
     getOperandLatch,
     getOperandModeForOpcode,
     getOperation,
@@ -45,6 +46,9 @@ export function stepCpu(state: CpuState, input?: Word): VmStepResult {
     if (state.halted || state.phase === 'HALTED') {
         return { kind: 'halted', state };
     }
+
+    // INPUT_READ stays pending when no value is supplied. The caller retries
+    // the same micro-op with a value, so the transfer happens exactly once.
 
     let current = state;
 
@@ -128,99 +132,11 @@ function createQueue(state: CpuState): readonly MicroOp[] {
 }
 
 function createExecuteQueue(state: CpuState): readonly MicroOp[] {
-    const opcode = state.br.opcode;
-
-    if (opcode === null) {
-        return [{ kind: 'HALT' }];
-    }
-
-    if (opcode === OPCODES.HALT) {
-        return [{ kind: 'HALT' }];
-    }
-
-    if (opcode === OPCODES.JUMP) {
-        return [{ kind: 'BR_READ_OPERAND' }, { kind: 'BZ_WRITE' }];
-    }
-
-    if (
-        opcode === OPCODES.JUMP_IF_LESS ||
-        opcode === OPCODES.JUMP_IF_EQUAL ||
-        opcode === OPCODES.JUMP_IF_GREATER
-    ) {
-        return [
-            { kind: 'VGL_READ' },
-            { kind: 'BR_READ_OPERAND' },
-            { kind: 'BZ_WRITE' },
-        ];
-    }
-
-    const mode = getOperandModeForOpcode(opcode);
-    const operation = getOperation(opcode);
-
-    if (mode === 'none' || mode === 'target') {
-        return [{ kind: 'HALT' }];
-    }
-
-    switch (operation) {
-        case 'load':
-            return mode === 'address'
-                ? [
-                      { kind: 'BR_READ_OPERAND' },
-                      { kind: 'MEM_READ', width: 1 },
-                      { kind: 'AC_WRITE' },
-                  ]
-                : [{ kind: 'BR_READ_OPERAND' }, { kind: 'AC_WRITE' }];
-
-        case 'store':
-            return [
-                { kind: 'AC_READ' },
-                { kind: 'BR_READ_OPERAND' },
-                { kind: 'MEM_WRITE' },
-            ];
-
-        case 'input':
-            return [
-                { kind: 'INPUT_READ' },
-                { kind: 'BR_READ_OPERAND' },
-                { kind: 'MEM_WRITE' },
-            ];
-
-        case 'output':
-            return mode === 'address'
-                ? [
-                      { kind: 'BR_READ_OPERAND' },
-                      { kind: 'MEM_READ', width: 1 },
-                      { kind: 'AUS_WRITE' },
-                  ]
-                : [{ kind: 'BR_READ_OPERAND' }, { kind: 'AUS_WRITE' }];
-
-        case 'compare':
-            return arithmeticQueue(mode, 'ERG_VGL_WRITE');
-
-        default:
-            return arithmeticQueue(mode, 'ERG_AC_WRITE');
-    }
-}
-
-function arithmeticQueue(
-    mode: 'address' | 'immediate',
-    resultOp: 'ERG_AC_WRITE' | 'ERG_VGL_WRITE',
-): readonly MicroOp[] {
-    const base: MicroOp[] =
-        mode === 'address'
-            ? [
-                  { kind: 'BR_READ_OPERAND' },
-                  { kind: 'MEM_READ', width: 1 },
-                  { kind: 'OP_WRITE' },
-              ]
-            : [{ kind: 'BR_READ_OPERAND' }, { kind: 'OP_WRITE' }];
-
-    return [
-        ...base,
-        { kind: 'AR_WRITE' },
-        { kind: 'ALU_CALC' },
-        { kind: resultOp },
-    ];
+    // A missing opcode is the only VM-local fallback. All real instruction
+    // sequences come from the ISA table so the VM cannot drift from it.
+    return state.br.opcode === null
+        ? [{ kind: 'HALT' }]
+        : getExecutionSequence(state.br.opcode);
 }
 
 function applyMicroOp(
@@ -345,7 +261,16 @@ function applyDecode(next: MutableCpuState): ApplyResult {
 }
 
 function applyBzUpdate(next: MutableCpuState): ApplyResult {
-    next.bz += next.br.opcode === OPCODES.HALT ? 1 : 2;
+    const opcode = next.br.opcode;
+
+    if (opcode === null) {
+        return trap(next, 'INVALID_OPCODE', 'No instruction is loaded.');
+    }
+
+    // The operand mode defines the instruction width; no opcode needs a
+    // special case here.
+    const wordCount = getOperandModeForOpcode(opcode) === 'none' ? 1 : 2;
+    next.bz += wordCount;
     return { state: next };
 }
 
@@ -567,12 +492,24 @@ function checkCompare(state: MutableCpuState): ApplyResult {
     }
 
     const opcode = state.br.opcode;
-    const matches =
-        (opcode === OPCODES.JUMP_IF_LESS && state.vgl === '<') ||
-        (opcode === OPCODES.JUMP_IF_EQUAL && state.vgl === '=') ||
-        (opcode === OPCODES.JUMP_IF_GREATER && state.vgl === '>');
 
-    return matches ? { state } : { state, skipRemaining: true };
+    if (opcode === null) {
+        return trap(state, 'INVALID_OPCODE', 'No instruction is loaded.');
+    }
+
+    const instruction = getInstructionByOpcode(opcode);
+
+    if (!instruction.compare) {
+        return trap(
+            state,
+            'INVALID_OPCODE',
+            'Instruction has no comparison condition.',
+        );
+    }
+
+    return state.vgl === instruction.compare
+        ? { state }
+        : { state, skipRemaining: true };
 }
 
 function trap(

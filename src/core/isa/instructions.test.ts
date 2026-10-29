@@ -10,10 +10,14 @@ import {
     OPERAND_MODE_BY_OPCODE,
     findInstructionByOpcode,
     getInstruction,
+    getExecutionSequence,
     getInstructionByOpcode,
     getOpcode,
+    getOperandFamily,
     getOperandLatch,
     getOperandModeForOpcode,
+    getOperandModes,
+    hasOperand,
     isInstructionId,
     type InstructionId,
     type OperandMode,
@@ -130,5 +134,51 @@ describe('instruction table', () => {
         expect(findInstructionByOpcode(0)).toBeUndefined();
         expect(findInstructionByOpcode(61)).toBeUndefined();
         expect(findInstructionByOpcode(Number.NaN)).toBeUndefined();
+    });
+
+    it('defines an execution sequence for every opcode mode', () => {
+        for (const instruction of INSTRUCTIONS) {
+            expect(Object.keys(instruction.execution).sort()).toEqual(
+                Object.keys(instruction.opcodes).sort(),
+            );
+
+            for (const [mode, opcode] of Object.entries(
+                instruction.opcodes,
+            ) as [OperandMode, Opcode][]) {
+                expect(instruction.execution[mode]).toBeDefined();
+                expect(getExecutionSequence(opcode)).toBe(
+                    instruction.execution[mode],
+                );
+                expect(getExecutionSequence(opcode).length).toBeGreaterThan(0);
+            }
+        }
+    });
+
+    it('derives operand families from the opcode table', () => {
+        expect(getOperandFamily(ISA.end)).toBe('none');
+        expect(getOperandFamily(ISA.st)).toBe('address');
+        expect(getOperandFamily(ISA.in)).toBe('address');
+        expect(getOperandFamily(ISA.ld)).toBe('address-or-immediate');
+        expect(getOperandFamily(ISA.out)).toBe('address-or-immediate');
+        expect(getOperandFamily(ISA.add)).toBe('address-or-immediate');
+        expect(getOperandFamily(ISA.jmp)).toBe('target');
+        expect(getOperandFamily(ISA.jlt)).toBe('target');
+        expect(getOperandModes(ISA.ld)).toEqual(['address', 'immediate']);
+        expect(hasOperand(ISA.end)).toBe(false);
+        expect(hasOperand(ISA.ld)).toBe(true);
+    });
+
+    it('declares termination, comparison, and compare-requirement flags', () => {
+        expect(ISA.end.terminates).toBe(true);
+        expect(ISA.cmp.writesCompare).toBe(true);
+
+        for (const id of ['jlt', 'jeq', 'jgt'] as const) {
+            expect(ISA[id].requiresCompare).toBe(true);
+            expect(ISA[id].compare).toBeDefined();
+        }
+
+        expect(ISA.jlt.compare).toBe('<');
+        expect(ISA.jeq.compare).toBe('=');
+        expect(ISA.jgt.compare).toBe('>');
     });
 });

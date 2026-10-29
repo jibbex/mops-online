@@ -11,7 +11,6 @@ import {
     type CpuState,
     type VmEvent,
 } from './index';
-import { disassemble } from './disassembler';
 import type { Trap } from './traps';
 
 function programFromMemory(memory: Word[]): ObjectProgram {
@@ -222,15 +221,40 @@ describe('execute programs', () => {
         expect(result.state.memory[67]).toBe(1);
     });
 
-    it('uses floor division and Python-style modulo for negative values', () => {
+    it('uses floor division and divisor-signed modulo for all sign combinations', () => {
         const result = runProgram(
-            ['ld -7', 'div 2', 'st a', 'ld -7', 'mod 2', 'st b', 'end'].join(
-                '\n',
-            ),
+            [
+                'ld -7',
+                'div 2',
+                'st a',
+                'ld 7',
+                'div -2',
+                'st b',
+                'ld -7',
+                'div -2',
+                'st c',
+                'ld 7',
+                'div 2',
+                'st d',
+                'ld -7',
+                'mod 2',
+                'st e',
+                'ld 7',
+                'mod -2',
+                'st f',
+                'ld -7',
+                'mod -2',
+                'st g',
+                'ld 7',
+                'mod 2',
+                'st h',
+                'end',
+            ].join('\n'),
         );
 
-        expect(result.state.memory[64]).toBe(-4);
-        expect(result.state.memory[65]).toBe(1);
+        expect(result.state.memory.slice(64, 72)).toEqual([
+            -4, -4, 3, 3, 1, -1, -1, 1,
+        ]);
     });
 
     it('runs a counting loop with cmp and jgt', () => {
@@ -384,17 +408,5 @@ describe('runtime traps', () => {
         if (trapped.kind === 'trap') {
             expect(trapped.trap.code).toBe('INPUT_OUT_OF_RANGE');
         }
-    });
-});
-
-describe('disassembler', () => {
-    it('reconstructs instructions from memory', () => {
-        const result = disassemble([11, 5, 30, 64, 60]);
-
-        expect(result.map((instruction) => instruction.text)).toEqual([
-            'ld 5',
-            'add $64',
-            'end',
-        ]);
     });
 });

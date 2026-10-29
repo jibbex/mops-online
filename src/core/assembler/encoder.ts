@@ -8,9 +8,10 @@
  */
 
 import {
-    OPCODES,
+    getInstruction,
     getOpcode,
-    type InstructionId,
+    getOperandFamily,
+    type InstructionSpec,
     type OperandMode,
 } from '@/core/isa';
 import {
@@ -31,6 +32,7 @@ import {
     type DiagnosticCode,
 } from './diagnostics';
 import type { ParsedLine } from './line-parser';
+import { MAX_LINE_TARGET } from './limits';
 
 /** Last memory address available to encoded instructions. */
 const PROGRAM_LAST_CELL = DATA_START - 1;
@@ -62,6 +64,12 @@ interface EncoderContext {
     hasCompare: boolean;
 }
 
+/**
+ * A jump operand whose target is not known until all lines are laid out.
+ *
+ * Numeric targets stay attached to their source line, while labels are looked
+ * up after encoding. This is what makes forward references work.
+ */
 interface JumpFixup {
     readonly address: Address;
     readonly line: number;
@@ -91,8 +99,11 @@ export function encodeProgram(
 ): EncoderResult {
     const context = createEncoderContext();
 
+    // Encoding stops at the first terminating instruction; later lines are
+    // still parsed so they can be reported as warnings instead of silently
+    // disappearing from the source model.
     for (const [index, line] of lines.entries()) {
-        if (line.instruction.id === 'end') {
+        if (getInstruction(line.instruction.id).terminates) {
             encodeEndInstruction(context, line, lines.slice(index + 1));
             break;
         }
@@ -153,14 +164,21 @@ function encodeEndInstruction(
     }
 
     const address = context.pointer;
+    const opcode = getOpcode(line.instruction.id, 'none');
 
-    context.memory[address] = OPCODES.HALT;
+    if (opcode === undefined) {
+        throw new Error(
+            `The terminating instruction "${line.instruction.id}" has no opcode.`,
+        );
+    }
+
+    context.memory[address] = opcode;
     context.sourceMap[address] = line.number;
     context.lineToAddress.set(line.number, address);
     context.listing.push({
         line: line.number,
         address,
-        words: [OPCODES.HALT],
+        words: [opcode],
         source: line.raw,
     });
     context.endAddress = address;
@@ -183,7 +201,8 @@ function encodeEndInstruction(
  * @param line Parsed instruction line.
  */
 function encodeInstruction(context: EncoderContext, line: ParsedLine): void {
-    const resolution = resolveOperand(line, line.instruction.id);
+    const instruction = getInstruction(line.instruction.id);
+    const resolution = resolveOperand(line, instruction);
 
     if (!resolution.ok) {
         context.diagnostics.push(resolution.diagnostic);
@@ -236,11 +255,11 @@ function encodeInstruction(context: EncoderContext, line: ParsedLine): void {
         source: line.raw,
     });
 
-    if (line.instruction.id === 'cmp') {
+    if (instruction.writesCompare) {
         context.hasCompare = true;
     }
 
-    if (isConditionalJump(line.instruction.id) && !context.hasCompare) {
+    if (instruction.requiresCompare && !context.hasCompare) {
         context.diagnostics.push(
             createLineDiagnostic(
                 line,
@@ -415,10 +434,6 @@ function resolveListing(
     }));
 }
 
-function isConditionalJump(id: InstructionId): boolean {
-    return id === 'jlt' || id === 'jeq' || id === 'jgt';
-}
-
 function createLineDiagnostic(
     line: ParsedLine,
     code: DiagnosticCode,
@@ -453,60 +468,97 @@ function createPointWarning(
 
 function resolveOperand(
     line: ParsedLine,
-    id: InstructionId,
+    instruction: InstructionSpec,
 ): OperandResolution {
     const operand = line.instruction.operand;
 
-    if (id === 'end') {
-        return { ok: true, operand: { mode: 'none' } };
+    switch (getOperandFamily(instruction)) {
+        case 'none':
+            return { ok: true, operand: { mode: 'none' } };
+        case 'target':
+            return resolveTargetOperand(line, operand);
+        case 'address':
+            return resolveAddressOperand(line, operand);
+        case 'address-or-immediate':
+            return resolveAddressOrImmediateOperand(line, operand);
     }
+}
 
-    if (id === 'st' || id === 'in') {
-        const address = parseAddress(operand);
+/**
+ * Resolves a jump target.
+ *
+ * Numeric targets are represented as source-line fixups because addresses are
+ * only known after the complete program layout has been encoded.
+ */
+function resolveTargetOperand(
+    line: ParsedLine,
+    operand: string,
+): OperandResolution {
+    if (operand.startsWith('#')) {
+        const targetLine = parseInteger(operand.slice(1));
 
-        if (address === undefined) {
+        if (
+            targetLine === undefined ||
+            targetLine < 1 ||
+            targetLine > MAX_LINE_TARGET
+        ) {
             return fail(
                 line,
-                'invalid-address',
-                'Instruction requires a data address.',
-            );
-        }
-
-        return { ok: true, operand: { mode: 'address', value: address } };
-    }
-
-    if (id === 'jmp' || id === 'jlt' || id === 'jeq' || id === 'jgt') {
-        if (operand.startsWith('#')) {
-            const targetLine = parseInteger(operand.slice(1));
-
-            if (targetLine === undefined || targetLine < 1 || targetLine > 99) {
-                return fail(
-                    line,
-                    'invalid-line-target',
-                    'Line target must be a number from 1 to 99.',
-                );
-            }
-
-            return {
-                ok: true,
-                operand: { mode: 'target', fixup: { targetLine } },
-            };
-        }
-
-        if (!/^[a-z][a-z0-9]*$/.test(operand)) {
-            return fail(
-                line,
-                'invalid-jump-target',
-                'Jump target must be a label or a line number.',
+                'invalid-line-target',
+                `Line target must be a number from 1 to ${MAX_LINE_TARGET}.`,
             );
         }
 
         return {
             ok: true,
-            operand: { mode: 'target', fixup: { label: operand } },
+            operand: { mode: 'target', fixup: { targetLine } },
         };
     }
 
+    if (!/^[a-z][a-z0-9]*$/.test(operand)) {
+        return fail(
+            line,
+            'invalid-jump-target',
+            'Jump target must be a label or a line number.',
+        );
+    }
+
+    return {
+        ok: true,
+        operand: { mode: 'target', fixup: { label: operand } },
+    };
+}
+
+/**
+ * Resolves an instruction that only accepts data addresses.
+ */
+function resolveAddressOperand(
+    line: ParsedLine,
+    operand: string,
+): OperandResolution {
+    const address = parseAddress(operand);
+
+    if (address === undefined) {
+        return fail(
+            line,
+            'invalid-address',
+            'Instruction requires a data address.',
+        );
+    }
+
+    return { ok: true, operand: { mode: 'address', value: address } };
+}
+
+/**
+ * Resolves an instruction that accepts either an address or an immediate.
+ *
+ * Addresses are tried first so `a` through `h` and `$64` through `$71` keep
+ * their documented meaning; everything else must be a valid word.
+ */
+function resolveAddressOrImmediateOperand(
+    line: ParsedLine,
+    operand: string,
+): OperandResolution {
     const address = parseAddress(operand);
 
     if (address !== undefined) {

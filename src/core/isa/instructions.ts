@@ -8,10 +8,23 @@
  * @module core/isa/instructions
  */
 
+import type { MicroOp } from '@/core/vm/microops';
 import { OPCODES, isOpcode, type Opcode } from './opcodes';
 
 /** Encoding family selected by the operand syntax. */
 export type OperandMode = 'address' | 'immediate' | 'target' | 'none';
+
+/** Comparison selected by a conditional jump. */
+export type Comparison = '<' | '=' | '>';
+
+/**
+ * Operand forms the assembler can resolve without knowing the instruction ID.
+ *
+ * The family is derived from the opcode table so the table remains the single
+ * source of truth for which operand forms an instruction accepts.
+ */
+export type OperandFamily =
+    'none' | 'address' | 'address-or-immediate' | 'target';
 
 /**
  * Internal latch that carries an operand into the execute phase.
@@ -64,7 +77,112 @@ export interface InstructionSpec {
     readonly mnemonic: string;
     /** Concrete opcodes by operand mode. */
     readonly opcodes: Readonly<Partial<Record<OperandMode, Opcode>>>;
+    /**
+     * Execute-phase micro-ops by operand mode.
+     *
+     * Keeping the sequence next to the opcode table makes a new instruction a
+     * single ISA change instead of coordinated edits in the VM. The import is
+     * type-only, so the ISA does not acquire a runtime dependency on the VM.
+     */
+    readonly execution: Readonly<
+        Partial<Record<OperandMode, readonly MicroOp[]>>
+    >;
+    /** Whether this instruction terminates program encoding. */
+    readonly terminates?: true;
+    /** Whether this instruction writes the comparison register. */
+    readonly writesCompare?: true;
+    /** Whether this instruction requires a prior comparison. */
+    readonly requiresCompare?: true;
+    /** Comparison that must match for a conditional jump. */
+    readonly compare?: Comparison;
 }
+
+/**
+ * Execute sequences are data, not VM branches.
+ *
+ * Sharing the common sequences keeps the table readable; instruction-specific
+ * behavior remains visible at the point where an instruction is declared.
+ */
+const LOAD_ADDRESS_EXECUTION: readonly MicroOp[] = [
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'MEM_READ', width: 1 },
+    { kind: 'AC_WRITE' },
+];
+
+const LOAD_IMMEDIATE_EXECUTION: readonly MicroOp[] = [
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'AC_WRITE' },
+];
+
+const STORE_EXECUTION: readonly MicroOp[] = [
+    { kind: 'AC_READ' },
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'MEM_WRITE' },
+];
+
+const INPUT_EXECUTION: readonly MicroOp[] = [
+    { kind: 'INPUT_READ' },
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'MEM_WRITE' },
+];
+
+const OUTPUT_ADDRESS_EXECUTION: readonly MicroOp[] = [
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'MEM_READ', width: 1 },
+    { kind: 'AUS_WRITE' },
+];
+
+const OUTPUT_IMMEDIATE_EXECUTION: readonly MicroOp[] = [
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'AUS_WRITE' },
+];
+
+const ARITHMETIC_ADDRESS_EXECUTION: readonly MicroOp[] = [
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'MEM_READ', width: 1 },
+    { kind: 'OP_WRITE' },
+    { kind: 'AR_WRITE' },
+    { kind: 'ALU_CALC' },
+    { kind: 'ERG_AC_WRITE' },
+];
+
+const ARITHMETIC_IMMEDIATE_EXECUTION: readonly MicroOp[] = [
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'OP_WRITE' },
+    { kind: 'AR_WRITE' },
+    { kind: 'ALU_CALC' },
+    { kind: 'ERG_AC_WRITE' },
+];
+
+const COMPARE_ADDRESS_EXECUTION: readonly MicroOp[] = [
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'MEM_READ', width: 1 },
+    { kind: 'OP_WRITE' },
+    { kind: 'AR_WRITE' },
+    { kind: 'ALU_CALC' },
+    { kind: 'ERG_VGL_WRITE' },
+];
+
+const COMPARE_IMMEDIATE_EXECUTION: readonly MicroOp[] = [
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'OP_WRITE' },
+    { kind: 'AR_WRITE' },
+    { kind: 'ALU_CALC' },
+    { kind: 'ERG_VGL_WRITE' },
+];
+
+const JUMP_EXECUTION: readonly MicroOp[] = [
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'BZ_WRITE' },
+];
+
+const CONDITIONAL_JUMP_EXECUTION: readonly MicroOp[] = [
+    { kind: 'VGL_READ' },
+    { kind: 'BR_READ_OPERAND' },
+    { kind: 'BZ_WRITE' },
+];
+
+const HALT_EXECUTION: readonly MicroOp[] = [{ kind: 'HALT' }];
 
 /**
  * The complete MOPS instruction table.
@@ -80,6 +198,10 @@ export const ISA = {
             address: OPCODES.LOAD_ADDRESS,
             immediate: OPCODES.LOAD_IMMEDIATE,
         },
+        execution: {
+            address: LOAD_ADDRESS_EXECUTION,
+            immediate: LOAD_IMMEDIATE_EXECUTION,
+        },
     },
     st: {
         id: 'st',
@@ -87,12 +209,18 @@ export const ISA = {
         opcodes: {
             address: OPCODES.STORE,
         },
+        execution: {
+            address: STORE_EXECUTION,
+        },
     },
     in: {
         id: 'in',
         mnemonic: 'in',
         opcodes: {
             address: OPCODES.INPUT,
+        },
+        execution: {
+            address: INPUT_EXECUTION,
         },
     },
     out: {
@@ -102,6 +230,10 @@ export const ISA = {
             address: OPCODES.OUTPUT_ADDRESS,
             immediate: OPCODES.OUTPUT_IMMEDIATE,
         },
+        execution: {
+            address: OUTPUT_ADDRESS_EXECUTION,
+            immediate: OUTPUT_IMMEDIATE_EXECUTION,
+        },
     },
     add: {
         id: 'add',
@@ -109,6 +241,10 @@ export const ISA = {
         opcodes: {
             address: OPCODES.ADD_ADDRESS,
             immediate: OPCODES.ADD_IMMEDIATE,
+        },
+        execution: {
+            address: ARITHMETIC_ADDRESS_EXECUTION,
+            immediate: ARITHMETIC_IMMEDIATE_EXECUTION,
         },
     },
     sub: {
@@ -118,6 +254,10 @@ export const ISA = {
             address: OPCODES.SUBTRACT_ADDRESS,
             immediate: OPCODES.SUBTRACT_IMMEDIATE,
         },
+        execution: {
+            address: ARITHMETIC_ADDRESS_EXECUTION,
+            immediate: ARITHMETIC_IMMEDIATE_EXECUTION,
+        },
     },
     mul: {
         id: 'mul',
@@ -125,6 +265,10 @@ export const ISA = {
         opcodes: {
             address: OPCODES.MULTIPLY_ADDRESS,
             immediate: OPCODES.MULTIPLY_IMMEDIATE,
+        },
+        execution: {
+            address: ARITHMETIC_ADDRESS_EXECUTION,
+            immediate: ARITHMETIC_IMMEDIATE_EXECUTION,
         },
     },
     div: {
@@ -134,6 +278,10 @@ export const ISA = {
             address: OPCODES.DIVIDE_ADDRESS,
             immediate: OPCODES.DIVIDE_IMMEDIATE,
         },
+        execution: {
+            address: ARITHMETIC_ADDRESS_EXECUTION,
+            immediate: ARITHMETIC_IMMEDIATE_EXECUTION,
+        },
     },
     mod: {
         id: 'mod',
@@ -141,6 +289,10 @@ export const ISA = {
         opcodes: {
             address: OPCODES.MODULO_ADDRESS,
             immediate: OPCODES.MODULO_IMMEDIATE,
+        },
+        execution: {
+            address: ARITHMETIC_ADDRESS_EXECUTION,
+            immediate: ARITHMETIC_IMMEDIATE_EXECUTION,
         },
     },
     cmp: {
@@ -150,12 +302,20 @@ export const ISA = {
             address: OPCODES.COMPARE_ADDRESS,
             immediate: OPCODES.COMPARE_IMMEDIATE,
         },
+        execution: {
+            address: COMPARE_ADDRESS_EXECUTION,
+            immediate: COMPARE_IMMEDIATE_EXECUTION,
+        },
+        writesCompare: true,
     },
     jmp: {
         id: 'jmp',
         mnemonic: 'jmp',
         opcodes: {
             target: OPCODES.JUMP,
+        },
+        execution: {
+            target: JUMP_EXECUTION,
         },
     },
     jlt: {
@@ -164,6 +324,11 @@ export const ISA = {
         opcodes: {
             target: OPCODES.JUMP_IF_LESS,
         },
+        execution: {
+            target: CONDITIONAL_JUMP_EXECUTION,
+        },
+        requiresCompare: true,
+        compare: '<',
     },
     jeq: {
         id: 'jeq',
@@ -171,6 +336,11 @@ export const ISA = {
         opcodes: {
             target: OPCODES.JUMP_IF_EQUAL,
         },
+        execution: {
+            target: CONDITIONAL_JUMP_EXECUTION,
+        },
+        requiresCompare: true,
+        compare: '=',
     },
     jgt: {
         id: 'jgt',
@@ -178,6 +348,11 @@ export const ISA = {
         opcodes: {
             target: OPCODES.JUMP_IF_GREATER,
         },
+        execution: {
+            target: CONDITIONAL_JUMP_EXECUTION,
+        },
+        requiresCompare: true,
+        compare: '>',
     },
     end: {
         id: 'end',
@@ -185,6 +360,10 @@ export const ISA = {
         opcodes: {
             none: OPCODES.HALT,
         },
+        execution: {
+            none: HALT_EXECUTION,
+        },
+        terminates: true,
     },
 } as const satisfies Record<InstructionId, InstructionSpec>;
 
@@ -197,6 +376,72 @@ export const INSTRUCTIONS: readonly InstructionSpec[] = Object.values(ISA);
  * All canonical instruction identifiers in declaration order.
  */
 export const INSTRUCTION_IDS = Object.keys(ISA) as readonly InstructionId[];
+
+/**
+ * Returns the operand modes encoded by an instruction.
+ *
+ * @param instruction Instruction specification.
+ */
+export function getOperandModes(
+    instruction: InstructionSpec,
+): readonly OperandMode[] {
+    return Object.keys(instruction.opcodes) as readonly OperandMode[];
+}
+
+/**
+ * Returns the operand family for source-level operand resolution.
+ *
+ * The family is derived from the opcode table instead of duplicating the
+ * instruction semantics in the parser or encoder.
+ *
+ * @param instruction Instruction specification.
+ */
+export function getOperandFamily(instruction: InstructionSpec): OperandFamily {
+    const modes = getOperandModes(instruction);
+
+    if (modes.length === 1 && modes[0] === 'none') {
+        return 'none';
+    }
+
+    if (modes.includes('target')) {
+        return 'target';
+    }
+
+    if (modes.length === 1 && modes[0] === 'address') {
+        return 'address';
+    }
+
+    return 'address-or-immediate';
+}
+
+/**
+ * Returns whether an instruction takes an operand.
+ *
+ * @param instruction Instruction specification.
+ */
+export function hasOperand(instruction: InstructionSpec): boolean {
+    return getOperandFamily(instruction) !== 'none';
+}
+
+/**
+ * Returns the execute-phase micro-op sequence for an opcode.
+ *
+ * @param opcode A valid MOPS opcode.
+ * @throws When the ISA table is incomplete.
+ */
+export function getExecutionSequence(opcode: Opcode): readonly MicroOp[] {
+    const instruction = getInstructionByOpcode(opcode);
+    const mode = getOperandModeForOpcode(opcode);
+    const sequence = instruction.execution[mode];
+
+    if (!sequence) {
+        throw new Error(
+            `No execution sequence is defined for opcode ${opcode} (${mode}).`,
+        );
+    }
+
+    return sequence;
+}
 
 const instructionByOpcode = new Map<Opcode, InstructionSpec>();
 const operandModeByOpcode = new Map<Opcode, OperandMode>();
