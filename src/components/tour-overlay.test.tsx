@@ -1,8 +1,10 @@
 import { LanguageProvider } from '@/i18n/i18n-provider';
+import { openTour } from '@/tour/tour-actions';
 import { TOUR_STORAGE_KEY } from '@/tour/tour-storage';
 import { TOUR_STEPS } from '@/tour/tour-steps';
 import { useTour } from '@/tour/tour-store';
 import {
+    act,
     cleanup,
     fireEvent,
     render,
@@ -87,7 +89,7 @@ describe('TourOverlay', () => {
     afterEach(() => {
         cleanup();
         document
-            .querySelectorAll('[data-tour]')
+            .querySelectorAll('[data-tour], [data-tour-trigger]')
             .forEach((element) => element.remove());
         useTour.setState({ stepId: null, started: false });
     });
@@ -321,6 +323,27 @@ describe('TourOverlay', () => {
         fireEvent(window, new Event('resize'));
 
         expect(screen.getByTestId('tour-card')).toHaveStyle({ top: '568px' });
+    });
+
+    it('returns focus to the trigger when the tour closes', async () => {
+        const trigger = document.createElement('button');
+
+        trigger.type = 'button';
+        trigger.dataset.tourTrigger = 'true';
+        trigger.textContent = 'Trigger';
+        document.body.append(trigger);
+        trigger.focus();
+        openTour();
+
+        await renderOverlay();
+
+        act(() => {
+            useTour.setState({ stepId: null });
+        });
+
+        await waitFor(() => {
+            expect(trigger).toHaveFocus();
+        });
     });
 
     it('renders German text with the German language provider', async () => {

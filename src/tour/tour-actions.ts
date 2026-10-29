@@ -7,12 +7,30 @@
 import { usePlayer, type PlayerStatus } from '@/player/player';
 import { useTour } from './tour-store';
 
+let returnFocusTarget: HTMLElement | null = null;
+
 /**
- * Pauses the machine and opens the tour at its first step.
+ * Pauses the machine, remembers the trigger, and opens the tour.
  */
 export function openTour(): void {
+    const active = document.activeElement;
+
+    returnFocusTarget = active instanceof HTMLElement ? active : null;
     usePlayer.getState().pause();
     useTour.getState().start();
+}
+
+/**
+ * Restores focus to the element that opened the tour.
+ */
+export function restoreTourFocus(): void {
+    const target = returnFocusTarget;
+
+    returnFocusTarget = null;
+
+    if (target !== null) {
+        target.focus();
+    }
 }
 
 /**

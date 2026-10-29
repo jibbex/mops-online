@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { usePlayer, type PlayerStatus } from '@/player/player';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { openTour, shouldAutoStart } from './tour-actions';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { openTour, restoreTourFocus, shouldAutoStart } from './tour-actions';
 import { useTour } from './tour-store';
 
 interface AutoStartCase {
@@ -99,11 +99,16 @@ describe('openTour', () => {
         localStorage.clear();
         usePlayer.getState().stop();
         useTour.setState({ stepId: null, started: false });
+        restoreTourFocus();
     });
 
     afterEach(() => {
+        document
+            .querySelectorAll('[data-tour-trigger]')
+            .forEach((element) => element.remove());
         usePlayer.getState().stop();
         useTour.setState({ stepId: null, started: false });
+        restoreTourFocus();
     });
 
     it('pauses a running player and opens the first step', () => {
@@ -117,5 +122,28 @@ describe('openTour', () => {
         expect(usePlayer.getState().status).toBe('paused');
         expect(useTour.getState().stepId).toBe('welcome');
         expect(useTour.getState().started).toBe(true);
+    });
+
+    it('restores focus to the element that opened the tour', () => {
+        const trigger = document.createElement('button');
+
+        trigger.dataset.tourTrigger = 'true';
+        document.body.append(trigger);
+        trigger.focus();
+
+        openTour();
+        restoreTourFocus();
+
+        expect(trigger).toHaveFocus();
+    });
+
+    it('does not restore focus when the trigger was not an HTML element', () => {
+        const activeElement = vi.spyOn(document, 'activeElement', 'get');
+
+        activeElement.mockReturnValue(null);
+        openTour();
+        activeElement.mockRestore();
+
+        expect(() => restoreTourFocus()).not.toThrow();
     });
 });

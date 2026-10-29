@@ -24,15 +24,10 @@ import {
     TOUR_STEP_COUNT,
     type TourStepId,
 } from '@/tour/tour-steps';
+import { restoreTourFocus } from '@/tour/tour-actions';
 import { useTour } from '@/tour/tour-store';
-import { Presence } from '@radix-ui/react-presence';
-import {
-    useEffect,
-    useLayoutEffect,
-    useRef,
-    useState,
-    type ReactElement,
-} from 'react';
+import { Presence } from 'radix-ui/internal';
+import { useEffect, useLayoutEffect, useState, type ReactElement } from 'react';
 
 interface TourLayout {
     readonly hole: Rect | null;
@@ -60,6 +55,12 @@ export function TourOverlay(): ReactElement | null {
         }
     }, [stepId]);
 
+    useEffect(() => {
+        if (stepId === null) {
+            restoreTourFocus();
+        }
+    }, [stepId]);
+
     const displayStepId = stepId ?? lastStepId;
 
     if (displayStepId === null) {
@@ -69,7 +70,7 @@ export function TourOverlay(): ReactElement | null {
     const present = stepId !== null;
 
     return (
-        <Presence present={present}>
+        <Presence.Root present={present}>
             <div
                 data-testid="tour"
                 data-state={present ? 'open' : 'closed'}
@@ -80,7 +81,7 @@ export function TourOverlay(): ReactElement | null {
                     visibility={present ? 'open' : 'closed'}
                 />
             </div>
-        </Presence>
+        </Presence.Root>
     );
 }
 
@@ -95,8 +96,7 @@ function TourContent({
     const next = useTour((state) => state.next);
     const back = useTour((state) => state.back);
     const close = useTour((state) => state.close);
-    const cardRef = useRef<HTMLDivElement>(null);
-    const primaryRef = useRef<HTMLButtonElement>(null);
+    const [card, setCard] = useState<HTMLDivElement | null>(null);
     const [layout, setLayout] = useState<TourLayout>(INITIAL_LAYOUT);
     const [measured, setMeasured] = useState(false);
     const [animate, setAnimate] = useState(false);
@@ -104,6 +104,10 @@ function TourContent({
     const targetSelector = step.target;
 
     useLayoutEffect(() => {
+        if (card === null) {
+            return;
+        }
+
         const measure = (): void => {
             const viewport = {
                 width: window.innerWidth,
@@ -120,7 +124,6 @@ function TourContent({
                           target.getBoundingClientRect(),
                           viewport,
                       );
-            const card = cardRef.current as HTMLDivElement;
             const cardSize = card.getBoundingClientRect();
 
             setLayout({
@@ -134,7 +137,7 @@ function TourContent({
         window.addEventListener('resize', measure);
 
         return () => window.removeEventListener('resize', measure);
-    }, [stepId, language, targetSelector]);
+    }, [card, stepId, language, targetSelector]);
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent): void => {
@@ -159,10 +162,6 @@ function TourContent({
 
         return () => window.cancelAnimationFrame(frame);
     }, [measured]);
-
-    useEffect(() => {
-        (primaryRef.current as HTMLButtonElement).focus();
-    }, [stepId, animate]);
 
     const viewport = {
         width: window.innerWidth,
@@ -199,7 +198,7 @@ function TourContent({
                 />
             )}
             <div
-                ref={cardRef}
+                ref={setCard}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="tour-title"
@@ -250,7 +249,7 @@ function TourContent({
                         </Button>
                     )}
                     <Button
-                        ref={primaryRef}
+                        key={stepId}
                         className="ml-auto"
                         size="sm"
                         autoFocus
