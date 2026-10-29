@@ -83,4 +83,12 @@ describe('calculateAlu', () => {
             message: 'Jump instruction reached the ALU.',
         });
     });
+
+    it('rejects non-ALU operations', () => {
+        expect(calculateAlu('load', 1, 1)).toEqual({
+            ok: false,
+            code: 'INVALID_OPCODE',
+            message: 'Unsupported ALU operation.',
+        });
+    });
 });
