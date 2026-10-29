@@ -28,6 +28,7 @@ import {
     createEditorLineState,
     type EditorLineState,
 } from './editor-line-state';
+import { tokenizeMopsLine } from './mops-tokenizer';
 
 interface MopsEditorProps {
     readonly value: string;
@@ -41,39 +42,7 @@ interface MopsEditorProps {
  * Lightweight tokenizer for MOPS mnemonics, operands, labels, and comments.
  */
 const mopsLanguage = StreamLanguage.define({
-    token(stream) {
-        if (stream.eatSpace()) {
-            return null;
-        }
-
-        if (stream.match(';')) {
-            stream.skipToEnd();
-            return 'comment';
-        }
-
-        if (stream.match(/^:[a-z][a-z0-9]*/i)) {
-            return 'variableName';
-        }
-
-        if (stream.match(/^\$[0-9]+/)) {
-            return 'number';
-        }
-
-        if (stream.match(/^#[0-9]+/)) {
-            return 'number';
-        }
-
-        if (stream.match(/^-?[0-9]+/)) {
-            return 'number';
-        }
-
-        if (stream.match(/^[a-z][a-z0-9]*/i)) {
-            return 'keyword';
-        }
-
-        stream.next();
-        return null;
-    },
+    token: tokenizeMopsLine,
 });
 
 /**
