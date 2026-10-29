@@ -88,6 +88,10 @@ assembly programs on a simplified von Neumann machine.
 9. Switch the interface language and theme from the header.
 10. Download the `.asm` source file from the file dialog and upload it to Moodle.
 
+MOPS uses fixed-width decimal words from −9999 to 9999. Division rounds toward
+negative infinity, modulo keeps the divisor's sign, and results outside the range
+trap instead of wrapping.
+
 ### Moodle Tasks
 
 Moodle links can pass a task identifier, a display title, and an interface language:
