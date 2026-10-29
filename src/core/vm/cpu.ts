@@ -197,8 +197,9 @@ function collectInstructionAddresses(
             break;
         }
 
-        const wordCount = getOperandModeForOpcode(opcode) === 'none' ? 1 : 2;
-        address += wordCount;
+        // Terminating instructions break above; every remaining instruction
+        // occupies an opcode cell and an operand cell.
+        address += 2;
     }
 
     return addresses;
