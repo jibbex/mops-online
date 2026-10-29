@@ -7,10 +7,15 @@
  * @module test/setup
  */
 
+import { TOUR_STORAGE_KEY } from '@/tour/tour-storage';
 import '@testing-library/jest-dom/vitest';
-import { vi } from 'vitest';
+import { beforeEach, vi } from 'vitest';
 
 if (typeof window !== 'undefined') {
+    beforeEach(() => {
+        localStorage.setItem(TOUR_STORAGE_KEY, '1');
+    });
+
     Object.defineProperty(window, 'matchMedia', {
         writable: true,
         value: vi.fn().mockImplementation((query: string) => ({

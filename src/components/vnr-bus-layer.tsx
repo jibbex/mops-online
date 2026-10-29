@@ -19,6 +19,7 @@ export function VnrBusLayer(): ReactElement {
                 <path
                     key={path.id}
                     id={path.id}
+                    data-tour={path.id === 'sl-trunk' ? 'bus' : undefined}
                     d={path.d}
                     className={path.thin ? 'diagram-signal' : 'diagram-bus'}
                 />

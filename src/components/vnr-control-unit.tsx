@@ -35,6 +35,7 @@ export function VnrControlUnit({
 
     return (
         <g
+            data-tour="control-unit"
             className={cn(
                 'diagram-unit',
                 'unit-control',
@@ -69,6 +70,7 @@ export function VnrControlUnit({
             </text>
             <g
                 id="pc"
+                data-tour="pc"
                 className={cn('diagram-register', active('pc') && 'is-active')}
                 data-operation={operation('pc')}
             >
@@ -89,6 +91,7 @@ export function VnrControlUnit({
             </text>
             <g
                 id="br"
+                data-tour="br"
                 className={cn('diagram-register', active('br') && 'is-active')}
                 data-operation={operation('br')}
             >

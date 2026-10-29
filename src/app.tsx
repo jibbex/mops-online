@@ -17,6 +17,8 @@ import { InputDialog } from '@/components/input-dialog';
 import { MopsEditor } from '@/components/mops-editor';
 import { OutputDialog } from '@/components/output-dialog';
 import { StatusBar } from '@/components/status-bar';
+import { TourController } from '@/components/tour-controller';
+import { TourOverlay } from '@/components/tour-overlay';
 import { VnrDiagram } from '@/components/vnr-diagram';
 import {
     Card,
@@ -32,6 +34,8 @@ import { cn } from '@/lib/utils';
 import { NORMAL_SPEED, usePlayer } from '@/player/player';
 import { FLOW_DURATION_MS } from '@/player/timing';
 import { visualStateFor } from '@/player/visual-map';
+import { TOUR_STEPS, tourVisualState } from '@/tour/tour-steps';
+import { useTour } from '@/tour/tour-store';
 import { useState, type ReactElement } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -69,7 +73,13 @@ export default function App(): ReactElement {
             historyLength: state.history.length,
         })),
     );
-    const visual = visualStateFor(lastEvent);
+    const tourStepId = useTour((state) => state.stepId);
+    const tourStep = tourStepId === null ? null : TOUR_STEPS[tourStepId];
+    const visual =
+        tourStep === null
+            ? visualStateFor(lastEvent)
+            : tourVisualState(tourStep);
+    const tourOpen = tourStep !== null;
     const [task] = useState<TaskInfo>(() =>
         readTaskInfo(window.location.search),
     );
@@ -78,6 +88,7 @@ export default function App(): ReactElement {
     const [mobileView, setMobileView] = useState<'editor' | 'machine'>(
         'machine',
     );
+    const view = tourOpen ? 'machine' : mobileView;
     const currentLine = lastEvent
         ? program?.sourceMap[lastEvent.address]
         : undefined;
@@ -88,95 +99,102 @@ export default function App(): ReactElement {
             : Math.round(FLOW_DURATION_MS / animatedSpeed);
 
     return (
-        <div className="app-shell flex h-screen flex-col overflow-hidden text-foreground">
-            <AppHeader task={task} />
-            <AppToolbar task={task} />
-            <main className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.7fr)] lg:grid-rows-[minmax(0,1fr)]">
-                <div className="flex items-center lg:hidden">
-                    <ToggleGroup
-                        type="single"
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        value={mobileView}
-                        onValueChange={(value) => {
-                            if (value === 'editor' || value === 'machine') {
-                                setMobileView(value);
-                            }
-                        }}
-                        aria-label={t('view.label')}
+        <>
+            <div
+                className="app-shell flex h-screen flex-col overflow-hidden text-foreground"
+                inert={tourOpen}
+            >
+                <AppHeader task={task} />
+                <AppToolbar task={task} />
+                <main className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.7fr)] lg:grid-rows-[minmax(0,1fr)]">
+                    <div className="flex items-center lg:hidden">
+                        <ToggleGroup
+                            type="single"
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            value={view}
+                            onValueChange={(value) => {
+                                if (value === 'editor' || value === 'machine') {
+                                    setMobileView(value);
+                                }
+                            }}
+                            aria-label={t('view.label')}
+                        >
+                            <ToggleGroupItem value="editor" className="flex-1">
+                                {t('view.editor')}
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="machine" className="flex-1">
+                                {t('view.machine')}
+                            </ToggleGroupItem>
+                        </ToggleGroup>
+                    </div>
+                    <section
+                        className={cn(
+                            'flex min-h-0 flex-col gap-2',
+                            view !== 'editor' && 'hidden',
+                            'lg:flex',
+                        )}
                     >
-                        <ToggleGroupItem value="editor" className="flex-1">
-                            {t('view.editor')}
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="machine" className="flex-1">
-                            {t('view.machine')}
-                        </ToggleGroupItem>
-                    </ToggleGroup>
-                </div>
-                <section
-                    className={cn(
-                        'flex min-h-0 flex-col gap-2',
-                        mobileView !== 'editor' && 'hidden',
-                        'lg:flex',
-                    )}
-                >
-                    <Card className="app-card flex min-h-0 flex-1 flex-col gap-0 py-0">
-                        <CardHeader className="shrink-0 border-b">
-                            <CardTitle>{t('editor.title')}</CardTitle>
-                            <CardDescription>
-                                {t('editor.lines', {
-                                    count: source.split('\n').length,
-                                })}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="min-h-0 flex-1 p-0">
-                            <MopsEditor
-                                value={source}
-                                onChange={setSource}
-                                diagnostics={diagnostics}
-                                warnings={warnings}
-                                currentLine={currentLine}
-                            />
-                        </CardContent>
-                    </Card>
-                    <Diagnostics />
-                </section>
+                        <Card className="app-card flex min-h-0 flex-1 flex-col gap-0 py-0">
+                            <CardHeader className="shrink-0 border-b">
+                                <CardTitle>{t('editor.title')}</CardTitle>
+                                <CardDescription>
+                                    {t('editor.lines', {
+                                        count: source.split('\n').length,
+                                    })}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="min-h-0 flex-1 p-0">
+                                <MopsEditor
+                                    value={source}
+                                    onChange={setSource}
+                                    diagnostics={diagnostics}
+                                    warnings={warnings}
+                                    currentLine={currentLine}
+                                />
+                            </CardContent>
+                        </Card>
+                        <Diagnostics />
+                    </section>
 
-                <section
-                    className={cn(
-                        'flex min-h-0 flex-col gap-2',
-                        mobileView !== 'machine' && 'hidden',
-                        'lg:max-wide:flex',
-                        'wide:grid wide:grid-cols-[minmax(0,1fr)_16rem] wide:grid-rows-[minmax(0,1fr)]',
-                    )}
-                >
-                    <Card className="app-card flex min-h-0 flex-1 flex-col gap-0 py-0">
-                        <CardHeader className="shrink-0 border-b">
-                            <CardTitle>{t('machine.title')}</CardTitle>
-                            <CardDescription>
-                                {t('machine.description')}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="min-h-0 flex-1 p-1">
-                            <VnrDiagram
-                                cpu={cpu}
-                                pc={pc}
-                                visual={visual}
-                                pulseKey={historyLength}
-                                flowDurationMs={flowDurationMs}
-                            />
-                        </CardContent>
-                    </Card>
-                    <StatusBar
-                        currentLine={currentLine}
-                        className="wide:self-start"
-                    />
-                </section>
-            </main>
-            <AppFooter />
-            <InputDialog />
-            <OutputDialog />
-        </div>
+                    <section
+                        className={cn(
+                            'flex min-h-0 flex-col gap-2',
+                            view !== 'machine' && 'hidden',
+                            'lg:max-wide:flex',
+                            'wide:grid wide:grid-cols-[minmax(0,1fr)_16rem] wide:grid-rows-[minmax(0,1fr)]',
+                        )}
+                    >
+                        <Card className="app-card flex min-h-0 flex-1 flex-col gap-0 py-0">
+                            <CardHeader className="shrink-0 border-b">
+                                <CardTitle>{t('machine.title')}</CardTitle>
+                                <CardDescription>
+                                    {t('machine.description')}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="min-h-0 flex-1 p-1">
+                                <VnrDiagram
+                                    cpu={cpu}
+                                    pc={pc}
+                                    visual={visual}
+                                    pulseKey={historyLength}
+                                    flowDurationMs={flowDurationMs}
+                                />
+                            </CardContent>
+                        </Card>
+                        <StatusBar
+                            currentLine={currentLine}
+                            className="wide:self-start"
+                        />
+                    </section>
+                </main>
+                <AppFooter />
+                <InputDialog />
+                <OutputDialog />
+            </div>
+            <TourOverlay />
+            <TourController />
+        </>
     );
 }

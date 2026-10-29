@@ -7,6 +7,7 @@
 import { CommandReference } from '@/components/command-reference';
 import { LanguageToggle } from '@/components/language-toggle';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { TourButton } from '@/components/tour-button';
 import { Badge } from '@/components/ui/badge';
 import { useI18n } from '@/i18n/i18n-context';
 import { isTaskContext, PRACTICE_TASK_ID, type TaskInfo } from '@/lib/task';
@@ -48,6 +49,7 @@ export function AppHeader({ task }: { readonly task: TaskInfo }): ReactElement {
                 </Badge>
             ) : null}
             <div className="ml-auto flex items-center gap-1">
+                <TourButton />
                 <CommandReference />
                 <LanguageToggle />
                 <ThemeToggle />
