@@ -23,7 +23,7 @@ import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 import { useI18n } from '@/i18n/i18n-context';
 import { tags } from '@lezer/highlight';
 import { basicSetup } from 'codemirror';
-import { useEffect, useRef, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import {
     createEditorLineState,
     type EditorLineState,
@@ -222,8 +222,11 @@ export function MopsEditor({
     currentLine,
 }: MopsEditorProps): ReactElement {
     const { t } = useI18n();
-    const containerRef = useRef<HTMLDivElement>(null);
-    const viewRef = useRef<EditorView | null>(null);
+    // The container and view are state rather than refs so the dependent
+    // effects only run once both exist and skip the first render, where the
+    // DOM node has not been attached yet.
+    const [container, setContainer] = useState<HTMLDivElement | null>(null);
+    const [view, setView] = useState<EditorView | null>(null);
     // CodeMirror owns its update listener for the lifetime of the view. Refs
     // keep the latest React callbacks without recreating the editor on every
     // render, which would lose cursor and selection state.
@@ -241,11 +244,11 @@ export function MopsEditor({
     }, [currentLine]);
 
     useEffect(() => {
-        if (!containerRef.current) {
+        if (!container) {
             return;
         }
 
-        const view = new EditorView({
+        const nextView = new EditorView({
             state: EditorState.create({
                 doc: initialValueRef.current,
                 extensions: [
@@ -263,21 +266,18 @@ export function MopsEditor({
                     }),
                 ],
             }),
-            parent: containerRef.current,
+            parent: container,
         });
 
-        viewRef.current = view;
+        setView(nextView);
 
         return () => {
-            view.destroy();
-            viewRef.current = null;
+            nextView.destroy();
+            setView(null);
         };
-    }, []);
+    }, [container]);
 
     useEffect(() => {
-        const container = containerRef.current;
-        const view = viewRef.current;
-
         if (!container || !view || typeof ResizeObserver === 'undefined') {
             return;
         }
@@ -303,11 +303,9 @@ export function MopsEditor({
         observer.observe(container);
 
         return () => observer.disconnect();
-    }, []);
+    }, [container, view]);
 
     useEffect(() => {
-        const view = viewRef.current;
-
         if (!view) {
             return;
         }
@@ -323,11 +321,9 @@ export function MopsEditor({
                 },
             });
         }
-    }, [value]);
+    }, [value, view]);
 
     useEffect(() => {
-        const view = viewRef.current;
-
         if (!view) {
             return;
         }
@@ -346,11 +342,11 @@ export function MopsEditor({
         if (!currentLine) {
             lastScrolledLineRef.current = undefined;
         }
-    }, [currentLine, diagnostics, warnings]);
+    }, [currentLine, diagnostics, warnings, view]);
 
     return (
         <div
-            ref={containerRef}
+            ref={setContainer}
             className="h-full min-h-0 overflow-hidden bg-background"
             aria-label={t('editor.ariaLabel')}
         />
