@@ -14,14 +14,14 @@
 </p>
 
 <p align="center">
-  <img src="public/favicon.svg" alt="MOPS logo" width="96" height="96">
+  <img src="public/favicon.svg" alt="MOPS Online logo" width="96" height="96">
 </p>
 
-# MOPS
+# MOPS Online
 
-MOPS is a web-based educational model computer with an integrated assembler and a
-von Neumann machine simulator. It is designed to help students understand how a
-simple CPU fetches, decodes, and executes instructions.
+MOPS Online is a web-based educational model computer with an integrated
+assembler and a von Neumann machine simulator. It is designed to help students
+understand how a simple CPU fetches, decodes, and executes instructions.
 
 **Live application:** <https://jibbex.github.io/mops-online/>
 
@@ -52,8 +52,8 @@ simple CPU fetches, decodes, and executes instructions.
 
 ## Features
 
-MOPS provides a complete, browser-based environment for writing and running
-assembly programs on a simplified von Neumann machine.
+MOPS Online provides a complete, browser-based environment for writing and
+running assembly programs on a simplified von Neumann machine.
 
 - A source editor with line numbers, syntax highlighting, and inline diagnostics.
 - A two-pass assembler with symbols, forward references, and source maps.
@@ -88,9 +88,9 @@ assembly programs on a simplified von Neumann machine.
 9. Switch the interface language and theme from the header.
 10. Download the `.asm` source file from the file dialog and upload it to Moodle.
 
-MOPS uses fixed-width decimal words from −9999 to 9999. Division rounds toward
-negative infinity, modulo keeps the divisor's sign, and results outside the range
-trap instead of wrapping.
+The simulated machine uses fixed-width decimal words from −9999 to 9999.
+Division rounds toward negative infinity, modulo keeps the divisor's sign, and
+results outside the range trap instead of wrapping.
 
 ### Moodle Tasks
 
@@ -319,7 +319,7 @@ Common additions:
 
 ### Scope
 
-MOPS implements a simplified educational model computer.
+MOPS Online simulates a simplified educational model computer.
 
 It includes:
 
@@ -362,8 +362,8 @@ It does not include:
 
 ## Acknowledgments
 
-MOPS is an independent TypeScript reimplementation of the functionality of the
-original [MOPS model computer](http://www.viktorianer.de/info/mops.html). It
+MOPS Online is an independent TypeScript reimplementation of the functionality of
+the original [MOPS model computer](http://www.viktorianer.de/info/mops.html). It
 contains no source code, binaries, or other assets from the original application.
 The original application remains a separate project.
 
