@@ -138,15 +138,20 @@ export function sourceFilename(task: TaskInfo): string {
 /**
  * Starts a browser download for generated text.
  *
+ * The temporary anchor and object URL stay alive until the next task. Removing
+ * them in the same click handler can cancel the download before the browser
+ * has handed the blob to its download manager.
+ *
  * @param filename Suggested file name.
  * @param text File contents.
  * @param mimeType MIME type of the generated file.
+ * @returns Resolves after the download has been handed off.
  */
 export function downloadTextFile(
     filename: string,
     text: string,
     mimeType: string,
-): void {
+): Promise<void> {
     const blob = new Blob([text], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -156,6 +161,12 @@ export function downloadTextFile(
     anchor.rel = 'noopener';
     document.body.append(anchor);
     anchor.click();
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+
+    return new Promise((resolve) => {
+        window.setTimeout(() => {
+            anchor.remove();
+            URL.revokeObjectURL(url);
+            resolve();
+        }, 0);
+    });
 }

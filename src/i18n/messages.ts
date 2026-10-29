@@ -106,6 +106,8 @@ const en = {
         'Load a previously downloaded .asm file (max. {max} KiB).',
     'file.choose': 'Choose source file',
     'file.reading': 'Reading file…',
+    'file.exportErrorTitle': 'Export failed',
+    'file.exportError': 'The source file could not be downloaded.',
     'file.importErrorTitle': 'Import failed',
     'file.importEmpty': 'The file is empty.',
     'file.importTooLarge':
@@ -249,6 +251,8 @@ const de: Record<MessageKey, string> = {
         'Eine zuvor heruntergeladene .asm-Datei laden (max. {max} KiB).',
     'file.choose': 'Quelltextdatei wählen',
     'file.reading': 'Datei wird gelesen…',
+    'file.exportErrorTitle': 'Export fehlgeschlagen',
+    'file.exportError': 'Die Quelldatei konnte nicht heruntergeladen werden.',
     'file.importErrorTitle': 'Import fehlgeschlagen',
     'file.importEmpty': 'Die Datei ist leer.',
     'file.importTooLarge':

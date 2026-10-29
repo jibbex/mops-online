@@ -159,7 +159,11 @@ describe('downloadTextFile', () => {
             () => undefined,
         );
 
-        downloadTextFile('mops.asm', 'ld 1\nend\n', 'text/plain');
+        const download = downloadTextFile(
+            'mops.asm',
+            'ld 1\nend\n',
+            'text/plain',
+        );
 
         expect(createObjectURL).toHaveBeenCalledTimes(1);
 
@@ -181,6 +185,9 @@ describe('downloadTextFile', () => {
         expect(anchor.href).toBe('blob:mops');
 
         vi.runAllTimers();
+        await download;
+
         expect(revokeObjectURL).toHaveBeenCalledWith('blob:mops');
+        expect(anchor.isConnected).toBe(false);
     });
 });

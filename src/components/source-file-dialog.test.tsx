@@ -1,6 +1,7 @@
 import { LanguageProvider } from '@/i18n/i18n-provider';
 import { downloadTextFile, MAX_SOURCE_FILE_BYTES } from '@/lib/exchange';
 import {
+    act,
     cleanup,
     fireEvent,
     render,
@@ -79,6 +80,54 @@ describe('SourceFileDialog', () => {
             'text/plain',
         );
         await waitForClosedDialog();
+    });
+
+    it('closes the dialog only after the download handoff', async () => {
+        let finish: (() => void) | undefined;
+
+        vi.mocked(downloadTextFile).mockReturnValueOnce(
+            new Promise<void>((resolve) => {
+                finish = resolve;
+            }),
+        );
+
+        renderDialog();
+        const user = await openDialog();
+
+        await user.click(
+            screen.getByRole('button', { name: /Download source/ }),
+        );
+
+        expect(
+            screen.getByRole('heading', { name: 'Source file' }),
+        ).toBeVisible();
+
+        act(() => {
+            finish?.();
+        });
+
+        await waitForClosedDialog();
+    });
+
+    it('reports an export failure and keeps the dialog open', async () => {
+        vi.mocked(downloadTextFile).mockRejectedValueOnce(
+            new Error('Download blocked.'),
+        );
+
+        renderDialog();
+        const user = await openDialog();
+
+        await user.click(
+            screen.getByRole('button', { name: /Download source/ }),
+        );
+
+        expect(await screen.findByText('Export failed')).toBeVisible();
+        expect(
+            screen.getByText('The source file could not be downloaded.'),
+        ).toBeVisible();
+        expect(
+            screen.getByRole('heading', { name: 'Source file' }),
+        ).toBeVisible();
     });
 
     it('opens the file picker from the choose button', async () => {

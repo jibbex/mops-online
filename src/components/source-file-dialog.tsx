@@ -36,9 +36,13 @@ interface SourceFileDialogProps {
     readonly onImport: (source: string) => void;
 }
 
-type ImportStatus =
+type DialogStatus =
     | { readonly kind: 'idle' }
-    | { readonly kind: 'error'; readonly reason: SourceImportFailureReason };
+    | { readonly kind: 'export-error' }
+    | {
+          readonly kind: 'import-error';
+          readonly reason: SourceImportFailureReason;
+      };
 
 /**
  * Renders the source file export and import dialog.
@@ -54,7 +58,7 @@ export function SourceFileDialog({
     const { t } = useI18n();
     const fileInput = useRef<HTMLInputElement>(null);
     const [open, setOpen] = useState(false);
-    const [status, setStatus] = useState<ImportStatus>({ kind: 'idle' });
+    const [status, setStatus] = useState<DialogStatus>({ kind: 'idle' });
     // Reading is asynchronous; disabling the picker prevents a second file
     // from racing the first one and overwriting its result.
     const [busy, setBusy] = useState(false);
@@ -67,20 +71,30 @@ export function SourceFileDialog({
         setOpen(false);
     };
 
-    const exportSource = (): void => {
+    const exportSource = async (): Promise<void> => {
         const exported = buildSourceExport(task, source);
+        setStatus({ kind: 'idle' });
 
-        downloadTextFile(exported.filename, exported.text, exported.mimeType);
-        closeDialog();
+        try {
+            await downloadTextFile(
+                exported.filename,
+                exported.text,
+                exported.mimeType,
+            );
+            closeDialog();
+        } catch {
+            setStatus({ kind: 'export-error' });
+        }
     };
 
     const importFile = async (file: File): Promise<void> => {
+        setStatus({ kind: 'idle' });
         setBusy(true);
 
         const result = await readSourceFile(file);
 
         if (!result.ok) {
-            setStatus({ kind: 'error', reason: result.reason });
+            setStatus({ kind: 'import-error', reason: result.reason });
             setBusy(false);
             return;
         }
@@ -150,7 +164,9 @@ export function SourceFileDialog({
 
                 <Button
                     className="h-auto justify-start py-2"
-                    onClick={exportSource}
+                    onClick={() => {
+                        void exportSource();
+                    }}
                 >
                     <Download data-icon="inline-start" />
                     <span className="flex flex-col items-start">
@@ -189,7 +205,15 @@ export function SourceFileDialog({
                     </Button>
                 </section>
 
-                {status.kind === 'error' ? (
+                {status.kind === 'export-error' ? (
+                    <Alert variant="destructive">
+                        <AlertTitle>{t('file.exportErrorTitle')}</AlertTitle>
+                        <AlertDescription>
+                            {t('file.exportError')}
+                        </AlertDescription>
+                    </Alert>
+                ) : null}
+                {status.kind === 'import-error' ? (
                     <Alert variant="destructive">
                         <AlertTitle>{t('file.importErrorTitle')}</AlertTitle>
                         <AlertDescription>
