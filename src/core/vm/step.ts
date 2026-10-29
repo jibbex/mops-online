@@ -8,6 +8,7 @@ import {
     getExecutionSequence,
     getOperandModeForOpcode,
     type MicroOp,
+    type Phase,
 } from '@/core/isa';
 import type { Word } from '@/core/object';
 import type { CpuState, VmEvent, VmStepResult } from './cpu';
@@ -30,18 +31,19 @@ export function stepCpu(state: CpuState, input?: Word): VmStepResult {
     let current = state;
 
     if (current.queueIndex >= current.queue.length) {
+        // The halt guard above excludes HALTED; the assertion carries that
+        // invariant through the queue rebuild.
         current = {
             ...current,
-            queue: createQueue(current),
+            queue: createQueue(
+                current as CpuState & { readonly phase: RunnablePhase },
+            ),
             queueIndex: 0,
         };
     }
 
-    const microOp = current.queue[current.queueIndex];
-
-    if (!microOp) {
-        return { kind: 'halted', state: current };
-    }
+    // createQueue returns at least one micro-op for every runnable phase.
+    const microOp = current.queue[current.queueIndex] as MicroOp;
 
     const applied = applyMicroOp(current, microOp, input);
     const event = createEvent(current, applied.state, microOp);
@@ -87,7 +89,9 @@ export function stepCpu(state: CpuState, input?: Word): VmStepResult {
     };
 
     if (nextIndex >= after.queue.length) {
-        after = advancePhase(after);
+        after = advancePhase(
+            after as CpuState & { readonly phase: RunnablePhase },
+        );
     }
 
     const finalEvent = createEvent(current, after, microOp);
@@ -99,7 +103,11 @@ export function stepCpu(state: CpuState, input?: Word): VmStepResult {
     return { kind: 'step', state: after, event: finalEvent };
 }
 
-function createQueue(state: CpuState): readonly MicroOp[] {
+type RunnablePhase = Exclude<Phase, 'HALTED'>;
+
+function createQueue(
+    state: CpuState & { readonly phase: RunnablePhase },
+): readonly MicroOp[] {
     switch (state.phase) {
         case 'FETCH':
             // BR_WRITE appends the optional operand read and the PC update
@@ -114,8 +122,6 @@ function createQueue(state: CpuState): readonly MicroOp[] {
             return [{ kind: 'DECODE' }];
         case 'EXECUTE':
             return createExecuteQueue(state);
-        case 'HALTED':
-            return [];
     }
 }
 
@@ -156,7 +162,9 @@ function applyMicroOp(
     return MICRO_OPS[microOp.kind].apply(state, input);
 }
 
-function advancePhase(state: CpuState): CpuState {
+function advancePhase(
+    state: CpuState & { readonly phase: RunnablePhase },
+): CpuState {
     switch (state.phase) {
         case 'FETCH':
             return { ...state, phase: 'DECODE', queue: [], queueIndex: 0 };
@@ -166,8 +174,6 @@ function advancePhase(state: CpuState): CpuState {
             return state.halted
                 ? { ...state, phase: 'HALTED', queue: [], queueIndex: 0 }
                 : { ...state, phase: 'FETCH', queue: [], queueIndex: 0 };
-        case 'HALTED':
-            return state;
     }
 }
 
