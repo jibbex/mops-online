@@ -16,6 +16,7 @@ import {
     beginRun,
     changeSource,
     createInitialSnapshot,
+    MAX_HISTORY_ENTRIES,
     pausePlayback,
     reduceVmStep,
     shouldPause,
@@ -235,6 +236,18 @@ describe('player-state', () => {
         expect(forced.run).toBe(false);
         expect(running.state.status).toBe('running');
         expect(running.run).toBe(true);
+    });
+
+    it('keeps only the most recent history entries', () => {
+        const { snapshot, state, event } = fixture();
+        const history = Array<VmEvent>(MAX_HISTORY_ENTRIES).fill(event);
+        const result = reduceVmStep(
+            { ...snapshot, history },
+            { kind: 'step', state, event },
+        );
+
+        expect(result.state.history).toHaveLength(MAX_HISTORY_ENTRIES);
+        expect(result.state.history.at(-1)).toBe(event);
     });
 
     it('describes pause boundaries for every mode', () => {
