@@ -137,7 +137,7 @@ describe('SourceFileDialog', () => {
 
         expect(
             await screen.findByText(
-                /The file is too large\. The maximum size is 16 KB\./,
+                /The file is too large\. The maximum size is 16 KiB\./,
             ),
         ).toBeVisible();
         expect(read).not.toHaveBeenCalled();

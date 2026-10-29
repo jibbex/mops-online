@@ -38,7 +38,7 @@ test('rejects an oversized source file', async ({ page }) => {
     });
 
     await expect(
-        page.getByText('The file is too large. The maximum size is 16 KB.'),
+        page.getByText('The file is too large. The maximum size is 16 KiB.'),
     ).toBeVisible();
 });
 

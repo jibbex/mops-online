@@ -103,13 +103,13 @@ const en = {
     'file.downloadHint': 'The source file is the submission artifact.',
     'file.importSection': 'Import',
     'file.importHint':
-        'Load a previously downloaded .asm file (max. {max} KB).',
+        'Load a previously downloaded .asm file (max. {max} KiB).',
     'file.choose': 'Choose source file',
     'file.reading': 'Reading file…',
     'file.importErrorTitle': 'Import failed',
     'file.importEmpty': 'The file is empty.',
     'file.importTooLarge':
-        'The file is too large. The maximum size is {max} KB.',
+        'The file is too large. The maximum size is {max} KiB.',
     'file.importUnreadable': 'The file could not be read.',
     'file.importBinary': 'The file is not a plain text file.',
     'theme.appearance': 'Appearance',
@@ -246,13 +246,13 @@ const de: Record<MessageKey, string> = {
     'file.downloadHint': 'Die Quelldatei ist die Abgabe.',
     'file.importSection': 'Import',
     'file.importHint':
-        'Eine zuvor heruntergeladene .asm-Datei laden (max. {max} KB).',
+        'Eine zuvor heruntergeladene .asm-Datei laden (max. {max} KiB).',
     'file.choose': 'Quelltextdatei wählen',
     'file.reading': 'Datei wird gelesen…',
     'file.importErrorTitle': 'Import fehlgeschlagen',
     'file.importEmpty': 'Die Datei ist leer.',
     'file.importTooLarge':
-        'Die Datei ist zu groß. Maximal {max} KB sind erlaubt.',
+        'Die Datei ist zu groß. Maximal {max} KiB sind erlaubt.',
     'file.importUnreadable': 'Die Datei konnte nicht gelesen werden.',
     'file.importBinary': 'Die Datei ist keine reine Textdatei.',
     'theme.appearance': 'Theme',
