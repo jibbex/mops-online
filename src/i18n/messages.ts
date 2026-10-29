@@ -21,6 +21,31 @@ const en = {
     'footer.repository': 'GitHub repository',
     'header.language': 'Language settings',
     'header.theme': 'Theme settings',
+    'tour.help': 'Guided tour',
+    'tour.dialog': 'Guided tour of the machine diagram',
+    'tour.step': 'Step {current} of {total}',
+    'tour.next': 'Next',
+    'tour.back': 'Back',
+    'tour.skip': 'Skip tour',
+    'tour.finish': 'Done',
+    'tour.welcome.title': 'The machine',
+    'tour.welcome.body':
+        'This diagram shows the model computer. While a program runs, the parts that work in the current micro-step light up. This short tour explains how to read the highlights.',
+    'tour.unit.title': 'Active unit',
+    'tour.unit.body':
+        'The unit that works in the current step gets a colored frame. Here the control unit is active.',
+    'tour.read.title': 'Read',
+    'tour.read.body':
+        'A dashed outline with a soft fill means read. The value is copied out and stays unchanged. Here the program counter is read.',
+    'tour.write.title': 'Write',
+    'tour.write.body':
+        'A solid filled box means write. The register or cell receives a new value. Here the instruction register is written.',
+    'tour.increment.title': 'Increment',
+    'tour.increment.body':
+        'A filled box with a cyan border means increment. The program counter moves on by one instruction. It counts instructions, not memory cells.',
+    'tour.bus.title': 'Data packet',
+    'tour.bus.body':
+        'A cyan packet travels along the bus for every real transfer between two units. Internal steps inside one unit show no packet.',
     'task.label': 'Task',
     'task.practice': 'Free practice',
     'task.unknown': 'Moodle task',
@@ -168,6 +193,31 @@ const de: Record<MessageKey, string> = {
     'footer.repository': 'GitHub-Repository',
     'header.language': 'Sprache',
     'header.theme': 'Theme',
+    'tour.help': 'Geführte Tour',
+    'tour.dialog': 'Geführte Tour durch das Maschinendiagramm',
+    'tour.step': 'Schritt {current} von {total}',
+    'tour.next': 'Weiter',
+    'tour.back': 'Zurück',
+    'tour.skip': 'Tour überspringen',
+    'tour.finish': 'Fertig',
+    'tour.welcome.title': 'Der Rechner',
+    'tour.welcome.body':
+        'Dieses Diagramm zeigt den Modellrechner. Während ein Programm läuft, leuchten die Teile auf, die im aktuellen Mikroschritt arbeiten. Diese kurze Tour erklärt die Kennzeichnungen.',
+    'tour.unit.title': 'Aktive Einheit',
+    'tour.unit.body':
+        'Die Einheit, die im aktuellen Schritt arbeitet, erhält einen farbigen Rahmen. Hier ist das Steuerwerk aktiv.',
+    'tour.read.title': 'Lesen',
+    'tour.read.body':
+        'Ein gestrichelter Rand mit heller Füllung bedeutet Lesen. Der Wert wird ausgegeben und bleibt unverändert. Hier wird der Befehlszähler gelesen.',
+    'tour.write.title': 'Schreiben',
+    'tour.write.body':
+        'Ein durchgehend gefülltes Feld bedeutet Schreiben. Das Register oder die Zelle erhält einen neuen Wert. Hier wird das Befehlsregister geschrieben.',
+    'tour.increment.title': 'Erhöhen',
+    'tour.increment.body':
+        'Ein gefülltes Feld mit cyanfarbenem Rand bedeutet Erhöhen. Der Befehlszähler geht um einen Befehl weiter. Er zählt Befehle und keine Speicherzellen.',
+    'tour.bus.title': 'Datenpaket',
+    'tour.bus.body':
+        'Für jede echte Übertragung zwischen zwei Einheiten läuft ein cyanfarbenes Paket über den Bus. Interne Schritte innerhalb einer Einheit zeigen kein Paket.',
     'task.label': 'Task',
     'task.practice': 'Freies Üben',
     'task.unknown': 'Moodle-Aufgabe',
