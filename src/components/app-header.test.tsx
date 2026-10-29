@@ -33,4 +33,23 @@ describe('AppHeader', () => {
 
         expect(screen.queryByText('Free practice')).toBeNull();
     });
+
+    it('orders the header controls from reference to theme', () => {
+        renderHeader({ id: PRACTICE_TASK_ID, title: '' });
+
+        expect(
+            screen
+                .getAllByRole('button')
+                .map(
+                    (button) =>
+                        button.getAttribute('aria-label') ??
+                        button.textContent?.trim(),
+                ),
+        ).toEqual([
+            'Reference',
+            'Guided tour',
+            'Language settings',
+            'Theme settings',
+        ]);
+    });
 });

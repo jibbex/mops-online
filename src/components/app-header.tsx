@@ -49,8 +49,8 @@ export function AppHeader({ task }: { readonly task: TaskInfo }): ReactElement {
                 </Badge>
             ) : null}
             <div className="ml-auto flex items-center gap-1">
-                <TourButton />
                 <CommandReference />
+                <TourButton />
                 <LanguageToggle />
                 <ThemeToggle />
             </div>
