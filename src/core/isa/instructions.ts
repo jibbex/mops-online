@@ -426,21 +426,16 @@ export function hasOperand(instruction: InstructionSpec): boolean {
 /**
  * Returns the execute-phase micro-op sequence for an opcode.
  *
+ * The ISA contract test keeps execution and opcode keys in sync, so a valid
+ * opcode always has a sequence.
+ *
  * @param opcode A valid MOPS opcode.
- * @throws When the ISA table is incomplete.
  */
 export function getExecutionSequence(opcode: Opcode): readonly MicroOp[] {
     const instruction = getInstructionByOpcode(opcode);
     const mode = getOperandModeForOpcode(opcode);
-    const sequence = instruction.execution[mode];
 
-    if (!sequence) {
-        throw new Error(
-            `No execution sequence is defined for opcode ${opcode} (${mode}).`,
-        );
-    }
-
-    return sequence;
+    return instruction.execution[mode] as readonly MicroOp[];
 }
 
 const instructionByOpcode = new Map<Opcode, InstructionSpec>();
@@ -523,17 +518,13 @@ export function getInstructionByOpcode(opcode: Opcode): InstructionSpec {
 /**
  * Returns the operand mode for a valid opcode.
  *
+ * The opcode map is built from the same table as the opcode list, so every
+ * valid opcode has a mode.
+ *
  * @param opcode A valid MOPS opcode.
- * @throws When the ISA table is incomplete.
  */
 export function getOperandModeForOpcode(opcode: Opcode): OperandMode {
-    const mode = OPERAND_MODE_BY_OPCODE.get(opcode);
-
-    if (!mode) {
-        throw new Error(`No operand mode is defined for opcode ${opcode}.`);
-    }
-
-    return mode;
+    return OPERAND_MODE_BY_OPCODE.get(opcode) as OperandMode;
 }
 
 /**

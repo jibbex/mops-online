@@ -93,6 +93,7 @@ describe('instruction table', () => {
                 }
 
                 expect(getInstructionByOpcode(opcode)).toBe(instruction);
+                expect(findInstructionByOpcode(opcode)).toBe(instruction);
                 expect(getOperandModeForOpcode(opcode)).toBe(mode);
                 expect(OPCODE_TO_INSTRUCTION.get(opcode)).toBe(instruction);
                 expect(OPERAND_MODE_BY_OPCODE.get(opcode)).toBe(mode);
