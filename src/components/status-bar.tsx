@@ -75,9 +75,9 @@ export function StatusBar({
                     value={cpu?.phase ?? '—'}
                 />
                 <StatusValue
-                    id="bz"
-                    label={t('status.bz')}
-                    value={formatAddress(cpu?.bz ?? 0)}
+                    id="pc"
+                    label={t('status.pc')}
+                    value={formatAddress(cpu?.pc ?? 0)}
                 />
                 <StatusValue
                     id="ac"

@@ -24,8 +24,11 @@ describe('createCpu', () => {
 
         expect(cpu.memory).toEqual(program.memory);
         expect(cpu.memory).not.toBe(program.memory);
-        expect(cpu.bz).toBe(0);
+        expect(cpu.pc).toBe(0);
         expect(cpu.instructionAddress).toBe(0);
+        expect(cpu.instructionAddresses).toEqual([0, 2, 4]);
+        expect(cpu.addressToPc.get(2)).toBe(1);
+        expect(cpu.addressToPc.get(4)).toBe(2);
         expect(cpu.br).toEqual({ opcode: null, operand: 0 });
         expect(cpu.phase).toBe('FETCH');
         expect(cpu.halted).toBe(false);

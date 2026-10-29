@@ -173,13 +173,13 @@ const COMPARE_IMMEDIATE_EXECUTION: readonly MicroOp[] = [
 
 const JUMP_EXECUTION: readonly MicroOp[] = [
     { kind: 'BR_READ_OPERAND' },
-    { kind: 'BZ_WRITE' },
+    { kind: 'PC_WRITE' },
 ];
 
 const CONDITIONAL_JUMP_EXECUTION: readonly MicroOp[] = [
     { kind: 'VGL_READ' },
     { kind: 'BR_READ_OPERAND' },
-    { kind: 'BZ_WRITE' },
+    { kind: 'PC_WRITE' },
 ];
 
 const HALT_EXECUTION: readonly MicroOp[] = [{ kind: 'HALT' }];

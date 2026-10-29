@@ -7,6 +7,7 @@
 import {
     getInstructionByOpcode,
     getOperandModeForOpcode,
+    isOpcode,
     type Opcode,
     type Operation,
 } from '@/core/isa';
@@ -28,10 +29,20 @@ export type BusValue = Word | readonly [Word, Word];
 export interface CpuState {
     /** Complete memory image. */
     readonly memory: readonly Word[];
-    /** Instruction counter. */
-    readonly bz: Address;
-    /** Address of the instruction currently being processed. */
+    /** Program counter: the instruction index, not a memory address. */
+    readonly pc: Address;
+    /** Memory address of the instruction currently being processed. */
     readonly instructionAddress: Address;
+    /**
+     * Start addresses of every instruction, indexed by program counter.
+     *
+     * Instructions are variable-width in memory, so the PC cannot be used
+     * directly as an address. This table keeps the counter at one increment per
+     * instruction while the fetch address stays correct.
+     */
+    readonly instructionAddresses: readonly Address[];
+    /** Maps instruction start addresses back to program-counter indices. */
+    readonly addressToPc: ReadonlyMap<Address, number>;
     /** Decoded instruction register. */
     readonly br: BranchRegister;
     /** Accumulator. */
@@ -122,10 +133,17 @@ export type VmStepResult =
  * @param program The program to load.
  */
 export function createCpu(program: ObjectProgram): CpuState {
+    const instructionAddresses = collectInstructionAddresses(program);
+    const addressToPc = new Map(
+        instructionAddresses.map((address, index) => [address, index]),
+    );
+
     return {
         memory: [...program.memory],
-        bz: program.entry,
+        pc: 0,
         instructionAddress: program.entry,
+        instructionAddresses,
+        addressToPc,
         br: { opcode: null, operand: 0 },
         ac: 0,
         op: 0,
@@ -145,6 +163,43 @@ export function createCpu(program: ObjectProgram): CpuState {
         halted: false,
         trap: null,
     };
+}
+
+/**
+ * Collects instruction start addresses in execution order.
+ *
+ * The machine stores two-cell instructions, so the program counter is an
+ * instruction index rather than a byte address. The table is derived from the
+ * object program instead of being stored separately by the assembler.
+ *
+ * @param program Object program loaded into the machine.
+ */
+function collectInstructionAddresses(
+    program: ObjectProgram,
+): readonly Address[] {
+    const addresses: Address[] = [];
+    let address = program.entry;
+
+    while (address >= 0 && address < program.memory.length) {
+        addresses.push(address);
+
+        const opcode = program.memory[address];
+
+        if (opcode === undefined || !isOpcode(opcode)) {
+            break;
+        }
+
+        const instruction = getInstructionByOpcode(opcode);
+
+        if (instruction.terminates) {
+            break;
+        }
+
+        const wordCount = getOperandModeForOpcode(opcode) === 'none' ? 1 : 2;
+        address += wordCount;
+    }
+
+    return addresses;
 }
 
 /**

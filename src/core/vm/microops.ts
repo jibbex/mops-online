@@ -14,11 +14,11 @@
  * diagram elements.
  */
 export type MicroOp =
-    | { readonly kind: 'BZ_READ' }
+    | { readonly kind: 'PC_READ' }
     | { readonly kind: 'MEM_READ'; readonly width: 1 | 2 }
     | { readonly kind: 'BR_WRITE' }
     | { readonly kind: 'DECODE' }
-    | { readonly kind: 'BZ_UPDATE' }
+    | { readonly kind: 'PC_UPDATE' }
     | { readonly kind: 'BR_READ_OPERAND' }
     | { readonly kind: 'INPUT_READ' }
     | { readonly kind: 'MEM_WRITE' }
@@ -31,7 +31,7 @@ export type MicroOp =
     | { readonly kind: 'ERG_VGL_WRITE' }
     | { readonly kind: 'AUS_WRITE' }
     | { readonly kind: 'VGL_READ' }
-    | { readonly kind: 'BZ_WRITE' }
+    | { readonly kind: 'PC_WRITE' }
     | { readonly kind: 'HALT' };
 
 /** Instruction-processing phase. */

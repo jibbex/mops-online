@@ -61,8 +61,8 @@ export function VnrControlUnit({
                 {t('diagram.instructionCounter')}
             </text>
             <g
-                id="bz"
-                className={cn('diagram-register', active('bz') && 'is-active')}
+                id="pc"
+                className={cn('diagram-register', active('pc') && 'is-active')}
             >
                 <rect x="421" y="91" width="19" height="16" rx="1" />
                 <text
@@ -72,7 +72,7 @@ export function VnrControlUnit({
                     textAnchor="middle"
                     fontSize="8"
                 >
-                    {formatAddress(cpu?.bz ?? 0)}
+                    {formatAddress(cpu?.pc ?? 0)}
                 </text>
             </g>
 

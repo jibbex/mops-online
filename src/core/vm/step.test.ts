@@ -159,7 +159,7 @@ describe('CPU state', () => {
         const program = programFromMemory([60]);
         const cpu = createCpu(program);
 
-        expect(cpu.bz).toBe(0);
+        expect(cpu.pc).toBe(0);
         expect(cpu.ac).toBe(0);
         expect(cpu.phase).toBe('FETCH');
         expect(cpu.halted).toBe(false);
@@ -293,6 +293,7 @@ describe('execute programs', () => {
 
         expect(result.state.halted).toBe(true);
         expect(result.state.phase).toBe('HALTED');
+        expect(result.state.pc).toBe(1);
     });
 
     it('reports fetch, decode, and execute phases', () => {
@@ -300,6 +301,32 @@ describe('execute programs', () => {
         const phases = new Set(result.events.map((event) => event.phase));
 
         expect(phases).toEqual(new Set(['FETCH', 'DECODE', 'EXECUTE']));
+    });
+
+    it('increments the program counter once per instruction', () => {
+        const result = runProgram('ld 5\nend');
+        const updates = result.events.filter(
+            (event) => event.microOp.kind === 'PC_UPDATE',
+        );
+
+        // The program counter is an instruction index, not a memory address.
+        // Both the two-cell `ld` and the one-cell `end` advance it by one.
+        expect(
+            updates.map((event) => [event.before.pc, event.after.pc]),
+        ).toEqual([
+            [0, 1],
+            [1, 2],
+        ]);
+    });
+
+    it('sets the program counter to the target instruction on a jump', () => {
+        const result = runProgram(['jmp #2', 'ld 5', 'end'].join('\n'));
+        const write = result.events.find(
+            (event) => event.microOp.kind === 'PC_WRITE' && event.opcode === 50,
+        );
+
+        expect(write?.after.pc).toBe(1);
+        expect(write?.after.instructionAddress).toBe(2);
     });
 });
 
@@ -362,10 +389,10 @@ describe('runtime traps', () => {
         expect(trap?.code).toBe('INVALID_OPCODE');
     });
 
-    it('traps on an out-of-range instruction counter', () => {
+    it('traps on an out-of-range program counter', () => {
         const cpu = {
             ...createCpu(programFromMemory([60])),
-            bz: 72,
+            pc: 72,
         };
         const result = stepCpu(cpu, undefined);
 

@@ -148,12 +148,12 @@ describe('visual map', () => {
 
     it('does not draw a packet for internal control reads and writes', () => {
         const internal: VmEvent['microOp'][] = [
-            { kind: 'BZ_READ' },
+            { kind: 'PC_READ' },
             { kind: 'BR_WRITE' },
             { kind: 'DECODE' },
-            { kind: 'BZ_UPDATE' },
+            { kind: 'PC_UPDATE' },
             { kind: 'BR_READ_OPERAND' },
-            { kind: 'BZ_WRITE' },
+            { kind: 'PC_WRITE' },
         ];
 
         for (const microOp of internal) {

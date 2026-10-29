@@ -23,7 +23,7 @@ describe('StatusBar', () => {
             ...createCpu(createObjectProgramFixture()),
             ac: 8,
             aus: 8,
-            bz: 4,
+            pc: 2,
             decoded: 'end',
         };
 
@@ -40,7 +40,7 @@ describe('StatusBar', () => {
         );
         expect(screen.getByTestId('status-ac')).toHaveTextContent('00008');
         expect(screen.getByTestId('status-aus')).toHaveTextContent('00008');
-        expect(screen.getByTestId('status-bz')).toHaveTextContent('04');
+        expect(screen.getByTestId('status-pc')).toHaveTextContent('02');
         expect(screen.getByTestId('status-line')).toHaveTextContent('3');
         expect(screen.getByTestId('status-decoded')).toHaveTextContent('end');
     });

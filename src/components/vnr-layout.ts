@@ -24,7 +24,7 @@ export interface BusPath {
 export const BUS_PATHS: readonly BusPath[] = [
     { id: 'sl-trunk', d: 'M300 59 V480' },
     { id: 'sl-mem', d: 'M257 59 H300' },
-    { id: 'sl-bz', d: 'M300 99 H421', thin: true },
+    { id: 'sl-pc', d: 'M300 99 H421', thin: true },
     { id: 'sl-br', d: 'M300 135 H421', thin: true },
     { id: 'sl-dek', d: 'M300 158 H325', thin: true },
     { id: 'br-dek', d: 'M421 134 V147', thin: true },

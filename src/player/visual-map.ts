@@ -63,8 +63,8 @@ export function visualStateFor(event: VmEvent | null): VisualState {
     const active = new Set<string>();
 
     switch (event.microOp.kind) {
-        case 'BZ_READ':
-            add(active, 'control', 'bz');
+        case 'PC_READ':
+            add(active, 'control', 'pc');
             break;
         case 'MEM_READ':
             add(active, 'control', 'memory');
@@ -76,8 +76,8 @@ export function visualStateFor(event: VmEvent | null): VisualState {
         case 'DECODE':
             add(active, 'control', 'dek', 'br');
             break;
-        case 'BZ_UPDATE':
-            add(active, 'control', 'bz');
+        case 'PC_UPDATE':
+            add(active, 'control', 'pc');
             break;
         case 'BR_READ_OPERAND':
             add(active, 'control', 'br', 'br-op');
@@ -114,8 +114,8 @@ export function visualStateFor(event: VmEvent | null): VisualState {
         case 'VGL_READ':
             add(active, 'control', 'vgl');
             break;
-        case 'BZ_WRITE':
-            add(active, 'control', 'bz');
+        case 'PC_WRITE':
+            add(active, 'control', 'pc');
             break;
         case 'HALT':
             add(active, 'control');
@@ -163,15 +163,15 @@ function transferFor(event: VmEvent): TransferRoute | null {
             return route('control-aus', 'M300 158 V437');
         case 'VGL_READ':
             return route('vgl-control', 'M300 334 V158');
-        case 'BZ_READ':
+        case 'PC_READ':
         case 'BR_WRITE':
         case 'DECODE':
-        case 'BZ_UPDATE':
+        case 'PC_UPDATE':
         case 'BR_READ_OPERAND':
         case 'ALU_CALC':
         case 'ERG_AC_WRITE':
         case 'ERG_VGL_WRITE':
-        case 'BZ_WRITE':
+        case 'PC_WRITE':
         case 'HALT':
             return null;
     }

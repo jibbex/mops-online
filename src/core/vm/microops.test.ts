@@ -6,11 +6,11 @@ import type { Compare, MicroOp, Phase } from './microops';
 describe('micro-op types', () => {
     it('lists every micro-op kind', () => {
         expectTypeOf<MicroOp['kind']>().toEqualTypeOf<
-            | 'BZ_READ'
+            | 'PC_READ'
             | 'MEM_READ'
             | 'BR_WRITE'
             | 'DECODE'
-            | 'BZ_UPDATE'
+            | 'PC_UPDATE'
             | 'BR_READ_OPERAND'
             | 'INPUT_READ'
             | 'MEM_WRITE'
@@ -23,7 +23,7 @@ describe('micro-op types', () => {
             | 'ERG_VGL_WRITE'
             | 'AUS_WRITE'
             | 'VGL_READ'
-            | 'BZ_WRITE'
+            | 'PC_WRITE'
             | 'HALT'
         >();
     });

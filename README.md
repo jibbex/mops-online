@@ -337,6 +337,14 @@ Examples: `-7 div 2` is `-4`, `-7 mod 2` is `1`, and `7 mod -2` is `-1`.
 These rules match MOPS 1.04, which uses Python's `operator.floordiv` and
 `operator.mod`. They are covered by the VM semantics tests.
 
+### Program Counter
+
+The program counter (`PC`) is an **instruction index**, not a memory address. It
+advances by exactly one per instruction, including `end`, independent of the
+two-cell instruction encoding. The VM maps the PC to the instruction's memory
+address through the object program, and jumps set the PC to the target
+instruction index.
+
 ### Conventions
 
 - All repository text is written in American English.

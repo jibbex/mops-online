@@ -70,6 +70,26 @@ test('requires assembly after a source change', async ({ page }) => {
     await expect(page.getByRole('button', { name: 'Step' })).toBeEnabled();
 });
 
+test('increments the program counter for end', async ({ page }) => {
+    await page.goto('/');
+    await setSource(page, 'end');
+    await page.getByRole('button', { name: 'Assemble' }).click();
+
+    for (let step = 0; step < 10; step += 1) {
+        if (
+            (await page.getByTestId('status-status').textContent()) ===
+            'Finished'
+        ) {
+            break;
+        }
+
+        await page.getByRole('button', { name: 'Step' }).click();
+    }
+
+    await expect(page.getByTestId('status-status')).toHaveText('Finished');
+    await expect(page.getByTestId('status-pc')).toHaveText('01');
+});
+
 test('shows an assembly error in the UI', async ({ page }) => {
     await page.goto('/');
     await setSource(page, 'xyz 5\nend');

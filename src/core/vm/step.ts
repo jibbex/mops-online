@@ -118,12 +118,12 @@ function createQueue(state: CpuState): readonly MicroOp[] {
     switch (state.phase) {
         case 'FETCH':
             return [
-                { kind: 'BZ_READ' },
+                { kind: 'PC_READ' },
                 { kind: 'MEM_READ', width: 2 },
                 { kind: 'BR_WRITE' },
             ];
         case 'DECODE':
-            return [{ kind: 'DECODE' }, { kind: 'BZ_UPDATE' }];
+            return [{ kind: 'DECODE' }, { kind: 'PC_UPDATE' }];
         case 'EXECUTE':
             return createExecuteQueue(state);
         case 'HALTED':
@@ -147,16 +147,16 @@ function applyMicroOp(
     const next = cloneCpuState(state) as MutableCpuState;
 
     switch (microOp.kind) {
-        case 'BZ_READ':
-            return applyBzRead(next);
+        case 'PC_READ':
+            return applyPcRead(next);
         case 'MEM_READ':
             return applyMemRead(next, microOp.width);
         case 'BR_WRITE':
             return applyBrWrite(next);
         case 'DECODE':
             return applyDecode(next);
-        case 'BZ_UPDATE':
-            return applyBzUpdate(next);
+        case 'PC_UPDATE':
+            return applyPcUpdate(next);
         case 'BR_READ_OPERAND':
             return applyBrReadOperand(next);
         case 'INPUT_READ':
@@ -181,24 +181,26 @@ function applyMicroOp(
             return applyAusWrite(next);
         case 'VGL_READ':
             return checkCompare(next);
-        case 'BZ_WRITE':
-            return applyBzWrite(next);
+        case 'PC_WRITE':
+            return applyPcWrite(next);
         case 'HALT':
             return applyHalt(next);
     }
 }
 
-function applyBzRead(next: MutableCpuState): ApplyResult {
-    if (next.bz < 0 || next.bz >= next.memory.length) {
+function applyPcRead(next: MutableCpuState): ApplyResult {
+    const address = next.instructionAddresses[next.pc];
+
+    if (address === undefined) {
         return trap(
             next,
             'PC_OUT_OF_RANGE',
-            'Instruction counter is out of range.',
+            'Program counter is out of range.',
         );
     }
 
-    next.slAdr = next.bz;
-    next.instructionAddress = next.bz;
+    next.slAdr = address;
+    next.instructionAddress = address;
     return { state: next };
 }
 
@@ -260,17 +262,14 @@ function applyDecode(next: MutableCpuState): ApplyResult {
     return { state: next };
 }
 
-function applyBzUpdate(next: MutableCpuState): ApplyResult {
-    const opcode = next.br.opcode;
-
-    if (opcode === null) {
+function applyPcUpdate(next: MutableCpuState): ApplyResult {
+    if (next.br.opcode === null) {
         return trap(next, 'INVALID_OPCODE', 'No instruction is loaded.');
     }
 
-    // The operand mode defines the instruction width; no opcode needs a
-    // special case here.
-    const wordCount = getOperandModeForOpcode(opcode) === 'none' ? 1 : 2;
-    next.bz += wordCount;
+    // PC counts instructions, never memory cells. The fetch address is looked
+    // up from the instruction-address table on the next PC_READ.
+    next.pc += 1;
     return { state: next };
 }
 
@@ -414,8 +413,20 @@ function applyAusWrite(next: MutableCpuState): ApplyResult {
     return { state: next };
 }
 
-function applyBzWrite(next: MutableCpuState): ApplyResult {
-    next.bz = next.slAdr;
+function applyPcWrite(next: MutableCpuState): ApplyResult {
+    const target = next.slAdr;
+    const pc = next.addressToPc.get(target);
+
+    if (pc === undefined) {
+        return trap(
+            next,
+            'PC_OUT_OF_RANGE',
+            'Jump target is not an instruction boundary.',
+        );
+    }
+
+    next.pc = pc;
+    next.instructionAddress = target;
     return { state: next };
 }
 
@@ -557,16 +568,16 @@ function createEvent(
 
 function describe(microOp: MicroOp): string {
     switch (microOp.kind) {
-        case 'BZ_READ':
-            return 'Read the instruction counter.';
+        case 'PC_READ':
+            return 'Read the program counter.';
         case 'MEM_READ':
             return `Read ${microOp.width} memory cell${microOp.width === 1 ? '' : 's'}.`;
         case 'BR_WRITE':
             return 'Write the instruction register.';
         case 'DECODE':
             return 'Decode the instruction.';
-        case 'BZ_UPDATE':
-            return 'Update the instruction counter.';
+        case 'PC_UPDATE':
+            return 'Update the program counter.';
         case 'BR_READ_OPERAND':
             return 'Read the instruction operand.';
         case 'INPUT_READ':
@@ -591,8 +602,8 @@ function describe(microOp: MicroOp): string {
             return 'Write the output register.';
         case 'VGL_READ':
             return 'Check the comparison register.';
-        case 'BZ_WRITE':
-            return 'Write the instruction counter.';
+        case 'PC_WRITE':
+            return 'Write the program counter.';
         case 'HALT':
             return 'Halt the machine.';
     }
