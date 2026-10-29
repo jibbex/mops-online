@@ -15,7 +15,8 @@ import {
     type MicroOp,
     type Operation,
 } from '@/core/isa';
-import { MAX_WORD, MIN_WORD, isWord, type Word } from '@/core/object';
+import { isWord, type Word } from '@/core/object';
+import { calculateAlu } from './alu';
 import {
     cloneCpuState,
     formatDecoded,
@@ -479,60 +480,13 @@ function applyHalt(next: MutableCpuState): ApplyResult {
 }
 
 function calculate(state: MutableCpuState): ApplyResult {
-    const operation = state.operation;
+    const result = calculateAlu(state.operation, state.ac, state.op);
 
-    if (operation === null) {
-        return trap(state, 'INVALID_OPCODE', 'No operation is selected.');
+    if (!result.ok) {
+        return trap(state, result.code, result.message);
     }
 
-    if (operation === 'jump' || operation.startsWith('jump-')) {
-        return trap(
-            state,
-            'INVALID_OPCODE',
-            'Jump instruction reached the ALU.',
-        );
-    }
-
-    let result: number;
-
-    switch (operation) {
-        case 'add':
-            result = state.ac + state.op;
-            break;
-        case 'subtract':
-            result = state.ac - state.op;
-            break;
-        case 'multiply':
-            result = state.ac * state.op;
-            break;
-        case 'divide':
-            if (state.op === 0) {
-                return trap(state, 'DIVISION_BY_ZERO', 'Division by zero.');
-            }
-            result = Math.floor(state.ac / state.op);
-            break;
-        case 'modulo':
-            if (state.op === 0) {
-                return trap(state, 'DIVISION_BY_ZERO', 'Modulo by zero.');
-            }
-            result = ((state.ac % state.op) + state.op) % state.op;
-            break;
-        case 'compare':
-            result = state.ac < state.op ? -1 : state.ac > state.op ? 1 : 0;
-            break;
-        default:
-            return trap(state, 'INVALID_OPCODE', 'Unsupported ALU operation.');
-    }
-
-    if (result < MIN_WORD || result > MAX_WORD) {
-        return trap(
-            state,
-            'OVERFLOW',
-            'Arithmetic result is outside the valid range.',
-        );
-    }
-
-    state.erg = result;
+    state.erg = result.value;
     return { state };
 }
 
