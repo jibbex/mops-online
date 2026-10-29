@@ -40,7 +40,6 @@ export function VnrControlUnit({
                 'unit-control',
                 active('control') && 'is-active',
             )}
-            data-operation={operation('control')}
         >
             <rect
                 className="unit-frame"

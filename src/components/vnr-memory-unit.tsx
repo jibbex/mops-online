@@ -38,7 +38,6 @@ export function VnrMemoryUnit({
                 'unit-memory',
                 active('memory') && 'is-active',
             )}
-            data-operation={operation('memory')}
         >
             <rect
                 className="unit-frame"
